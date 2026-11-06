@@ -1,0 +1,13 @@
+{
+  "name": "@daily-brief/render-pdf",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {
+    "@daily-brief/maps": "*",
+    "@daily-brief/schema": "*",
+    "geist": "^1.9.2",
+    "playwright": "1.63.0"
+  }
+}
