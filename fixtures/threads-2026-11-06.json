@@ -1,0 +1,103 @@
+{
+  "fr": {
+    "kicker": "Environnement",
+    "title": "Épisodes méditerranéens 2026",
+    "intro": "Les pluies diluviennes qui frappent le Sud-Est et la Corse depuis la mi-octobre, épisode par épisode.",
+    "map": "map-floods",
+    "nodes": [
+      {
+        "st": "next",
+        "d": "À suivre",
+        "h": "Vigilance orange en Corse-du-Sud",
+        "p": "Le niveau de vigilance et les bilans seront repris dans le brief de demain."
+      },
+      {
+        "st": "now",
+        "d": "Ven 06 nov · Aujourd’hui",
+        "h": "Corse : deux morts, plus de deux mois de pluie en 48 h",
+        "p": "285 mm à Conca, au moins 70 personnes évacuées. Le Vidourle monte de plus de 1,50 m en deux heures à Sommières (Gard). Euronews porte à 4 morts le bilan de l’épisode du 20 octobre.",
+        "src": "Euronews",
+        "map": true
+      },
+      {
+        "st": "",
+        "d": "Mar 20 oct",
+        "h": "Premier épisode : un mort près de Marseille, un disparu en Haute-Corse",
+        "p": "Près de 400 mm au nord de Solenzara, dont 191 mm en une heure ; l’A9 fermée plusieurs heures à Nîmes.",
+        "src": "Euronews"
+      }
+    ]
+  },
+  "en": {
+    "kicker": "Politics",
+    "title": "Midterms 2026",
+    "intro": "From election night to the last uncalled races.",
+    "map": "map-us",
+    "nodes": [
+      {
+        "st": "next",
+        "d": "Next",
+        "h": "Alaska and Mississippi Senate races",
+        "p": "Alaska could go to ranked-choice tabulation; Mississippi hinges on provisional ballots."
+      },
+      {
+        "st": "now",
+        "d": "Thu 05 Nov · Latest",
+        "h": "Democrats have flipped 43 House seats",
+        "p": "CBS News’s latest count: 43 districts to Democrats, two to Republicans. Scott Colom leads by 65 votes in Mississippi.",
+        "src": "CBS News",
+        "map": true
+      },
+      {
+        "st": "",
+        "d": "Wed 04 Nov",
+        "h": "Voters hand Democrats both chambers of Congress",
+        "p": "PBS NewsHour calls it a rebuke of President Trump.",
+        "src": "PBS NewsHour"
+      },
+      {
+        "st": "",
+        "d": "Tue 03 Nov",
+        "h": "Election day",
+        "p": "435 House seats and 35 Senate seats on the ballot.",
+        "src": "Euronews"
+      }
+    ]
+  },
+  "es": {
+    "kicker": "Política",
+    "title": "Crisis ferroviaria 2026",
+    "intro": "De Adamuz a la dimisión del ministro de Transportes, episodio por episodio.",
+    "map": "map-spain",
+    "nodes": [
+      {
+        "st": "next",
+        "d": "Próximo",
+        "h": "Elecciones generales del 29 de noviembre",
+        "p": "La crisis ferroviaria entra en la campaña."
+      },
+      {
+        "st": "now",
+        "d": "Mar 03 nov",
+        "h": "Óscar Puente dimite y renuncia a las listas del 29N",
+        "p": "«Es una cuestión de dignidad política, de coherencia y de empatía con las víctimas».",
+        "src": "Alicante Plaza",
+        "map": true
+      },
+      {
+        "st": "",
+        "d": "Mié 28 oct",
+        "h": "Urda: un AVE choca por alcance contra un tren de Iryo detenido",
+        "p": "Medio millar de viajeros a bordo de los dos trenes; el Gobierno decreta tres días de luto.",
+        "src": "elDiario.es"
+      },
+      {
+        "st": "",
+        "d": "Dom 18 ene",
+        "h": "Adamuz: 46 víctimas mortales",
+        "p": "Primer gran accidente de la alta velocidad del año, aún en investigación.",
+        "src": "elDiario.es"
+      }
+    ]
+  }
+}

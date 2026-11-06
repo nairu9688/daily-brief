@@ -1,0 +1,1312 @@
+{
+  "date": "2026-11-06",
+  "issue": "001",
+  "editions": [
+    {
+      "date": "2026-11-06",
+      "lang": "fr",
+      "region": "France · Monde",
+      "headline": "La rue pousse Lecornu à négocier, le Sud-Est sous l’eau",
+      "morningBrief": [
+        {
+          "lead": "Mobilisation :",
+          "text": "575 000 manifestants selon les autorités, 1,6 million selon la CGT ; Sébastien Lecornu convoque une conférence sociale lundi.",
+          "rubric": "Politique & société"
+        },
+        {
+          "lead": "Corse :",
+          "text": "deux morts dans des inondations, plus de deux mois de pluie en 48 h ; le Gard et l’Hérault aussi touchés.",
+          "rubric": "Environnement"
+        },
+        {
+          "lead": "États-Unis :",
+          "text": "les démocrates remportent les deux chambres du Congrès et font basculer plus de 40 sièges à la Chambre.",
+          "rubric": "International"
+        },
+        {
+          "lead": "Ukraine :",
+          "text": "à Madrid, Zelensky appelle à sauver d’urgence le réseau électrique de son pays.",
+          "rubric": "International"
+        },
+        {
+          "lead": "SNCF :",
+          "text": "le TGV M d’Alstom fait son voyage inaugural Paris–Marseille, avec plus de deux ans de retard.",
+          "rubric": "Entreprises"
+        }
+      ],
+      "audioScript": "La rue pousse Lecornu à négocier, le Sud-Est sous l’eau. Mobilisation : 575 000 manifestants selon les autorités, 1,6 million selon la CGT ; Sébastien Lecornu convoque une conférence sociale lundi. Corse : deux morts dans des inondations, plus de deux mois de pluie en 48 h ; le Gard et l’Hérault aussi touchés. États-Unis : les démocrates remportent les deux chambres du Congrès et font basculer plus de 40 sièges à la Chambre. Ukraine : à Madrid, Zelensky appelle à sauver d’urgence le réseau électrique de son pays. SNCF : le TGV M d’Alstom fait son voyage inaugural Paris–Marseille, avec plus de deux ans de retard.",
+      "sections": [
+        {
+          "key": "pol",
+          "title": "Politique & société",
+          "stories": [
+            {
+              "id": "2026-11-06-fr-1",
+              "kicker": "France",
+              "date": "05.11",
+              "title": "Après une journée de « colère sociale », Lecornu convoque une conférence sociale",
+              "summary": "Salariés, fonctionnaires, retraités et jeunes ont manifesté jeudi pour réclamer des hausses de pouvoir d’achat, lors de la quatrième journée de grève nationale de l’automne. Le Premier ministre réunira syndicats et patronat lundi 9 novembre pour une conférence sur les salaires et le pouvoir d’achat. À Lyon, le cortège a été marqué par des affrontements avec la police.",
+              "visual": {
+                "type": "map",
+                "caption": "Manifestants · chiffres des autorités",
+                "map": {
+                  "projection": "conic-france",
+                  "focus": [
+                    "FRA"
+                  ],
+                  "bubbles": true,
+                  "places": [
+                    {
+                      "name": "Paris",
+                      "lon": 2.35,
+                      "lat": 48.86,
+                      "value": 65000,
+                      "label": "Paris · 65 000"
+                    },
+                    {
+                      "name": "Lyon",
+                      "lon": 4.84,
+                      "lat": 45.76,
+                      "value": 30500,
+                      "label": "Lyon · 30 500"
+                    }
+                  ]
+                }
+              },
+              "stats": [
+                {
+                  "value": "575 000",
+                  "label": "manifestants (autorités)",
+                  "sourceUrl": "https://www.sudradio.fr/societe/la-grogne-sociale-monte-dun-cran-greve-et-manifestations-partout-en-france"
+                },
+                {
+                  "value": "193",
+                  "label": "cortèges en France",
+                  "sourceUrl": "https://www.sudradio.fr/societe/la-grogne-sociale-monte-dun-cran-greve-et-manifestations-partout-en-france"
+                },
+                {
+                  "value": "65 000",
+                  "label": "à Paris (autorités)",
+                  "sourceUrl": "https://www.sudradio.fr/societe/la-grogne-sociale-monte-dun-cran-greve-et-manifestations-partout-en-france"
+                },
+                {
+                  "value": "9 nov.",
+                  "label": "conférence sociale",
+                  "sourceUrl": "https://www.sudradio.fr/societe/la-grogne-sociale-monte-dun-cran-greve-et-manifestations-partout-en-france"
+                }
+              ],
+              "quote": {
+                "text": "La question qui est posée aujourd’hui, c’est pas “est-ce qu’on va gagner” mais “combien va-t-on gagner ?”",
+                "speaker": "Sophie Binet · CGT",
+                "translation": null,
+                "sourceUrl": "https://www.sudradio.fr/societe/la-grogne-sociale-monte-dun-cran-greve-et-manifestations-partout-en-france"
+              },
+              "divergences": [
+                {
+                  "metric": "Participation nationale",
+                  "a": {
+                    "value": "575 000",
+                    "by": "Autorités (AFP)"
+                  },
+                  "b": {
+                    "value": "1,6 million",
+                    "by": "CGT"
+                  }
+                },
+                {
+                  "metric": "Cortège de Lyon",
+                  "a": {
+                    "value": "30 500",
+                    "by": "Autorités (Euronews)"
+                  },
+                  "b": {
+                    "value": "55 000",
+                    "by": "CGT"
+                  }
+                }
+              ],
+              "thread": {
+                "title": "Mobilisation sociale de l’automne",
+                "subtitle": "4e journée de grève nationale"
+              },
+              "prepa": {
+                "subject": "Éco-droit",
+                "text": "Partage de la valeur ajoutée, négociation collective et rôle des partenaires sociaux."
+              },
+              "sources": [
+                {
+                  "outlet": "Sud Radio · AFP",
+                  "title": "Lecornu convoque une conférence sociale après une journée de « colère sociale »",
+                  "url": "https://www.sudradio.fr/societe/la-grogne-sociale-monte-dun-cran-greve-et-manifestations-partout-en-france",
+                  "lang": "fr",
+                  "readFull": true
+                },
+                {
+                  "outlet": "Euronews",
+                  "title": "France: Up to 55,000 march in Lyon amid clashes and tear gas",
+                  "url": "https://www.euronews.com/video/2026/11/05/france-up-to-55000-march-in-lyon-amid-clashes-and-tear-gas",
+                  "lang": "en",
+                  "readFull": true
+                }
+              ]
+            }
+          ],
+          "briefs": []
+        },
+        {
+          "key": "int",
+          "title": "International & géopolitique",
+          "stories": [
+            {
+              "id": "2026-11-06-fr-2",
+              "kicker": "États-Unis",
+              "date": "05.11",
+              "title": "Midterms : les démocrates prennent les deux chambres du Congrès",
+              "summary": "Les démocrates ont pris le contrôle de la Chambre des représentants en faisant basculer plus de trois douzaines de sièges républicains (43 selon le dernier décompte de CBS News, contre 2 gagnés par les républicains) et s’apprêtent à contrôler aussi le Sénat. Certaines courses restent ouvertes : au Mississippi, le démocrate Scott Colom devance la sénatrice Cindy Hyde-Smith de 65 voix, et en Alaska le Sénat pourrait se jouer au décompte préférentiel.",
+              "visual": {
+                "type": "map",
+                "caption": "États-Unis · courses à suivre",
+                "map": {
+                  "projection": "albers-usa",
+                  "focus": [
+                    "USA"
+                  ],
+                  "places": [
+                    {
+                      "name": "Washington",
+                      "lon": -77.01,
+                      "lat": 38.89,
+                      "primary": true
+                    },
+                    {
+                      "name": "Mississippi",
+                      "lon": -90.18,
+                      "lat": 32.3
+                    },
+                    {
+                      "name": "Alaska",
+                      "lon": -149.9,
+                      "lat": 61.2
+                    }
+                  ]
+                }
+              },
+              "stats": [
+                {
+                  "value": "43",
+                  "label": "sièges basculés (CBS)",
+                  "sourceUrl": "https://www.cbsnews.com/news/house-districts-flipped-2026-midterm-elections/"
+                },
+                {
+                  "value": "2",
+                  "label": "gagnés par les républicains",
+                  "sourceUrl": "https://www.cbsnews.com/news/house-districts-flipped-2026-midterm-elections/"
+                },
+                {
+                  "value": "65",
+                  "label": "voix d’écart au Mississippi",
+                  "sourceUrl": "https://www.cbsnews.com/news/house-districts-flipped-2026-midterm-elections/"
+                },
+                {
+                  "value": "435",
+                  "label": "sièges à la Chambre",
+                  "sourceUrl": "https://www.cbsnews.com/news/house-districts-flipped-2026-midterm-elections/"
+                }
+              ],
+              "quote": null,
+              "divergences": [],
+              "thread": {
+                "title": "Midterms 2026",
+                "subtitle": "Mississippi et Alaska encore indécis"
+              },
+              "prepa": {
+                "subject": "Anglais LV1 · CG",
+                "text": "Institutions américaines : divided government et checks and balances pour la fin du mandat Trump."
+              },
+              "sources": [
+                {
+                  "outlet": "CBS News",
+                  "title": "Democrats have flipped over 40 House seats. Here’s the breakdown.",
+                  "url": "https://www.cbsnews.com/news/house-districts-flipped-2026-midterm-elections/",
+                  "lang": "en",
+                  "readFull": true
+                },
+                {
+                  "outlet": "PBS NewsHour",
+                  "title": "Midterm voters rebuke Trump, handing Democrats both chambers of Congress",
+                  "url": "https://www.pbs.org/newshour/show/midterm-voters-rebuke-trump-handing-democrats-both-chambers-of-congress",
+                  "lang": "en",
+                  "readFull": true
+                },
+                {
+                  "outlet": "The Hill",
+                  "title": "Democrat Jessica Killin flips longtime GOP-held Colorado House seat",
+                  "url": "https://thehill.com/homenews/campaign/6180533-jessica-killin-unseats-jeff-crank-colorado-5th-district/",
+                  "lang": "en",
+                  "readFull": false
+                },
+                {
+                  "outlet": "NPR",
+                  "title": "What’s next for Democrats after the midterms. And, a look at the outstanding races",
+                  "url": "https://www.npr.org/2026/11/05/g-s1-152046/up-first-newsletter-democrats-congress-control-house-senate-trump-reaction",
+                  "lang": "en",
+                  "readFull": false
+                },
+                {
+                  "outlet": "Euronews",
+                  "title": "US midterm elections results 2026: live updates in maps and charts",
+                  "url": "https://euronews.com/2026/11/03/us-midterm-elections-results-2026-live-updates-in-maps-and-charts",
+                  "lang": "en",
+                  "readFull": true
+                },
+                {
+                  "outlet": "Al Jazeera",
+                  "title": "US Midterm Elections 2026 — results",
+                  "url": "https://aljazeera.com/us-midterm-elections-2026/results/",
+                  "lang": "en",
+                  "readFull": true
+                }
+              ]
+            },
+            {
+              "id": "2026-11-06-fr-3",
+              "kicker": "Ukraine · Espagne",
+              "date": "06.11",
+              "title": "À Madrid, Zelensky lance un appel urgent pour sauver le réseau électrique ukrainien",
+              "summary": "Invité au 30e Sommet ibéro-américain, le président ukrainien a demandé aux dirigeants présents transformateurs, générateurs et câbles pour un réseau pilonné par les frappes russes. Il a aussi rencontré le roi Felipe VI pour obtenir un soutien espagnol à la défense aérienne.",
+              "visual": {
+                "type": "map",
+                "caption": "Madrid → Kyiv",
+                "map": {
+                  "projection": "conic-europe",
+                  "highlight": [
+                    "ESP",
+                    "UKR"
+                  ],
+                  "arc": [
+                    "Madrid",
+                    "Kyiv"
+                  ],
+                  "places": [
+                    {
+                      "name": "Madrid",
+                      "lon": -3.7,
+                      "lat": 40.42
+                    },
+                    {
+                      "name": "Kyiv",
+                      "lon": 30.52,
+                      "lat": 50.45
+                    }
+                  ]
+                }
+              },
+              "stats": [],
+              "quote": {
+                "text": "le plus rapidement possible",
+                "speaker": "Volodymyr Zelensky · Madrid",
+                "translation": null,
+                "sourceUrl": "https://fr.euronews.com/2026/11/06/a-madrid-zelensky-lance-un-appel-urgent-a-laide-pour-sauver-le-reseau-electrique-ukrainien"
+              },
+              "divergences": [],
+              "thread": {
+                "title": "Guerre en Ukraine",
+                "subtitle": "l’énergie, cible de l’hiver"
+              },
+              "prepa": null,
+              "sources": [
+                {
+                  "outlet": "Euronews",
+                  "title": "À Madrid, Zelensky lance un appel urgent à l’aide pour sauver le réseau électrique ukrainien",
+                  "url": "https://fr.euronews.com/2026/11/06/a-madrid-zelensky-lance-un-appel-urgent-a-laide-pour-sauver-le-reseau-electrique-ukrainien",
+                  "lang": "fr",
+                  "readFull": true
+                },
+                {
+                  "outlet": "Exteriores (gouv. espagnol)",
+                  "title": "Albares anuncia que la Cumbre Iberoamericana se celebrará en Madrid los días 4 y 5 de noviembre",
+                  "url": "https://www.exteriores.gob.es:443/en/Comunicacion/NotasPrensa/Paginas/2025_NOTAS_P/Albares-anuncia-que-la-Cumbre-Iberoamericana-se-celebrara-en-Madrid-los-dias-4-y-5-de-noviembre.aspx",
+                  "lang": "es",
+                  "readFull": false
+                }
+              ]
+            }
+          ],
+          "briefs": []
+        },
+        {
+          "key": "env",
+          "title": "Environnement & énergie",
+          "stories": [
+            {
+              "id": "2026-11-06-fr-4",
+              "kicker": "France",
+              "date": "06.11",
+              "title": "Corse : deux morts dans des inondations, le Gard et l’Hérault aussi touchés",
+              "summary": "De violentes pluies orageuses ont frappé la Corse et le sud-est : plus de deux mois de pluie sont tombés en moins de 48 heures sur l’île. Dans la nuit, une voiture emportée par les eaux sur la RT10 a coûté la vie à deux de ses trois occupants. Dans le Gard, le Vidourle est monté de plus de 1,50 m en deux heures à Sommières.",
+              "visual": {
+                "type": "map",
+                "caption": "Corse-du-Sud · Gard · Hérault",
+                "map": {
+                  "projection": "conic-france",
+                  "focus": [
+                    "FRA"
+                  ],
+                  "places": [
+                    {
+                      "name": "Conca",
+                      "lon": 9.35,
+                      "lat": 41.73,
+                      "label": "Conca · 285 mm",
+                      "primary": true
+                    },
+                    {
+                      "name": "Porto-Vecchio",
+                      "lon": 9.28,
+                      "lat": 41.59
+                    },
+                    {
+                      "name": "Sommières",
+                      "lon": 4.09,
+                      "lat": 43.78
+                    },
+                    {
+                      "name": "Montpellier",
+                      "lon": 3.88,
+                      "lat": 43.61
+                    }
+                  ]
+                }
+              },
+              "stats": [
+                {
+                  "value": "285 mm",
+                  "label": "de pluie à Conca",
+                  "sourceUrl": "https://fr.euronews.com/2026/11/06/intemperies-deux-morts-en-corse-dans-des-inondations-le-gard-et-lherault-egalement-touches"
+                },
+                {
+                  "value": "2",
+                  "label": "morts en Corse-du-Sud",
+                  "sourceUrl": "https://fr.euronews.com/2026/11/06/intemperies-deux-morts-en-corse-dans-des-inondations-le-gard-et-lherault-egalement-touches"
+                },
+                {
+                  "value": "70+",
+                  "label": "personnes évacuées",
+                  "sourceUrl": "https://fr.euronews.com/2026/11/06/intemperies-deux-morts-en-corse-dans-des-inondations-le-gard-et-lherault-egalement-touches"
+                },
+                {
+                  "value": "+1,50 m",
+                  "label": "Vidourle en 2 h",
+                  "sourceUrl": "https://fr.euronews.com/2026/11/06/intemperies-deux-morts-en-corse-dans-des-inondations-le-gard-et-lherault-egalement-touches"
+                }
+              ],
+              "quote": null,
+              "divergences": [],
+              "thread": {
+                "title": "Épisodes méditerranéens 2026",
+                "subtitle": "2e épisode meurtrier depuis le 20 oct."
+              },
+              "prepa": {
+                "subject": "Éco-droit",
+                "text": "Risques climatiques et assurance : le régime d’indemnisation des catastrophes naturelles (CatNat)."
+              },
+              "sources": [
+                {
+                  "outlet": "Euronews",
+                  "title": "Intempéries : deux morts en Corse dans des inondations, le Gard et l’Hérault également touchés",
+                  "url": "https://fr.euronews.com/2026/11/06/intemperies-deux-morts-en-corse-dans-des-inondations-le-gard-et-lherault-egalement-touches",
+                  "lang": "fr",
+                  "readFull": true
+                }
+              ]
+            }
+          ],
+          "briefs": []
+        },
+        {
+          "key": "eco",
+          "title": "Économie",
+          "stories": [
+            {
+              "id": "2026-11-06-fr-5",
+              "kicker": "Allemagne",
+              "date": "06.11",
+              "title": "La production industrielle allemande rebondit, portée par l’automobile",
+              "summary": "La production industrielle a progressé de 0,7 % en septembre par rapport à août, au-dessus des attentes, selon l’office statistique Destatis. L’automobile (+17,1 %) a tiré la hausse tandis que la construction et les machines reculaient. Sur le troisième trimestre, la production baisse toutefois de 0,4 %.",
+              "visual": {
+                "type": "photo",
+                "query": "car factory"
+              },
+              "stats": [
+                {
+                  "value": "+0,7 %",
+                  "label": "en septembre (m/m)",
+                  "sourceUrl": "https://es.euronews.com/2026/11/06/los-fabricantes-de-coches-impulsan-el-inesperado-repunte-de-la-produccion-industrial-alema"
+                },
+                {
+                  "value": "+17,1 %",
+                  "label": "automobile",
+                  "sourceUrl": "https://es.euronews.com/2026/11/06/los-fabricantes-de-coches-impulsan-el-inesperado-repunte-de-la-produccion-industrial-alema"
+                },
+                {
+                  "value": "−0,4 %",
+                  "label": "sur le 3e trimestre",
+                  "sourceUrl": "https://es.euronews.com/2026/11/06/los-fabricantes-de-coches-impulsan-el-inesperado-repunte-de-la-produccion-industrial-alema"
+                },
+                {
+                  "value": "1,3 %",
+                  "label": "croissance prévue 2026",
+                  "sourceUrl": "https://es.euronews.com/2026/11/06/los-fabricantes-de-coches-impulsan-el-inesperado-repunte-de-la-produccion-industrial-alema"
+                }
+              ],
+              "quote": null,
+              "divergences": [],
+              "thread": null,
+              "prepa": {
+                "subject": "Économie",
+                "text": "Conjoncture et indicateurs : lire une variation mensuelle vs trimestrielle."
+              },
+              "sources": [
+                {
+                  "outlet": "Euronews",
+                  "title": "Los fabricantes de automóviles impulsan el inesperado repunte de la producción industrial alemana",
+                  "url": "https://es.euronews.com/2026/11/06/los-fabricantes-de-coches-impulsan-el-inesperado-repunte-de-la-produccion-industrial-alema",
+                  "lang": "es",
+                  "readFull": true
+                }
+              ]
+            }
+          ],
+          "briefs": [
+            {
+              "outlet": "Sud Radio · AFP",
+              "title": "Le nombre de locations Airbnb « à l’année » augmente en Île-de-France, selon une étude",
+              "url": "https://www.sudradio.fr/societe/le-nombre-de-locations-airbnb-a-lannee-augmente-en-ile-de-france-selon-une-etude",
+              "lang": "fr",
+              "readFull": false
+            }
+          ]
+        },
+        {
+          "key": "ent",
+          "title": "Entreprises & management",
+          "stories": [
+            {
+              "id": "2026-11-06-fr-6",
+              "kicker": "SNCF · Alstom",
+              "date": "06.11",
+              "title": "Le TGV M, nouveau train à grande vitesse, enfin sur les rails",
+              "summary": "Conçu par Alstom pour la SNCF, le TGV M a effectué son voyage inaugural entre Paris et Marseille, environ deux ans et demi après la date espérée (les JO de 2024). Plus sobre et à capacité modulable, il roule à 320 km/h et affrontera le Frecciarossa de Trenitalia sur l’axe Paris–Marseille.",
+              "visual": {
+                "type": "photo",
+                "query": "high-speed train"
+              },
+              "stats": [
+                {
+                  "value": "−20 %",
+                  "label": "d’énergie consommée",
+                  "sourceUrl": "https://www.sudradio.fr/societe/le-nouveau-tgv-dalstom-entre-enfin-en-service-commercial-vendredi-a-la-sncf"
+                },
+                {
+                  "value": "573",
+                  "label": "places (contre 500)",
+                  "sourceUrl": "https://www.sudradio.fr/societe/le-nouveau-tgv-dalstom-entre-enfin-en-service-commercial-vendredi-a-la-sncf"
+                },
+                {
+                  "value": "320 km/h",
+                  "label": "vitesse commerciale",
+                  "sourceUrl": "https://www.sudradio.fr/societe/le-nouveau-tgv-dalstom-entre-enfin-en-service-commercial-vendredi-a-la-sncf"
+                },
+                {
+                  "value": "−30 %",
+                  "label": "coûts de maintenance",
+                  "sourceUrl": "https://www.sudradio.fr/societe/le-nouveau-tgv-dalstom-entre-enfin-en-service-commercial-vendredi-a-la-sncf"
+                }
+              ],
+              "quote": null,
+              "divergences": [
+                {
+                  "metric": "Mise en service commerciale",
+                  "a": {
+                    "value": "ven. 6 nov.",
+                    "by": "AFP"
+                  },
+                  "b": {
+                    "value": "lun. 9 nov.",
+                    "by": "Euronews, Voyages d’Affaires"
+                  }
+                }
+              ],
+              "thread": null,
+              "prepa": {
+                "subject": "Management",
+                "text": "Pilotage d’un grand projet industriel et relation client–fournisseur (SNCF–Alstom) : coûts, délais, innovation."
+              },
+              "sources": [
+                {
+                  "outlet": "Sud Radio · AFP",
+                  "title": "Le nouveau TGV d’Alstom entre enfin en service commercial vendredi",
+                  "url": "https://www.sudradio.fr/societe/le-nouveau-tgv-dalstom-entre-enfin-en-service-commercial-vendredi-a-la-sncf",
+                  "lang": "fr",
+                  "readFull": true
+                },
+                {
+                  "outlet": "Euronews",
+                  "title": "SNCF : le TGV M, nouveau train à grande vitesse, enfin sur les rails",
+                  "url": "https://fr.euronews.com/2026/11/06/sncf-le-tgv-m-nouveau-train-a-grande-vitesse-enfin-sur-les-rails",
+                  "lang": "fr",
+                  "readFull": true
+                },
+                {
+                  "outlet": "Voyages d’Affaires",
+                  "title": "TGV M : les premiers passagers attendus le 9 novembre",
+                  "url": "https://www.voyages-d-affaires.com/?p=231671",
+                  "lang": "fr",
+                  "readFull": false
+                },
+                {
+                  "outlet": "L’Écho touristique",
+                  "title": "Le TGV M effectuera (enfin) son voyage inaugural le 6 novembre",
+                  "url": "https://www.lechotouristique.com/transport/le-tgv-m-prendra-enfin-son-depart-le-vendredi-6-novembre",
+                  "lang": "fr",
+                  "readFull": false
+                },
+                {
+                  "outlet": "Journal du Geek",
+                  "title": "Les nouveaux TGV entrent en circulation le 6 novembre, mais vous ne pourrez pas monter dedans",
+                  "url": "https://www.journaldugeek.com/2026/10/19/les-nouveaux-tgv-entrent-en-circulation-le-6-novembre-mais-vous-ne-pourrez-pas-monter-dedans/",
+                  "lang": "fr",
+                  "readFull": false
+                }
+              ]
+            }
+          ],
+          "briefs": []
+        },
+        {
+          "key": "dro",
+          "title": "Droit & justice",
+          "stories": [],
+          "briefs": [
+            {
+              "outlet": "Sud Radio · AFP",
+              "title": "Féminicide dans le Gers : un homme condamné à 30 ans de réclusion criminelle",
+              "url": "https://www.sudradio.fr/societe/gers-un-homme-condamne-a-30-ans-de-reclusion-pour-avoir-tue-son-ex-conjointe",
+              "lang": "fr",
+              "readFull": false
+            }
+          ]
+        },
+        {
+          "key": "tec",
+          "title": "Tech & IA",
+          "stories": [
+            {
+              "id": "2026-11-06-fr-7",
+              "kicker": "Europe",
+              "date": "05.11",
+              "title": "Data centers : plus de 100 organisations réclament un moratoire en Europe",
+              "summary": "Coordonnées par le collectif Stop Dirty Data Centres, quelque 75 actions ont lieu ce week-end dans 15 pays, dont jusqu’à 20 en Espagne (Saragosse, Madrid, Barcelone, Huelva). Les organisateurs dénoncent l’impact des nouveaux centres de données sur l’énergie, l’eau et le foncier, alors que l’investissement européen a doublé depuis 2020.",
+              "visual": {
+                "type": "map",
+                "caption": "Pays cités · actions des 6 et 7 nov.",
+                "map": {
+                  "projection": "conic-europe",
+                  "highlight": [
+                    "IRL",
+                    "POL",
+                    "DNK",
+                    "FIN",
+                    "ESP",
+                    "NLD",
+                    "FRA",
+                    "GBR"
+                  ],
+                  "places": []
+                }
+              },
+              "stats": [
+                {
+                  "value": "~75",
+                  "label": "actions en Europe",
+                  "sourceUrl": "https://www.euronews.com/2026/11/05/protesters-across-europe-to-call-for-freeze-on-energy-hungry-data-centres"
+                },
+                {
+                  "value": "102",
+                  "label": "organisations",
+                  "sourceUrl": "https://www.euronews.com/2026/11/05/protesters-across-europe-to-call-for-freeze-on-energy-hungry-data-centres"
+                },
+                {
+                  "value": "15",
+                  "label": "pays",
+                  "sourceUrl": "https://www.euronews.com/2026/11/05/protesters-across-europe-to-call-for-freeze-on-energy-hungry-data-centres"
+                },
+                {
+                  "value": "176 Md€",
+                  "label": "investis 2026-31 (PwC)",
+                  "sourceUrl": "https://www.euronews.com/2026/11/05/protesters-across-europe-to-call-for-freeze-on-energy-hungry-data-centres"
+                }
+              ],
+              "quote": {
+                "text": "Están jugando al salvaje Oeste: meterlo todo deprisa y corriendo antes de que dé tiempo a regular nada",
+                "speaker": "Aurora Gómez · Tu Nube Seca Mi Río (Espagne)",
+                "translation": "Ils jouent au Far West : tout installer à toute vitesse avant qu’on ait le temps de réguler quoi que ce soit.",
+                "sourceUrl": "https://www.euronews.com/2026/11/05/protesters-across-europe-to-call-for-freeze-on-energy-hungry-data-centres"
+              },
+              "divergences": [],
+              "thread": null,
+              "prepa": null,
+              "sources": [
+                {
+                  "outlet": "Euronews",
+                  "title": "Protesters across Europe to call for freeze on energy-hungry data centres",
+                  "url": "https://www.euronews.com/2026/11/05/protesters-across-europe-to-call-for-freeze-on-energy-hungry-data-centres",
+                  "lang": "en",
+                  "readFull": true
+                },
+                {
+                  "outlet": "elDiario.es",
+                  "title": "España lidera la primera movilización europea contra los centros de datos",
+                  "url": "https://www.eldiario.es/tecnologia/espana-lidera-primera-movilizacion-europea-centros-datos-promesas-ia-son-falsas_1_13639661.html",
+                  "lang": "es",
+                  "readFull": true
+                },
+                {
+                  "outlet": "Yorkshire Evening Post",
+                  "title": "Leeds data centre campaigners to join forces with European partners for weekend of action",
+                  "url": "https://www.yorkshireeveningpost.co.uk/news/environment/leeds-data-centre-campaigners-to-join-forces-with-european-partners-for-weekend-of-action-9309504",
+                  "lang": "en",
+                  "readFull": false
+                },
+                {
+                  "outlet": "The Hill",
+                  "title": "Hinojosa vows to protect Texas citizens from data centers",
+                  "url": "https://thehill.com/homenews/state-watch/6203045-texas-hinojosa-data-centers/",
+                  "lang": "en",
+                  "readFull": false
+                },
+                {
+                  "outlet": "Alloforfait",
+                  "title": "Stop Dirty Data Centres : des initiatives attendues en fin de semaine contre les centres de données",
+                  "url": "https://alloforfait.fr/?p=155444",
+                  "lang": "fr",
+                  "readFull": false
+                }
+              ]
+            }
+          ],
+          "briefs": []
+        },
+        {
+          "key": "spo",
+          "title": "Sport",
+          "stories": [],
+          "briefs": [
+            {
+              "outlet": "Sud Radio",
+              "title": "Ligue Europa : l’OM se relance avec une victoire à Leverkusen",
+              "url": "https://www.sudradio.fr/sport-rugby/sport/ligue-europa-pour-lom-trois-points-enfin",
+              "lang": "fr",
+              "readFull": false
+            },
+            {
+              "outlet": "Sud Radio",
+              "title": "F1 : Hamilton « évidemment agacé » par l’incident avec son coéquipier Leclerc au Mexique",
+              "url": "https://www.sudradio.fr/sport-rugby/sport/f1-hamilton-evidemment-agace-par-lincident-avec-son-coequipier-leclerc-au-mexique",
+              "lang": "fr",
+              "readFull": false
+            }
+          ]
+        }
+      ],
+      "vocab": null
+    },
+    {
+      "date": "2026-11-06",
+      "lang": "en",
+      "region": "US · UK",
+      "headline": "A blue wave sweeps Congress",
+      "morningBrief": [
+        {
+          "lead": "Midterms:",
+          "text": "Democrats take both chambers of Congress, flipping more than 40 House seats.",
+          "rubric": "Politics"
+        },
+        {
+          "lead": "Still counting:",
+          "text": "Mississippi’s Senate race hangs on a 65-vote margin; Alaska may go to ranked-choice tabulation.",
+          "rubric": "Politics"
+        },
+        {
+          "lead": "Los Angeles:",
+          "text": "Nithya Raman ousts incumbent mayor Karen Bass, CBS News projects.",
+          "rubric": "Politics"
+        },
+        {
+          "lead": "UK:",
+          "text": "the Prime Minister is reviewing the decision to give a military satellite contract to a US firm.",
+          "rubric": "UK · Defence"
+        },
+        {
+          "lead": "Health:",
+          "text": "teens worldwide aren’t getting enough exercise, especially girls.",
+          "rubric": "Society"
+        }
+      ],
+      "audioScript": "A blue wave sweeps Congress. Midterms : Democrats take both chambers of Congress, flipping more than 40 House seats. Still counting : Mississippi’s Senate race hangs on a 65-vote margin; Alaska may go to ranked-choice tabulation. Los Angeles : Nithya Raman ousts incumbent mayor Karen Bass, CBS News projects. UK : the Prime Minister is reviewing the decision to give a military satellite contract to a US firm. Health : teens worldwide aren’t getting enough exercise, especially girls.",
+      "sections": [
+        {
+          "key": "pol",
+          "title": "Politics & society",
+          "stories": [
+            {
+              "id": "2026-11-06-en-8",
+              "kicker": "United States",
+              "date": "05.11",
+              "title": "Democrats win control of both chambers of Congress",
+              "summary": "Democrats won the House by flipping more than three dozen Republican-held seats (43 by CBS News’s latest count, against two gained by Republicans) and are poised to control the Senate too. Some races are still open: in Mississippi, Democrat Scott Colom leads Sen. Cindy Hyde-Smith by just 65 votes, and Alaska’s Senate race could go to ranked-choice tabulation.",
+              "visual": {
+                "type": "map",
+                "caption": "United States · races to watch",
+                "map": {
+                  "projection": "albers-usa",
+                  "focus": [
+                    "USA"
+                  ],
+                  "places": [
+                    {
+                      "name": "Washington",
+                      "lon": -77.01,
+                      "lat": 38.89,
+                      "primary": true
+                    },
+                    {
+                      "name": "Mississippi",
+                      "lon": -90.18,
+                      "lat": 32.3
+                    },
+                    {
+                      "name": "Alaska",
+                      "lon": -149.9,
+                      "lat": 61.2
+                    }
+                  ]
+                }
+              },
+              "stats": [
+                {
+                  "value": "43",
+                  "label": "seats flipped (CBS)",
+                  "sourceUrl": "https://www.cbsnews.com/news/house-districts-flipped-2026-midterm-elections/"
+                },
+                {
+                  "value": "2",
+                  "label": "gained by the GOP",
+                  "sourceUrl": "https://www.cbsnews.com/news/house-districts-flipped-2026-midterm-elections/"
+                },
+                {
+                  "value": "65",
+                  "label": "vote margin, Mississippi",
+                  "sourceUrl": "https://www.cbsnews.com/news/house-districts-flipped-2026-midterm-elections/"
+                },
+                {
+                  "value": "435",
+                  "label": "House seats",
+                  "sourceUrl": "https://www.cbsnews.com/news/house-districts-flipped-2026-midterm-elections/"
+                }
+              ],
+              "quote": null,
+              "divergences": [],
+              "thread": {
+                "title": "Midterms 2026",
+                "subtitle": "Mississippi and Alaska still undecided"
+              },
+              "prepa": {
+                "subject": "Anglais LV1",
+                "text": "US institutions: divided government and checks and balances for the rest of Trump’s term."
+              },
+              "sources": [
+                {
+                  "outlet": "CBS News",
+                  "title": "Democrats have flipped over 40 House seats. Here’s the breakdown.",
+                  "url": "https://www.cbsnews.com/news/house-districts-flipped-2026-midterm-elections/",
+                  "lang": "en",
+                  "readFull": true
+                },
+                {
+                  "outlet": "PBS NewsHour",
+                  "title": "Midterm voters rebuke Trump, handing Democrats both chambers of Congress",
+                  "url": "https://www.pbs.org/newshour/show/midterm-voters-rebuke-trump-handing-democrats-both-chambers-of-congress",
+                  "lang": "en",
+                  "readFull": true
+                },
+                {
+                  "outlet": "PBS NewsHour",
+                  "title": "Alaskans are waiting for more votes in Senate and governor’s races",
+                  "url": "https://www.pbs.org/newshour/politics/alaskans-are-waiting-for-more-votes-in-senate-and-governors-races-both-could-go-to-ranked-tabulations",
+                  "lang": "en",
+                  "readFull": false
+                },
+                {
+                  "outlet": "CBS News",
+                  "title": "Mississippi Senate race is toss-up, with razor-thin margin",
+                  "url": "https://www.cbsnews.com/news/mississippi-senate-race-results-2026-midterms/",
+                  "lang": "en",
+                  "readFull": false
+                },
+                {
+                  "outlet": "The Hill",
+                  "title": "Democrat Jessica Killin flips longtime GOP-held Colorado House seat",
+                  "url": "https://thehill.com/homenews/campaign/6180533-jessica-killin-unseats-jeff-crank-colorado-5th-district/",
+                  "lang": "en",
+                  "readFull": false
+                },
+                {
+                  "outlet": "NPR",
+                  "title": "What’s next for Democrats after the midterms",
+                  "url": "https://www.npr.org/2026/11/05/g-s1-152046/up-first-newsletter-democrats-congress-control-house-senate-trump-reaction",
+                  "lang": "en",
+                  "readFull": false
+                }
+              ]
+            }
+          ],
+          "briefs": [
+            {
+              "outlet": "CBS News",
+              "title": "Nithya Raman ousts incumbent Karen Bass in LA mayor’s race, CBS News projects",
+              "url": "https://www.cbsnews.com/news/los-angeles-mayor-election-2026-nithya-raman-karen-bass/",
+              "lang": "en",
+              "readFull": false
+            },
+            {
+              "outlet": "Sky News",
+              "title": "PM reviewing decision to give UK military satellite system contract to US firm",
+              "url": "https://news.sky.com/story/pm-reviewing-decision-to-give-uk-military-satellite-system-contract-to-us-firm-13608376",
+              "lang": "en",
+              "readFull": false
+            },
+            {
+              "outlet": "NPR",
+              "title": "Teens worldwide aren’t getting enough exercise, especially girls",
+              "url": "https://www.npr.org/2026/11/05/nx-s1-6027635/exercise-workout-teenagers-adolescents-gender-gap",
+              "lang": "en",
+              "readFull": false
+            }
+          ]
+        },
+        {
+          "key": "tec",
+          "title": "Tech & AI",
+          "stories": [],
+          "briefs": [
+            {
+              "outlet": "The Hill",
+              "title": "Hinojosa vows to protect Texas citizens from data centers",
+              "url": "https://thehill.com/homenews/state-watch/6203045-texas-hinojosa-data-centers/",
+              "lang": "en",
+              "readFull": false
+            },
+            {
+              "outlet": "Yorkshire Evening Post",
+              "title": "Leeds data centre campaigners to join forces with European partners for weekend of action",
+              "url": "https://www.yorkshireeveningpost.co.uk/news/environment/leeds-data-centre-campaigners-to-join-forces-with-european-partners-for-weekend-of-action-9309504",
+              "lang": "en",
+              "readFull": false
+            }
+          ]
+        }
+      ],
+      "vocab": {
+        "title": "Midterms vocabulary",
+        "items": [
+          {
+            "term": "blue wave",
+            "pos": "n.",
+            "translation": "vague démocrate",
+            "example": "Analysts are breaking down the Democrats’ big majorities after the blue wave."
+          },
+          {
+            "term": "to flip a seat",
+            "pos": "v.",
+            "translation": "faire basculer un siège",
+            "example": "Democrats flipped more than 40 House seats."
+          },
+          {
+            "term": "toss-up",
+            "pos": "n.",
+            "translation": "scrutin indécis",
+            "example": "The Mississippi Senate race is a toss-up."
+          },
+          {
+            "term": "incumbent",
+            "pos": "n./adj.",
+            "translation": "sortant(e)",
+            "example": "Raman ousts incumbent mayor Karen Bass."
+          },
+          {
+            "term": "razor-thin margin",
+            "pos": "n.",
+            "translation": "marge infime",
+            "example": "The race was decided by a razor-thin margin."
+          },
+          {
+            "term": "ranked-choice voting",
+            "pos": "n.",
+            "translation": "vote préférentiel",
+            "example": "Alaska’s races could go to ranked-choice tabulation."
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-11-06",
+      "lang": "es",
+      "region": "España",
+      "headline": "Puente dimite y la crisis ferroviaria entra en campaña",
+      "morningBrief": [
+        {
+          "lead": "Gobierno:",
+          "text": "Óscar Puente dimite como ministro de Transportes tras el accidente de Urda y no irá en las listas del 29N.",
+          "rubric": "Política"
+        },
+        {
+          "lead": "Encuestas:",
+          "text": "la media de elDiario.es sitúa a PP y Vox en 197 escaños, muy por encima de la mayoría absoluta.",
+          "rubric": "Política"
+        },
+        {
+          "lead": "Transporte:",
+          "text": "la caída del 13 % de viajeros del AVE Madrid-Barcelona refuerza el Puente Aéreo.",
+          "rubric": "Economía"
+        },
+        {
+          "lead": "Cumbre Iberoamericana:",
+          "text": "Zelenski pide en Madrid ayuda urgente para la red eléctrica ucraniana.",
+          "rubric": "Internacional"
+        },
+        {
+          "lead": "Centros de datos:",
+          "text": "España lidera la primera movilización europea, con hasta 20 convocatorias.",
+          "rubric": "Tecnología"
+        }
+      ],
+      "audioScript": "Puente dimite y la crisis ferroviaria entra en campaña. Gobierno : Óscar Puente dimite como ministro de Transportes tras el accidente de Urda y no irá en las listas del 29N. Encuestas : la media de elDiario.es sitúa a PP y Vox en 197 escaños, muy por encima de la mayoría absoluta. Transporte : la caída del 13 % de viajeros del AVE Madrid-Barcelona refuerza el Puente Aéreo. Cumbre Iberoamericana : Zelenski pide en Madrid ayuda urgente para la red eléctrica ucraniana. Centros de datos : España lidera la primera movilización europea, con hasta 20 convocatorias.",
+      "sections": [
+        {
+          "key": "pol",
+          "title": "Política y sociedad",
+          "stories": [
+            {
+              "id": "2026-11-06-es-9",
+              "kicker": "Gobierno",
+              "date": "03.11",
+              "title": "Óscar Puente dimite tras la tragedia de Urda y renuncia a ir en las listas del 29N",
+              "summary": "El ministro de Transportes anunció su dimisión el 3 de noviembre tras el accidente de Urda (Toledo), donde un AVE chocó por alcance el 28 de octubre contra un tren de Iryo detenido en la misma vía. Es la segunda gran tragedia de la alta velocidad en nueve meses, tras la de Adamuz en enero. Puente renuncia también a encabezar la lista del PSOE por Valladolid en las generales del 29 de noviembre.",
+              "visual": {
+                "type": "map",
+                "caption": "Urda · Adamuz · Madrid",
+                "map": {
+                  "projection": "conic-spain",
+                  "focus": [
+                    "ESP"
+                  ],
+                  "arc": [
+                    "Madrid",
+                    "Urda"
+                  ],
+                  "places": [
+                    {
+                      "name": "Urda",
+                      "lon": -3.72,
+                      "lat": 39.41,
+                      "label": "Urda · 28 oct.",
+                      "primary": true
+                    },
+                    {
+                      "name": "Adamuz",
+                      "lon": -4.52,
+                      "lat": 38.03,
+                      "label": "Adamuz · 18 ene."
+                    },
+                    {
+                      "name": "Madrid",
+                      "lon": -3.7,
+                      "lat": 40.42
+                    },
+                    {
+                      "name": "Valladolid",
+                      "lon": -4.72,
+                      "lat": 41.65
+                    }
+                  ]
+                }
+              },
+              "stats": [
+                {
+                  "value": "69",
+                  "label": "fallecidos en Urda",
+                  "sourceUrl": "https://www.elsaltodiario.com/psoe/dimite-oscar-puente-no-ira-listas-proximas-elecciones"
+                },
+                {
+                  "value": "2.ª",
+                  "label": "tragedia en 9 meses",
+                  "sourceUrl": "https://www.elsaltodiario.com/psoe/dimite-oscar-puente-no-ira-listas-proximas-elecciones"
+                },
+                {
+                  "value": "197",
+                  "label": "escaños PP + Vox (media)",
+                  "sourceUrl": "https://www.elsaltodiario.com/psoe/dimite-oscar-puente-no-ira-listas-proximas-elecciones"
+                },
+                {
+                  "value": "29N",
+                  "label": "elecciones generales",
+                  "sourceUrl": "https://www.elsaltodiario.com/psoe/dimite-oscar-puente-no-ira-listas-proximas-elecciones"
+                }
+              ],
+              "quote": {
+                "text": "es una cuestión de dignidad política, de coherencia y de empatía con las víctimas",
+                "speaker": "Óscar Puente",
+                "translation": null,
+                "sourceUrl": "https://www.elsaltodiario.com/psoe/dimite-oscar-puente-no-ira-listas-proximas-elecciones"
+              },
+              "divergences": [
+                {
+                  "metric": "Fallecidos en Urda",
+                  "a": {
+                    "value": "69",
+                    "by": "El Salto, Alicante Plaza"
+                  },
+                  "b": {
+                    "value": "74",
+                    "by": "Demócrata"
+                  }
+                }
+              ],
+              "thread": {
+                "title": "Crisis ferroviaria 2026",
+                "subtitle": "4 episodios desde Adamuz"
+              },
+              "prepa": {
+                "subject": "Espagnol LV2",
+                "text": "Vida política española: responsabilidad política y campaña de las generales del 29N."
+              },
+              "sources": [
+                {
+                  "outlet": "El Salto",
+                  "title": "Dimite Óscar Puente y no irá en las listas del PSOE en las próximas elecciones",
+                  "url": "https://www.elsaltodiario.com/psoe/dimite-oscar-puente-no-ira-listas-proximas-elecciones",
+                  "lang": "es",
+                  "readFull": true
+                },
+                {
+                  "outlet": "Alicante Plaza",
+                  "title": "Puente dimite como ministro y candidato del PSOE: «Es una decisión de empatía con las víctimas»",
+                  "url": "https://alicanteplaza.es/alicanteplaza/espana/puente-avanza-su-dimision-tras-la-tragedia-de-urda-es-una-decision-de-empatia-con-las-victimas",
+                  "lang": "es",
+                  "readFull": true
+                },
+                {
+                  "outlet": "Demócrata",
+                  "title": "Sánchez ensalza la dimisión de Óscar Puente: «Políticos como él dignifican a nuestro país»",
+                  "url": "https://www.democrata.es/politica/sanchez-ensalza-dimision-oscar-puente-politicos-como-dignifican-nuestro-pais/",
+                  "lang": "es",
+                  "readFull": true
+                },
+                {
+                  "outlet": "elDiario.es",
+                  "title": "La media de encuestas tras la dimisión de Óscar Puente: así afecta al voto del PSOE",
+                  "url": "https://www.eldiario.es/politica/media-encuestas-dimision-oscar-puente-afecta-voto-psoe_1_13640327.html",
+                  "lang": "es",
+                  "readFull": true
+                },
+                {
+                  "outlet": "Xataka",
+                  "title": "Óscar Puente anuncia su dimisión como ministro de Transportes",
+                  "url": "https://www.xataka.com/movilidad/oscar-puente-anuncia-su-dimision-como-ministro-transportes",
+                  "lang": "es",
+                  "readFull": false
+                },
+                {
+                  "outlet": "Artículo 14",
+                  "title": "Dimite Óscar Puente tras el accidente de Urda y renuncia a ir en listas el 29-N",
+                  "url": "https://www.articulo14.es/politica/dimite-oscar-puente-y-renuncia-a-ser-diputado-tras-el-29-n-20261103.html",
+                  "lang": "es",
+                  "readFull": false
+                },
+                {
+                  "outlet": "RTVC",
+                  "title": "Óscar Puente dimite como ministro de Transportes",
+                  "url": "https://rtvc.es/oscar-puente-anuncia-su-dimision-como-ministro-de-transportes-3-noviembre-2026/",
+                  "lang": "es",
+                  "readFull": false
+                },
+                {
+                  "outlet": "Vozpópuli",
+                  "title": "El futuro de Puente divide al PSOE: Moncloa teme que su dimisión suponga cargar con la culpa",
+                  "url": "https://www.vozpopuli.com/espana/politica/el-futuro-de-puente-divide-al-psoe-moncloa-teme-que-su-dimision-suponga-cargar-con-la-culpa-por-el-accidente.html",
+                  "lang": "es",
+                  "readFull": false
+                }
+              ]
+            }
+          ],
+          "briefs": []
+        },
+        {
+          "key": "eco",
+          "title": "Economía",
+          "stories": [
+            {
+              "id": "2026-11-06-es-10",
+              "kicker": "Transporte",
+              "date": "05.11",
+              "title": "La crisis ferroviaria aleja el fin de los vuelos cortos y refuerza el Puente Aéreo",
+              "summary": "Tras los accidentes de Adamuz y Urda, el objetivo de la Ley de Movilidad Sostenible de sustituir vuelos cortos por trenes de menos de dos horas y media se aleja: el estudio previsto no se ha puesto en marcha. La caída de viajeros en la alta velocidad Madrid-Barcelona beneficia al Puente Aéreo.",
+              "visual": {
+                "type": "photo",
+                "query": "airport runway"
+              },
+              "stats": [
+                {
+                  "value": "−13 %",
+                  "label": "viajeros AVE Madrid-BCN (T2)",
+                  "sourceUrl": "https://www.eldiario.es/economia/crisis-ferroviaria-aleja-meta-eliminar-vuelos-corto-radio-refuerza-puente-aereo_1_13642115.html"
+                },
+                {
+                  "value": "14,6 M",
+                  "label": "viajeros en 2024 (CNMC)",
+                  "sourceUrl": "https://www.eldiario.es/economia/crisis-ferroviaria-aleja-meta-eliminar-vuelos-corto-radio-refuerza-puente-aereo_1_13642115.html"
+                },
+                {
+                  "value": "+4,7 %",
+                  "label": "tráfico en Barajas",
+                  "sourceUrl": "https://www.eldiario.es/economia/crisis-ferroviaria-aleja-meta-eliminar-vuelos-corto-radio-refuerza-puente-aereo_1_13642115.html"
+                },
+                {
+                  "value": "24.000",
+                  "label": "vuelos cortos sustituibles",
+                  "sourceUrl": "https://www.eldiario.es/economia/crisis-ferroviaria-aleja-meta-eliminar-vuelos-corto-radio-refuerza-puente-aereo_1_13642115.html"
+                }
+              ],
+              "quote": null,
+              "divergences": [],
+              "thread": null,
+              "prepa": {
+                "subject": "Espagnol LV2 · Éco",
+                "text": "Transición ecológica y arbitraje tren/avión: un caso de política pública."
+              },
+              "sources": [
+                {
+                  "outlet": "elDiario.es",
+                  "title": "La crisis ferroviaria aleja la meta de eliminar los vuelos de corto radio y refuerza el Puente Aéreo",
+                  "url": "https://www.eldiario.es/economia/crisis-ferroviaria-aleja-meta-eliminar-vuelos-corto-radio-refuerza-puente-aereo_1_13642115.html",
+                  "lang": "es",
+                  "readFull": true
+                }
+              ]
+            }
+          ],
+          "briefs": []
+        },
+        {
+          "key": "int",
+          "title": "Internacional",
+          "stories": [],
+          "briefs": [
+            {
+              "outlet": "Euronews",
+              "title": "Zelenski pide en la Cumbre Iberoamericana de Madrid ayuda urgente para la red eléctrica ucraniana",
+              "url": "https://fr.euronews.com/2026/11/06/a-madrid-zelensky-lance-un-appel-urgent-a-laide-pour-sauver-le-reseau-electrique-ukrainien",
+              "lang": "fr",
+              "readFull": false
+            }
+          ]
+        },
+        {
+          "key": "tec",
+          "title": "Tecnología",
+          "stories": [],
+          "briefs": [
+            {
+              "outlet": "elDiario.es",
+              "title": "España lidera la primera movilización europea contra los centros de datos",
+              "url": "https://www.eldiario.es/tecnologia/espana-lidera-primera-movilizacion-europea-centros-datos-promesas-ia-son-falsas_1_13639661.html",
+              "lang": "es",
+              "readFull": false
+            }
+          ]
+        },
+        {
+          "key": "cul",
+          "title": "Cultura",
+          "stories": [],
+          "briefs": [
+            {
+              "outlet": "Infobae",
+              "title": "Lotería de Navidad 2026: se estrena el anuncio, titulado «Corazonada»",
+              "url": "https://www.infobae.com/espana/2026/11/06/estrenan-el-anuncio-de-la-loteria-de-navidad-2026-se-titula-corazonada-y-se-ha-grabado-en-un-pueblo-asturiano/",
+              "lang": "es",
+              "readFull": false
+            }
+          ]
+        },
+        {
+          "key": "spo",
+          "title": "Deporte",
+          "stories": [],
+          "briefs": [
+            {
+              "outlet": "Infobae",
+              "title": "De la Fuente da la lista para la Nations League con un homenaje a Jesús de Miguel y a las víctimas de Urda",
+              "url": "https://www.infobae.com/espana/deportes/2026/11/06/luis-de-la-fuente-da-la-lista-de-la-seleccion-espanola-para-la-nations-league-con-un-sentido-homenaje-a-jesus-de-miguel-y-las-victimas-del-accidente-de-urda/",
+              "lang": "es",
+              "readFull": false
+            }
+          ]
+        }
+      ],
+      "vocab": {
+        "title": "Política y transporte",
+        "items": [
+          {
+            "term": "la dimisión",
+            "pos": "f.",
+            "translation": "la démission",
+            "example": "Puente anuncia su dimisión como ministro de Transportes."
+          },
+          {
+            "term": "el choque por alcance",
+            "pos": "m.",
+            "translation": "la collision par l’arrière",
+            "example": "Un AVE chocó por alcance contra un tren de Iryo."
+          },
+          {
+            "term": "la mayoría absoluta",
+            "pos": "f.",
+            "translation": "la majorité absolue",
+            "example": "PP y Vox suman 197 escaños, muy por encima de la mayoría absoluta."
+          },
+          {
+            "term": "las listas electorales",
+            "pos": "f. pl.",
+            "translation": "les listes électorales",
+            "example": "Puente no irá en las listas del 29N."
+          },
+          {
+            "term": "el Puente Aéreo",
+            "pos": "m.",
+            "translation": "la navette aérienne Madrid–Barcelone",
+            "example": "La alternativa del transporte aéreo sale reforzada."
+          },
+          {
+            "term": "el luto oficial",
+            "pos": "m.",
+            "translation": "le deuil national",
+            "example": "El Gobierno declaró tres días de luto."
+          }
+        ]
+      }
+    }
+  ]
+}
