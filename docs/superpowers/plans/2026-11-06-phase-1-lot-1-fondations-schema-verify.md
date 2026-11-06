@@ -2200,11 +2200,10 @@ export function verifyEdition(input: unknown, ctx: VerifyContext): VerifyResult 
 
   const keepSource = (src: SourceRef, storyId?: string): boolean => {
     const p = checkPerimeter(ed.lang, src, ctx.whitelist);
-    if (p && 'remove' in p) {
+    if (p) {
       fix('R2', `source retirée : ${p.remove}`, storyId);
       return false;
     }
-    if (p && 'warn' in p) warn('R2', p.warn, storyId);
     return true;
   };
 
