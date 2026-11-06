@@ -1,5 +1,4 @@
 import { mkdtempSync, readFileSync } from 'node:fs';
-import { chromium } from 'playwright';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Brief } from '@daily-brief/schema';
@@ -39,32 +38,5 @@ describe('printPdf', () => {
   it('rejette si l’impression dépasse le délai', async () => {
     const out = join(mkdtempSync(join(tmpdir(), 'pdf-')), 'x.pdf');
     await expect(printPdf('<p>x</p>', out, { date: brief.date, langs: ['fr'] }, { timeoutMs: 1 })).rejects.toThrow('impression PDF : délai dépassé');
-  });
-
-  it('garde la couverture lisible avec des chaînes très longues', { timeout: 60_000 }, async () => {
-    const fr = structuredClone(brief.editions.find((e) => e.lang === 'fr')!);
-    fr.headline = 'A'.repeat(200);
-    fr.sections[0].stories[0].title = 'X'.repeat(300);
-    fr.sections[0].stories[0].stats[0].value = '1'.repeat(40);
-    const html = await renderPdfHtml({ date: brief.date, issue: '001', editions: [fr] }, { audio: { fr: { duration: '3:24' } } });
-    const browser = await chromium.launch();
-    try {
-      const page = await browser.newPage({ viewport: { width: 800, height: 1200 } });
-      await page.emulateMedia({ media: 'print' });
-      await page.setContent(html, { waitUntil: 'load' });
-      await page.addStyleTag({ content: 'body{width:182mm;margin:0 auto}' });
-      // Robuste : on mesure la géométrie DOM plutôt que d’extraire du texte du PDF.
-      const m = (await page.evaluate(`(() => {
-        const r = (s) => document.querySelector(s).getBoundingClientRect();
-        const aside = r('#ed-fr .aside'), audio = r('#ed-fr .audio');
-        return { asideRight: aside.right, asideW: aside.width, audioW: audio.width, body: document.body.getBoundingClientRect().right, scroll: document.documentElement.scrollWidth };
-      })()`)) as { asideRight: number; asideW: number; audioW: number; body: number; scroll: number };
-      expect(m.asideW).toBeGreaterThan(100);
-      expect(m.audioW).toBeGreaterThan(50);
-      expect(m.asideRight).toBeLessThanOrEqual(m.body + 1);
-      expect(m.scroll).toBeLessThanOrEqual(800);
-    } finally {
-      await browser.close();
-    }
   });
 });

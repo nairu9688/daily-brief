@@ -110,3 +110,4 @@ h4{font-size:14pt;line-height:1.16;letter-spacing:-.018em;font-weight:400;margin
 
 /* Chaînes sans espace (très longues) : coupure plutôt que débordement */
 h1,h4,.stat b,.kpi b,.src a,.pbriefs span{overflow-wrap:anywhere}
+.rubh h2,.aside .row span:first-child{overflow-wrap:anywhere;min-width:0}

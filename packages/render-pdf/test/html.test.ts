@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { chromium } from 'playwright';
 import type { Brief, Edition } from '@daily-brief/schema';
 import { describe, expect, it } from 'vitest';
 import { renderPdfHtml } from '../src/html';
@@ -103,9 +104,38 @@ describe('renderPdfHtml', () => {
   it('n’émet pas de saut de page pour une édition sans sections ni vocabulaire', async () => {
     const fr = ed('fr');
     fr.sections = [];
-    fr.vocab = undefined as never;
+    fr.vocab = null;
     const html = await renderPdfHtml({ date: brief.date, issue: '001', editions: [fr] });
     expect(html).not.toContain('class="pb"');
     expect(html).toContain('<section class="ed" id="ed-fr" lang="fr"');
+  });
+
+  it('garde la couverture lisible avec des chaînes très longues', { timeout: 60_000 }, async () => {
+    const fr = structuredClone(brief.editions.find((e) => e.lang === 'fr')!);
+    fr.headline = 'A'.repeat(200);
+    fr.sections[0].title = 'Rubrique ' + 'z'.repeat(150);
+    fr.sections[0].stories[0].title = 'X'.repeat(300);
+    fr.sections[0].stories[0].stats[0].value = '1'.repeat(40);
+    const html = await renderPdfHtml({ date: brief.date, issue: '001', editions: [fr] }, { audio: { fr: { duration: '3:24' } } });
+    const browser = await chromium.launch();
+    try {
+      const page = await browser.newPage({ viewport: { width: 800, height: 1200 } });
+      await page.emulateMedia({ media: 'print' });
+      await page.setContent(html, { waitUntil: 'load' });
+      await page.addStyleTag({ content: 'body{width:182mm;margin:0 auto}' });
+      // Robuste : on mesure la géométrie DOM plutôt que d’extraire du texte du PDF.
+      const m = (await page.evaluate(`(() => {
+        const r = (s) => document.querySelector(s).getBoundingClientRect();
+        const aside = r('#ed-fr .aside'), audio = r('#ed-fr .audio');
+        return { asideRight: aside.right, asideW: aside.width, audioW: audio.width, body: document.body.getBoundingClientRect().right, scroll: document.documentElement.scrollWidth, overflowing: [...document.querySelectorAll('#ed-fr .rubh h2, #ed-fr .aside .row')].filter((e) => e.getBoundingClientRect().right > document.body.getBoundingClientRect().right + 1).map((e) => e.className || e.tagName) };
+      })()`)) as { asideRight: number; asideW: number; audioW: number; body: number; scroll: number; overflowing: string[] };
+      expect(m.asideW).toBeGreaterThan(100);
+      expect(m.audioW).toBeGreaterThan(50);
+      expect(m.asideRight).toBeLessThanOrEqual(m.body + 1);
+      expect(m.scroll).toBeLessThanOrEqual(800);
+      expect(m.overflowing).toEqual([]);
+    } finally {
+      await browser.close();
+    }
   });
 });
