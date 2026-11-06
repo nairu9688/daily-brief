@@ -25,4 +25,14 @@ describe('matières prépa (R9)', () => {
     expect(isKnownPrepaSubject('Anglais LV1 · Physique', subjects)).toBe(false);
     expect(isKnownPrepaSubject(' · ', subjects)).toBe(false);
   });
+
+  it('tolère les fins de ligne CRLF', () => {
+    const s = parseProgrammeSubjects('## Culture générale\r\nAlias : CG\r\n');
+    expect(s.get('cg')).toBe('Culture générale');
+  });
+
+  it('reconnaît une matière en Unicode décomposé', () => {
+    expect(isKnownPrepaSubject('E\u0301co', subjects)).toBe(true);
+    expect(parseProgrammeSubjects('## E\u0301co-droit\n').get('éco-droit')).toBe('Éco-droit');
+  });
 });

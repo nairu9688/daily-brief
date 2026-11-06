@@ -13,6 +13,19 @@ describe('photoQueryProblem (R11)', () => {
     expect(photoQueryProblem('binet protest', ['Sophie Binet · CGT'])).toMatch(/binet/);
     expect(photoQueryProblem('a b c d e f', [])).toMatch(/5 mots/);
   });
+
+  it('compare les noms sans accents ni ponctuation', () => {
+    expect(photoQueryProblem('sanchez rally', ['Pedro Sánchez'])).toMatch(/sanchez/);
+    expect(photoQueryProblem('binet, protest', ['Sophie Binet'])).toMatch(/binet/);
+    expect(photoQueryProblem('luc portrait', ['Jean-Luc Mélenchon'])).toMatch(/luc/);
+    expect(photoQueryProblem('xi portrait', ['Xi Jinping'])).toMatch(/xi/);
+    expect(photoQueryProblem('high-speed train', ['Sophie Binet · CGT'])).toBeNull();
+  });
+
+  it('refuse une requête vide', () => {
+    expect(photoQueryProblem('', [])).toBe('requête vide');
+    expect(photoQueryProblem('   ', [])).toBe('requête vide');
+  });
 });
 
 describe('arcProblem', () => {
@@ -21,5 +34,7 @@ describe('arcProblem', () => {
     if (v.type !== 'map') throw new Error('carte attendue');
     expect(arcProblem(v.map)).toBeNull();
     expect(arcProblem({ ...v.map, arc: ['Madrid', 'Lviv'] })).toMatch(/Lviv/);
+    const name = v.map.places[0].name;
+    expect(arcProblem({ ...v.map, arc: [name, name] })).toBe('arc vers un même lieu');
   });
 });
