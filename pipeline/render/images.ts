@@ -6,9 +6,9 @@ export const MAX_IMAGE_BYTES = 3_000_000;
 export const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 /** Télécharge une image et la renvoie en data URI pour l'intégrer au PDF ; null en cas d'échec, de type non autorisé ou si trop lourde. */
-export async function fetchAsDataUri(url: string, fetch: FetchLike): Promise<string | null> {
+export async function fetchAsDataUri(url: string, fetch: FetchLike, timeoutMs = 10_000): Promise<string | null> {
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
     if (!res.ok) return null;
     const type = (res.headers.get('content-type') ?? 'image/jpeg').split(';')[0].trim().toLowerCase();
     if (!ALLOWED_IMAGE_TYPES.has(type)) return null;

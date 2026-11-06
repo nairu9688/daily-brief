@@ -1,7 +1,7 @@
 /** Sous-ensemble de `fetch` utilisé par le rendu : injectable dans les tests, aucun appel réseau réel. */
 export type FetchLike = (
   url: string,
-  init?: { headers?: Record<string, string> },
+  init?: { headers?: Record<string, string>; signal?: AbortSignal },
 ) => Promise<{
   ok: boolean;
   status: number;

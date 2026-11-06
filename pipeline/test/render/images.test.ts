@@ -34,4 +34,9 @@ describe('fetchAsDataUri', () => {
     const { fetch } = fakeFetch({ 'https://img/': { body: new Uint8Array([1, 2, 3]), type: 'image/jpeg; charset=binary' } });
     expect(await fetchAsDataUri('https://img/a.jpg', fetch)).toBe('data:image/jpeg;base64,AQID');
   });
+
+  it('renvoie null après le délai réseau', async () => {
+    const { fetch } = fakeFetch({ 'https://img/': { hang: true } });
+    expect(await fetchAsDataUri('https://img/slow.jpg', fetch, 20)).toBeNull();
+  });
 });

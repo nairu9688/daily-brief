@@ -31,4 +31,20 @@ describe('findPhoto', () => {
     const denied = fakeFetch({ 'https://api.pexels.com': { status: 401, json: {} } });
     await expect(findPhoto('x', { apiKey: 'k', fetch: denied.fetch })).rejects.toThrow(/Pexels 401/);
   });
+
+  it('rejette une photo invalide (photographe vide, URL non http)', async () => {
+    const bad = (patch: (p: any) => void) => {
+      const s = structuredClone(search);
+      s.photos = [s.photos[1]];
+      patch(s.photos[0]);
+      return fakeFetch({ 'https://api.pexels.com': { json: s } }).fetch;
+    };
+    await expect(findPhoto('x', { apiKey: 'k', fetch: bad((p) => (p.photographer = '')) })).rejects.toThrow(/photo Pexels invalide/);
+    await expect(findPhoto('x', { apiKey: 'k', fetch: bad((p) => (p.src.large = 'ftp://x')) })).rejects.toThrow(/photo Pexels invalide/);
+  });
+
+  it('abandonne après le délai réseau', async () => {
+    const { fetch } = fakeFetch({ 'https://api.pexels.com': { hang: true } });
+    await expect(findPhoto('x', { apiKey: 'k', fetch, timeoutMs: 20 })).rejects.toThrow();
+  });
 });

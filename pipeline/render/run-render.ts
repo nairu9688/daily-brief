@@ -36,10 +36,17 @@ export async function runRender(opts: RunRenderOptions): Promise<RunRenderResult
   if (!IsoDateSchema.safeParse(opts.date).success) {
     return { issues: [{ level: 'error', message: `date incorrecte : « ${opts.date} »` }], exitCode: 2, pdfPath: null, langs: [] };
   }
+  let issue: string;
+  try {
+    issue = issueNumber(opts.date);
+  } catch (e) {
+    return { issues: [{ level: 'error', message: (e as Error).message }], exitCode: 2, pdfPath: null, langs: [] };
+  }
   const dayDir = join(opts.outDir, opts.date);
   mkdirSync(dayDir, { recursive: true });
   const pdfPath = join(dayDir, pdfFileName(opts.date));
   rmSync(pdfPath, { force: true });
+  rmSync(join(dayDir, 'render-report.json'), { force: true });
 
   const editions: Edition[] = [];
   for (const lang of LANGS) {
@@ -69,6 +76,11 @@ export async function runRender(opts: RunRenderOptions): Promise<RunRenderResult
     } else if (ed.sections.some((s) => s.stories.some((st) => st.visual.type === 'photo' && !st.visual.pexels))) {
       issues.push({ level: 'warning', lang, message: 'PEXELS_API_KEY absente : sujets illustrés rendus sans photo' });
     }
+    const check = parseEdition(ed);
+    if (!check.success) {
+      issues.push({ level: 'error', lang, message: `édition finale invalide, photos omises : ${check.errors.join(' ; ')}` });
+      ed = parsed.data;
+    }
     writeFileSync(join(dayDir, `${lang}.final.json`), JSON.stringify(ed, null, 2) + '\n');
     editions.push(ed);
   }
@@ -96,8 +108,14 @@ export async function runRender(opts: RunRenderOptions): Promise<RunRenderResult
   }
 
   const langs = editions.map((e) => e.lang);
-  const html = await renderPdfHtml({ date: opts.date, issue: issueNumber(opts.date), editions }, { images, audio });
-  await (opts.print ?? printPdf)(html, pdfPath, { date: opts.date, langs });
+  try {
+    const html = await renderPdfHtml({ date: opts.date, issue, editions }, { images, audio });
+    await (opts.print ?? printPdf)(html, pdfPath, { date: opts.date, langs });
+  } catch (e) {
+    rmSync(pdfPath, { force: true });
+    issues.push({ level: 'error', message: `impression PDF impossible : ${(e as Error).message}` });
+    return finish(dayDir, opts.date, issues, null, langs);
+  }
   return finish(dayDir, opts.date, issues, pdfPath, langs);
 }
 
