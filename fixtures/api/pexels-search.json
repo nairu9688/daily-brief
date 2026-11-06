@@ -1,0 +1,52 @@
+{
+  "page": 1,
+  "per_page": 5,
+  "total_results": 2,
+  "photos": [
+    {
+      "id": 1001,
+      "width": 3000,
+      "height": 4500,
+      "url": "https://www.pexels.com/photo/portrait-train-1001/",
+      "photographer": "Ana Portrait",
+      "photographer_url": "https://www.pexels.com/@ana-portrait",
+      "photographer_id": 11,
+      "avg_color": "#5A5A5A",
+      "src": {
+        "original": "https://images.pexels.com/photos/1001/pexels-photo-1001.jpeg",
+        "large2x": "https://images.pexels.com/photos/1001/pexels-photo-1001.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "large": "https://images.pexels.com/photos/1001/pexels-photo-1001.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+        "medium": "https://images.pexels.com/photos/1001/pexels-photo-1001.jpeg?auto=compress&cs=tinysrgb&h=350",
+        "small": "https://images.pexels.com/photos/1001/pexels-photo-1001.jpeg?auto=compress&cs=tinysrgb&h=130",
+        "portrait": "https://images.pexels.com/photos/1001/pexels-photo-1001.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=800",
+        "landscape": "https://images.pexels.com/photos/1001/pexels-photo-1001.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200",
+        "tiny": "https://images.pexels.com/photos/1001/pexels-photo-1001.jpeg?auto=compress&cs=tinysrgb&dpr=1&fit=crop&h=200&w=280"
+      },
+      "liked": false,
+      "alt": "Train in a station, portrait"
+    },
+    {
+      "id": 2002,
+      "width": 6000,
+      "height": 4000,
+      "url": "https://www.pexels.com/photo/high-speed-train-2002/",
+      "photographer": "Jo Rails",
+      "photographer_url": "https://www.pexels.com/@jo-rails",
+      "photographer_id": 22,
+      "avg_color": "#7A8590",
+      "src": {
+        "original": "https://images.pexels.com/photos/2002/pexels-photo-2002.jpeg",
+        "large2x": "https://images.pexels.com/photos/2002/pexels-photo-2002.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "large": "https://images.pexels.com/photos/2002/pexels-photo-2002.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+        "medium": "https://images.pexels.com/photos/2002/pexels-photo-2002.jpeg?auto=compress&cs=tinysrgb&h=350",
+        "small": "https://images.pexels.com/photos/2002/pexels-photo-2002.jpeg?auto=compress&cs=tinysrgb&h=130",
+        "portrait": "https://images.pexels.com/photos/2002/pexels-photo-2002.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=800",
+        "landscape": "https://images.pexels.com/photos/2002/pexels-photo-2002.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200",
+        "tiny": "https://images.pexels.com/photos/2002/pexels-photo-2002.jpeg?auto=compress&cs=tinysrgb&dpr=1&fit=crop&h=200&w=280"
+      },
+      "liked": false,
+      "alt": "High-speed train at speed"
+    }
+  ],
+  "next_page": null
+}
