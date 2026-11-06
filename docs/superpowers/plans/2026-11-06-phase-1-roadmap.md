@@ -25,7 +25,7 @@
 
 L'ordre conseillé est 1 → 2 → 3 → 4 → 5 → 6 → 7. Le lot 6 (appli web) peut démarrer dès que le lot 4 a posé les migrations Supabase. Le lot 5 (audio) est indépendant des lots 2 à 4.
 
-### Lot 1 — Fondations, schéma et contrôle éditorial ✅ plan détaillé
+### Lot 1 — Fondations, schéma et contrôle éditorial ✅ terminé (149 tests)
 
 Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-1-fondations-schema-verify.md`
 
@@ -127,3 +127,9 @@ Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-1-fondations-schema-verify
 2. **Sources non vérifiables dans la fixture.** La fixture ne contient pas les textes sources (§6.1). Les tests de R5 et R6 s'appuient donc sur des extraits **reconstitués** dans `fixtures/sources/`, marqués comme tels. Si Naïm a gardé les textes réels de Sud Radio et de PBS du 05/11, il suffit de remplacer ces fichiers ; les tests doivent rester verts.
 3. **Accent ES du PDF** : `#C08A00` dans le prototype, `#C88E00` dans la spec (voir lot 2).
 4. **Email autorisé** : la spec indique `nanigeek@gmail.com`. Il est paramétrable par `ALLOWED_EMAIL` (lots 4 et 6).
+
+## 5. Consignes issues du lot 1 pour les lots suivants
+
+- **Lot 3 (collecte)** : remplir `text` dans `raw.json` uniquement pour les domaines `full`. Le contrôle l'exige de toute façon et retire sinon citations et chiffres. Émettre `lang` en code ISO 639-1. Utiliser `tryNormalizeUrl`, jamais `normalizeUrl`, sur les URL des API. Tout média espagnol absent de `whitelist.json` sera retiré de l'édition ES : l'y ajouter avec son pays.
+- **Lot 7 (routine)** : les fichiers `newsletters/*.md` comptent comme textes lus (R1). Ils doivent donc être écrits **mot pour mot** à partir de Gmail par une étape mécanique, jamais réécrits par la rédaction, sinon le contrôle R1/R5/R6 perd sa valeur. La routine relance `brief:verify` jusqu'à 3 fois ; code 1 : publier les `.verified.json` ; code 2 : ne pas publier l'édition concernée et notifier « Brief incomplet » (le rapport `editions[].written` dit lesquelles sont prêtes).
+- **Lot 6 (appli)** : `transpilePackages: ['@daily-brief/schema']`, car le paquet exporte du TypeScript source.

@@ -2616,3 +2616,22 @@ git commit -m "docs: commandes de développement du lot 1"
 | R12 Threads | 12, 15 (fermeture à 21 jours : lot 3) |
 | §7 « ne bloque jamais l'édition » | 15, 16 |
 | §13 tests unitaires du lot | 2 à 16 |
+
+---
+
+## Écarts après exécution (revues de code)
+
+Le lot a été exécuté par sous-agents, avec une revue de conformité puis une revue qualité après chaque groupe de tâches. Les revues ont durci le code au-delà du texte ci-dessus. **Le dépôt fait foi** ; ce plan reste la trace de la conception initiale. Résultat final : 17 fichiers de test, 149 tests, typage strict propre.
+
+| Zone | Écart par rapport au plan | Raison |
+|---|---|---|
+| Schéma | `z.strictObject` partout, URL http(s) seulement (`UrlSchema`), `z.iso.date()`, horodatages `z.iso.datetime`, test de synchronisation du JSON Schema, `isolatedModules` | Clé mal orthographiée signalée au lieu d'être perdue ; pas d'URL `javascript:` vers l'appli ou le PDF |
+| URL et liste blanche | `tryNormalizeUrl`, requête reconstruite et triée, suivi `xtor`/`at_*`…, `gouv`, `whitelist.json` validé par zod, échec fermé sur URL malformée | Robustesse pour la collecte (lot 3) |
+| R6 chiffres | Décimales distinctes des milliers, bornes « séparateur + chiffre », devise vérifiée sans traverser une conversion | « 1,6 million » n'est plus validé par « 16 millions », ni « 500 » par « 1 500 » |
+| R5 citations | Analyse par paragraphe, guillemets droits ignorés si impairs ou collés à un chiffre (pouces), nom sur limites de mot avec particules, 3 mots et 15 caractères minimum | Une paraphrase ne passe plus pour une citation |
+| R7 divergences | Symboles d'unité (`%`, `€`, `$`, `£`, `°`) gardés dans le périmètre | « 4 % » contre « 4 € » est refusé |
+| R2 périmètre | Pays par la liste blanche puis par le domaine national (`.pe`, `.co`…) ; pays inconnu **retiré** de l'édition ES ; langue comparée sans région (`en-US`) | Mieux vaut retirer qu'accepter une violation |
+| R1 newsletters | Chaque lien est rattaché à son bloc et au précédent, plus à toute la newsletter ; toutes les newsletters qui citent un lien comptent | Une citation du sujet B n'est plus validée pour l'article A |
+| R11, R12, R9, R10 | Noms comparés sans accents ni ponctuation ; Thread d'une autre langue refusé ; fins de ligne CRLF et NFC ; mots courts du vocabulaire | Cas limites relevés en revue |
+| Orchestrateur | Citations et chiffres seulement depuis une source du sujet **lue en entier** après R2 et R1 ; brèves dédoublonnées ; photo de repli revérifiée | Contrat « `.verified.json` conforme » garanti |
+| CLI et exécuteur | Entrée illisible, date invalide, édition qui ne correspond pas à son fichier : erreur et code 2 ; ancien `.verified.json` supprimé avant chaque passage ; `editions: [{ lang, written }]` dans le rapport ; test de bout en bout du CLI | La routine ne publie jamais des données fausses ou périmées sous un code trompeur |
