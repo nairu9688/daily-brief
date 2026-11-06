@@ -38,7 +38,7 @@ Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-1-fondations-schema-verify
 
 **Critère de fin :** `npm test` est vert, et `npm run brief:verify -- --date 2026-11-06 --out <dossier>` s'exécute sur les éditions de la fixture copiées dans un dossier de test.
 
-### Lot 2 — Cartes, photos et PDF ✅ plan détaillé
+### Lot 2 — Cartes, photos et PDF ✅ terminé
 
 Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-2-cartes-photos-pdf.md`
 
@@ -46,8 +46,8 @@ Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-2-cartes-photos-pdf.md`
 - `packages/maps/qr.ts` : `qrSvg(url)`, le QR code de la source principale.
 - `pipeline/render/pexels.ts` : `findPhoto(query)` appelle l'API Pexels (orientation paysage) et remplit `visual.pexels` avec le photographe et l'URL de crédit. Seules les requêtes déjà validées par R11 lui parviennent.
 - `packages/render-pdf` : portage de la partie PDF de `reference/render.mjs` (couverture, Morning Brief, sommaire, liens internes vers les trois éditions, encart audio, « Les chiffres du jour », sujets en deux colonnes avec QR code, brèves, tableau de vocabulaire, pied de page avec date, éditions et pagination). Le rendu passe par Playwright `page.pdf({ format: 'A4' })`, avec les polices Geist encodées en base64 depuis le paquet npm `geist`. Le fichier s'appelle `Daily Brief AAAA-MM-JJ.pdf`.
-- `pipeline/render/pdf.ts` et le script `brief:render` (sans l'audio, qui arrive au lot 5).
-- Tests : chaque projection de la fixture produit un SVG non vide sans coordonnées décimales ; un test visuel compare les pages 1, 2 et la couverture EN avec des captures de référence (`toHaveScreenshot`, seuil 1 %).
+- `pipeline/render/run-render.ts` et le script `brief:render` (sans l'audio, qui arrive au lot 5).
+- Tests : chaque projection de la fixture produit un SVG non vide sans coordonnées décimales ; un test visuel compare les pages 1, 2 et la couverture EN avec des captures de référence (comparaison pixelmatch, seuil 1 %).
 - Point à trancher en début de lot : le prototype PDF utilise `#C08A00` pour l'accent ES, la spec `#C88E00`. Par défaut, on garde `#C08A00` dans le PDF, plus lisible à l'impression, parce que la maquette fait foi.
 
 ### Lot 3 — Collecte

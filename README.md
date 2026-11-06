@@ -31,6 +31,8 @@ npm run maps:preview   # aperçu des cartes de la fixture (out/maps-preview.html
 
 `brief:render` lit les `{lang}.verified.json` du jour et complète les photos Pexels si `PEXELS_API_KEY` est définie (variable d'environnement ou `.env`). Il écrit `{lang}.final.json`, `Daily Brief <date>.pdf` (A4, FR puis EN puis ES) et `render-report.json`. Une édition absente est omise ; sans aucune édition, il n'y a pas de PDF et le code de sortie vaut 2. Le code 2 peut accompagner des `{lang}.final.json` valides (PDF impossible) : la publication s'appuie sur `finals` du rapport. Le test visuel du PDF compare trois captures à `packages/render-pdf/test/__screens__/`. Après un changement voulu du gabarit, régénère-les avec `UPDATE_VISUAL=1 npx vitest run packages/render-pdf/test/visual.test.ts` et vérifie les images avant de les commiter.
 
+`brief:render` imprime avec Chromium (Playwright 1.63.0) : il est préinstallé via `PLAYWRIGHT_BROWSERS_PATH` ; sinon, lance `npx playwright install chromium`. Le code 0 peut s'accompagner d'entrées de niveau `error` dans le rapport (une édition invalide est omise et le PDF contient les autres). Le fichier facultatif `audio.json`, écrit par le lot 5, a la forme `{ "fr": { "duration": "3:24" }, "en": { "duration": "3:10" }, "es": { "duration": "3:31" } }` ; chaque langue est facultative et les autres clés sont ignorées.
+
 `context.json`, `raw.json` et `newsletters/` sont facultatifs. Sans textes sources, toutes les citations et tous les chiffres sont retirés.
 
 Plans d'implémentation : `docs/superpowers/plans/`.
