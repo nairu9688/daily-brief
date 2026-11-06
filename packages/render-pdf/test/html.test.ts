@@ -84,4 +84,28 @@ describe('renderPdfHtml', () => {
     expect(html).not.toContain('<script');
   });
 
+  it('met un lien par source (dédoublonné par URL), la source principale en premier', async () => {
+    const fr = ed('fr');
+    const st = fr.sections[0].stories[0];
+    const base = st.sources[0];
+    st.sources = [
+      { ...base, outlet: 'Sud Radio', url: 'https://a.example/1', readFull: false },
+      { ...base, outlet: 'AFP', url: 'https://a.example/2', readFull: true },
+    ] as typeof st.sources;
+    const html = await renderPdfHtml({ date: brief.date, issue: '001', editions: [fr] });
+    const i1 = html.indexOf('<a href="https://a.example/1">');
+    const i2 = html.indexOf('<a href="https://a.example/2">');
+    expect(i1).toBeGreaterThan(0);
+    expect(i2).toBeGreaterThan(0);
+    expect(i2).toBeLessThan(i1);
+  });
+
+  it('n’émet pas de saut de page pour une édition sans sections ni vocabulaire', async () => {
+    const fr = ed('fr');
+    fr.sections = [];
+    fr.vocab = undefined as never;
+    const html = await renderPdfHtml({ date: brief.date, issue: '001', editions: [fr] });
+    expect(html).not.toContain('class="pb"');
+    expect(html).toContain('<section class="ed" id="ed-fr" lang="fr"');
+  });
 });

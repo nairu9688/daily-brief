@@ -24,9 +24,11 @@ const SAFE_IMAGE = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/;
 
 type Ctx = { qr: Map<string, string>; images: Record<string, string> };
 
-const uniqueOutlets = (sources: SourceRef[]) => {
+/** Une entrée par URL (chaque source reste cliquable), la source principale d'abord. */
+const uniqueSources = (sources: SourceRef[]) => {
+  const first = sources.find((s) => s.readFull) ?? sources[0];
   const seen = new Map<string, SourceRef>();
-  for (const s of sources) if (!seen.has(s.outlet)) seen.set(s.outlet, s);
+  for (const s of [first, ...sources]) if (s && !seen.has(s.url)) seen.set(s.url, s);
   return [...seen.values()];
 };
 
@@ -62,7 +64,7 @@ function story(s: Story, lang: Lang, ctx: Ctx): string {
         .join('')}</div>`
     : '';
   const prepa = s.prepa ? `<p class="prepa"><b>Lien prépa · ${esc(s.prepa.subject)}</b>${esc(s.prepa.text)}</p>` : '';
-  const links = uniqueOutlets(s.sources).map((x) => `<a href="${esc(x.url)}">${esc(x.outlet)}</a>`).join(' · ');
+  const links = uniqueSources(s.sources).map((x) => `<a href="${esc(x.url)}">${esc(x.outlet)}</a>`).join(' · ');
   return `<article class="story"><div class="txt">
     <div class="kick mono"><b>${esc(s.kicker)}</b> · ${esc(s.date)}</div><h4>${esc(s.title)}</h4>
     <div class="ai mono"><i>✦</i> ${t.ai}</div><p class="sum">${esc(s.summary)}</p>
@@ -111,14 +113,14 @@ function edition(ed: Edition, input: PdfInput, opts: PdfOptions, ctx: Ctx): stri
         .map((w) => `<tr><td><b>${esc(w.term)}</b> <em class="mono">${esc(w.pos)}</em></td><td class="fr">${esc(w.translation)}</td><td class="ex">${esc(w.example)}</td></tr>`)
         .join('')}</table>`
     : '';
-  return `<section class="ed" id="ed-${L}" style="--accent:${ACCENT[L]}">
+  return `<section class="ed" id="ed-${L}" lang="${L}" style="--accent:${ACCENT[L]}">
   <header class="mast"><div class="brand"><span class="logo"></span>DAILY BRIEF</div><div class="meta mono"><b>${t.edition}</b> · ${esc(ed.region)}<br>${longDateFr(input.date)} · N° ${esc(input.issue)}</div></header>
   <section class="lead"><div><div class="kick mono"><b>Morning Brief</b> · ${ed.morningBrief.length} ${t.infos} · 10 min</div><h1>${esc(ed.headline)}</h1>
     <ol class="mb">${ed.morningBrief.map((p, i) => `<li><span class="n mono">0${i + 1}</span><span><b>${esc(p.lead)}</b> ${esc(p.text)}</span></li>`).join('')}</ol></div>
     <aside class="aside"><h3 class="mono">${t.inThisEdition}</h3>${rows}${vocabRow}
       <h3 class="mono" style="margin-top:4mm">Les 3 éditions</h3><div class="eds">${eds}</div>${audio}</aside></section>
   ${kpis(ed)}
-  <div class="pb"></div>${sections}${vocab}</section>`;
+  ${ed.sections.length > 0 || ed.vocab ? '<div class="pb"></div>' : ''}${sections}${vocab}</section>`;
 }
 
 /** Document HTML complet du PDF du jour : éditions FR, EN puis ES, chacune ouverte par sa couverture. */

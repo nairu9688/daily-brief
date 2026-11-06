@@ -14,23 +14,32 @@ export function footerTemplate(info: FooterInfo): string {
 <span>${left}</span><span>Résumés IA à partir des articles cités · <span class="pageNumber"></span>/<span class="totalPages"></span></span></div>`;
 }
 
-/** Imprime le HTML en PDF A4 avec Chromium (Playwright), polices et couleurs comprises. */
-export async function printPdf(html: string, outPath: string, footer: FooterInfo): Promise<void> {
+/** Imprime le HTML en PDF A4 avec Chromium (Playwright), polices et couleurs comprises. JavaScript désactivé. */
+export async function printPdf(html: string, outPath: string, footer: FooterInfo, opts: { timeoutMs?: number } = {}): Promise<void> {
   const browser = await chromium.launch();
+  let timer: NodeJS.Timeout | undefined;
   try {
-    const page = await browser.newPage({ javaScriptEnabled: false });
-    await page.setContent(html, { waitUntil: 'load' });
-    await page.evaluate('document.fonts.ready');
-    await page.pdf({
-      path: outPath,
-      format: 'A4',
-      printBackground: true,
-      preferCSSPageSize: true,
-      displayHeaderFooter: true,
-      headerTemplate: '<span></span>',
-      footerTemplate: footerTemplate(footer),
+    const work = (async () => {
+      const page = await browser.newPage({ javaScriptEnabled: false });
+      await page.setContent(html, { waitUntil: 'load' });
+      await page.evaluate('document.fonts.ready');
+      await page.pdf({
+        path: outPath,
+        format: 'A4',
+        printBackground: true,
+        preferCSSPageSize: true,
+        displayHeaderFooter: true,
+        headerTemplate: '<span></span>',
+        footerTemplate: footerTemplate(footer),
+      });
+    })();
+    work.catch(() => {}); // évite un rejet non géré si le délai l'emporte puis que le navigateur se ferme
+    const deadline = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error('impression PDF : délai dépassé')), opts.timeoutMs ?? 120_000);
     });
+    await Promise.race([work, deadline]);
   } finally {
+    clearTimeout(timer);
     await browser.close();
   }
 }

@@ -52,14 +52,20 @@ describe('rendu visuel du PDF', () => {
         return;
       }
       const expected = PNG.sync.read(readFileSync(refPath));
-      expect(`${actual.width}×${actual.height}`).toBe(`${expected.width}×${expected.height}`);
+      const saveActual = () => {
+        mkdirSync(DIFFS, { recursive: true });
+        writeFileSync(`${DIFFS}${shot.name}.actual.png`, PNG.sync.write(actual));
+      };
+      if (actual.width !== expected.width || actual.height !== expected.height) {
+        saveActual();
+        expect(`${actual.width}×${actual.height}`).toBe(`${expected.width}×${expected.height}`);
+      }
       const diff = new PNG({ width: actual.width, height: actual.height });
       const changed = pixelmatch(actual.data, expected.data, diff.data, actual.width, actual.height, { threshold: 0.1 });
       const ratio = changed / (actual.width * actual.height);
       if (ratio > MAX_DIFF_RATIO) {
-        mkdirSync(DIFFS, { recursive: true });
+        saveActual();
         writeFileSync(`${DIFFS}${shot.name}.diff.png`, PNG.sync.write(diff));
-        writeFileSync(`${DIFFS}${shot.name}.actual.png`, PNG.sync.write(actual));
       }
       expect(ratio, `${(ratio * 100).toFixed(2)} % de pixels différents, voir out/visual/`).toBeLessThanOrEqual(MAX_DIFF_RATIO);
     });
