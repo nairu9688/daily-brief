@@ -19,3 +19,8 @@ export function normalizeForMatch(s: string): string {
     .trim()
     .toLowerCase();
 }
+
+/** Comparaison par mots entiers : ponctuation → espaces, entouré d'espaces pour borner les mots. */
+export function wordsForMatch(s: string): string {
+  return ' ' + normalizeForMatch(s).replace(/[^\p{L}\p{N}']+/gu, ' ').trim() + ' ';
+}

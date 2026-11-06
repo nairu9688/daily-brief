@@ -21,6 +21,54 @@ describe('speakerSurname', () => {
   });
 });
 
+describe('speakerSurname (particules)', () => {
+  it('garde les particules du nom', () => {
+    expect(speakerSurname('Marine Le Pen')).toBe('Le Pen');
+    expect(speakerSurname('Ursula von der Leyen')).toBe('von der Leyen');
+    expect(speakerSurname('Charles de Gaulle')).toBe('de Gaulle');
+  });
+});
+
+describe('checkQuote (R5) : régressions', () => {
+  const Q = 'the party would need to listen more closely to working families';
+  const reject = (text: string, source: string, speaker: string) => checkQuote({ text, speaker }, source).ok;
+
+  it('rejette une paraphrase quand des guillemets ouverts traînent dans d’autres paragraphes', () => {
+    const src = `"We will rebuild...\n\n"It starts tomorrow," Vance said.\n\nVance told reporters ${Q}.\n\nThune called it "a tough night".`;
+    expect(reject(Q, src, 'J.D. Vance')).toBe(false);
+  });
+
+  it('rejette une paraphrase quand un guillemet droit sert de symbole de pouces', () => {
+    const src = `Vance, who stands 6'2" tall, said ${Q}. Thune said "we lost".`;
+    expect(reject(Q, src, 'J.D. Vance')).toBe(false);
+  });
+
+  it('ne confond pas « Vance » et « advance »', () => {
+    const src = '"We had a tough night, no question about it," Thune said in advance of the vote.';
+    expect(reject('We had a tough night, no question about it', src, 'J.D. Vance')).toBe(false);
+  });
+
+  it('ne confond pas « Le Pen » et « pendant »', () => {
+    const src = '« Nous avons mené une campagne très difficile », a dit un élu pendant la soirée.';
+    expect(reject('Nous avons mené une campagne très difficile', src, 'Marine Le Pen')).toBe(false);
+  });
+
+  it('compare mot entier : un fragment de mots est rejeté', () => {
+    const src = '« Je ne suis pas d\'accord avec la réforme », dit Dupont.';
+    expect(reject("s pas d'acc", src, 'Dupont')).toBe(false);
+  });
+
+  it('rejette une citation trop courte ou vide', () => {
+    const r = checkQuote({ text: '“ ”', speaker: 'Dupont' }, '« Je ne suis pas d\'accord », dit Dupont.');
+    expect(r).toEqual({ ok: false, reason: 'citation trop courte (3 mots et 15 caractères minimum)' });
+  });
+
+  it('accepte une vraie citation avec orateur à particule', () => {
+    const src = '« Nous avons mené une campagne très difficile », a dit Marine Le Pen.';
+    expect(reject('Nous avons mené une campagne très difficile', src, 'Marine Le Pen')).toBe(true);
+  });
+});
+
 describe('checkQuote (R5)', () => {
   it('accepte la citation de Sophie Binet telle qu’écrite dans la fixture', () => {
     const quote = fixtureEdition('fr').sections[0].stories[0].quote!;
