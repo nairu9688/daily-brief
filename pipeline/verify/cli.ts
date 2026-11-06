@@ -4,28 +4,33 @@ import { parisToday } from '../lib/date';
 import { formatIssues } from './issues';
 import { runVerify } from './run-verify';
 
-const { values } = parseArgs({
-  options: {
-    date: { type: 'string' },
-    out: { type: 'string', default: 'out' },
-  },
-});
+try {
+  const { values } = parseArgs({
+    options: {
+      date: { type: 'string' },
+      out: { type: 'string', default: 'out' },
+    },
+  });
 
-const date = values.date ?? parisToday();
-const { issues, exitCode } = runVerify({
-  outDir: values.out!,
-  date,
-  whitelistPath: fileURLToPath(new URL('../config/whitelist.json', import.meta.url)),
-  programmePath: fileURLToPath(new URL('../editorial/programme-ect.md', import.meta.url)),
-});
+  const date = values.date ?? parisToday();
+  const { issues, exitCode } = runVerify({
+    outDir: values.out!,
+    date,
+    whitelistPath: fileURLToPath(new URL('../config/whitelist.json', import.meta.url)),
+    programmePath: fileURLToPath(new URL('../editorial/programme-ect.md', import.meta.url)),
+  });
 
-console.log(`brief:verify ${date}`);
-console.log(formatIssues(issues));
-console.log(
-  exitCode === 0
-    ? 'OK : aucune violation.'
-    : exitCode === 1
-      ? 'Corrections appliquées dans *.verified.json : corrige les fichiers sources puis relance.'
-      : 'Erreur : au moins une édition est invalide (schéma ou fichier manquant).',
-);
-process.exit(exitCode);
+  console.log(`brief:verify ${date}`);
+  console.log(formatIssues(issues));
+  console.log(
+    exitCode === 0
+      ? 'OK : aucune violation.'
+      : exitCode === 1
+        ? 'Corrections appliquées dans *.verified.json : corrige les fichiers sources puis relance.'
+        : 'Erreur : édition invalide ou absente, fichier d’entrée illisible ou date incorrecte. Corrige avant de publier.',
+  );
+  process.exit(exitCode);
+} catch (e) {
+  console.error(`brief:verify : ${e instanceof Error ? e.message : String(e)}`);
+  process.exit(2);
+}
