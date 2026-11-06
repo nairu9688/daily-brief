@@ -6,11 +6,23 @@ import { dotGrid, escapeXml, H, r1, roundedPath, W, wrapSvg } from './svg';
 
 /** Rayon des cercles proportionnels, comme le prototype : 65 000 manifestants → 18,4 px. */
 export const BUBBLE_K = 0.072;
+/** Rayon maximal d'un cercle : au-delà, tous les cercles de la carte sont réduits d'autant. */
+const MAX_BUBBLE_R = 56;
+const MIN_BUBBLE_R = 4;
+const MARKER_R = 3.6;
 const CHAR_W = 7.8;
 const LABEL_H = 14;
+const MAX_LABEL = 28;
+
+/** Libellé de 28 caractères au plus : au-delà, 27 caractères et « … ». */
+function truncate(text: string): string {
+  const chars = [...text];
+  return chars.length > MAX_LABEL ? chars.slice(0, MAX_LABEL - 1).join('') + '…' : text;
+}
 
 type Box = { x0: number; y0: number; x1: number; y1: number };
 const overlaps = (a: Box, b: Box) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+const insideFrame = (b: Box) => b.x0 >= 2 && b.x1 <= W - 2 && b.y0 >= 2 && b.y1 <= H - 2;
 
 function landClass(f: CountryFeature, focus: Set<CountryFeature>, highlight: Set<CountryFeature>): string {
   if (highlight.has(f)) return 'land focus';
@@ -72,39 +84,55 @@ export function renderMap(spec: MapSpec, label: string): string {
     if (a && b) body += arcPath(projection, a, b);
   }
 
-  const placed: Box[] = [];
+  // Rayons des cercles proportionnels. Seule une valeur finie > 0 donne un cercle : une valeur
+  // nulle, négative ou absente garde volontairement le marqueur pulsé.
+  const raw = new Map<Place, number>();
+  if (spec.bubbles) {
+    for (const p of spec.places) if (p.value !== undefined && Number.isFinite(p.value) && p.value > 0) raw.set(p, r1(Math.sqrt(p.value) * BUBBLE_K));
+  }
+  const largest = Math.max(0, ...raw.values());
+  const shrink = largest > MAX_BUBBLE_R ? MAX_BUBBLE_R / largest : 1;
+  const radius = (p: Place) => {
+    const r = raw.get(p);
+    return r === undefined ? null : Math.max(MIN_BUBBLE_R, r1(r * shrink));
+  };
+
   const ordered = [...spec.places].sort((a, b) => Number(b.primary ?? false) - Number(a.primary ?? false));
-  for (const place of ordered) {
+  const visible = ordered.flatMap((place) => {
     const xy = projection([place.lon, place.lat]);
-    if (!inFrame(xy)) continue;
-    const [x, y] = xy;
-    const r = spec.bubbles && place.value !== undefined ? r1(Math.sqrt(place.value) * BUBBLE_K) : null;
+    return inFrame(xy) ? [{ place, x: xy[0], y: xy[1], r: radius(place) }] : [];
+  });
+  // Les étiquettes évitent tous les marqueurs et cercles, pas seulement les étiquettes déjà posées.
+  const placed: Box[] = visible.map(({ x, y, r }) => {
+    const e = r ?? MARKER_R;
+    return { x0: x - e, y0: y - e, x1: x + e, y1: y + e };
+  });
+
+  for (const { place, x, y, r } of visible) {
     body += r
       ? `<circle cx="${r1(x)}" cy="${r1(y)}" r="${r}" class="bubble"/>`
       : `<circle cx="${r1(x)}" cy="${r1(y)}" r="${place.primary ? 14 : 10}" class="pulse"/>`;
-    body += `<circle cx="${r1(x)}" cy="${r1(y)}" r="3.6" class="marker"/>`;
+    body += `<circle cx="${r1(x)}" cy="${r1(y)}" r="${MARKER_R}" class="marker"/>`;
 
-    const text = place.label ?? place.name;
-    const width = text.length * CHAR_W;
+    const text = truncate(place.label ?? place.name);
+    const width = [...text].length * CHAR_W;
     const gap = r ? r + 4 : 10;
-    const toLeft = x > W * 0.72;
-    const dx = toLeft ? -gap : gap;
-    const anchor = toLeft ? 'end' : 'start';
-    let chosen: Box | null = null;
-    let ty = y + 4;
+    const prefersLeft = x > W * 0.72;
+    const candidates: { box: Box; left: boolean; dy: number }[] = [];
     for (const dy of [4, -10, 18, -24, 32]) {
-      const lx = x + dx;
-      const box: Box = toLeft
-        ? { x0: lx - width, y0: y + dy - LABEL_H + 3, x1: lx, y1: y + dy + 3 }
-        : { x0: lx, y0: y + dy - LABEL_H + 3, x1: lx + width, y1: y + dy + 3 };
-      if (!placed.some((p) => overlaps(p, box))) {
-        chosen = box;
-        ty = y + dy;
-        break;
+      for (const left of [prefersLeft, !prefersLeft]) {
+        const lx = left ? x - gap : x + gap;
+        const y0 = y + dy - LABEL_H + 3;
+        const box: Box = left ? { x0: lx - width, y0, x1: lx, y1: y + dy + 3 } : { x0: lx, y0, x1: lx + width, y1: y + dy + 3 };
+        candidates.push({ box, left, dy });
       }
     }
-    placed.push(chosen ?? { x0: x, y0: ty - LABEL_H, x1: x + width, y1: ty });
-    body += `<text x="${r1(x + dx)}" y="${r1(ty)}" class="maplabel" text-anchor="${anchor}">${escapeXml(text)}</text>`;
+    const fits = candidates.filter((c) => insideFrame(c.box));
+    // Repli : la dernière position dans le cadre, sinon la dernière essayée.
+    const chosen = fits.find((c) => !placed.some((p) => overlaps(p, c.box))) ?? fits.at(-1) ?? candidates.at(-1)!;
+    placed.push(chosen.box);
+    const tx = chosen.left ? x - gap : x + gap;
+    body += `<text x="${r1(tx)}" y="${r1(y + chosen.dy)}" class="maplabel" text-anchor="${chosen.left ? 'end' : 'start'}">${escapeXml(text)}</text>`;
   }
   return wrapSvg(body, label);
 }

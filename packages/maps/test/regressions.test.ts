@@ -114,3 +114,90 @@ describe('cadrage (revue 2)', () => {
     expect(markers(svg)).toHaveLength(1);
   });
 });
+
+type Box = { x0: number; y0: number; x1: number; y1: number };
+const unescape = (s: string) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+/** Boîtes des étiquettes, avec la même métrique que le moteur (7,8 px par caractère, 14 px de haut). */
+const labels = (svg: string) =>
+  [...svg.matchAll(/<text x="([^"]+)" y="([^"]+)" class="maplabel" text-anchor="(\w+)">([^<]*)<\/text>/g)].map((m) => {
+    const x = Number(m[1]);
+    const y = Number(m[2]);
+    const text = unescape(m[4]);
+    const w = [...text].length * 7.8;
+    const box: Box = m[3] === 'end' ? { x0: x - w, y0: y - 11, x1: x, y1: y + 3 } : { x0: x, y0: y - 11, x1: x + w, y1: y + 3 };
+    return { text, box };
+  });
+const boxInFrame = (b: Box) => b.x0 >= 2 - 0.1 && b.x1 <= W - 2 + 0.1 && b.y0 >= 2 - 0.1 && b.y1 <= H - 2 + 0.1;
+const overlap = (a: Box, b: Box) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+
+describe('cercles et étiquettes (revue 2)', () => {
+  it('borne le rayon des cercles et réserve le cercle aux valeurs > 0', () => {
+    const spec: MapSpec = {
+      projection: 'conic-france',
+      bubbles: true,
+      places: [
+        { name: 'Zero', lon: 2.35, lat: 48.86, value: 0 },
+        { name: 'Neg', lon: 4.84, lat: 45.76, value: -100 },
+        { name: 'Huge', lon: 1.44, lat: 43.6, value: 1e9 },
+        { name: 'Inf', lon: -1.55, lat: 47.2, value: Infinity },
+        { name: 'Small', lon: 5.37, lat: 43.3, value: 65_000 },
+      ],
+    };
+    const svg = renderMap(spec, 'x');
+    expect(svg).not.toMatch(/NaN|Infinity/);
+    const radii = [...svg.matchAll(/r="([^"]+)" class="bubble"/g)].map((m) => Number(m[1]));
+    expect(radii).toHaveLength(2);
+    expect(Math.max(...radii)).toBeLessThanOrEqual(56);
+    expect(Math.min(...radii)).toBeGreaterThanOrEqual(4);
+    expect(count(svg, /class="pulse"/g)).toBe(3);
+  });
+
+  it('tronque un libellé trop long et le garde dans le cadre', () => {
+    const spec: MapSpec = {
+      projection: 'conic-france',
+      places: [{ name: 'X'.repeat(200), lon: 2.35, lat: 48.86 }, { name: 'Lyon', lon: 4.84, lat: 45.76 }],
+    };
+    const ls = labels(renderMap(spec, 'x'));
+    expect(ls[0].text).toBe('X'.repeat(27) + '…');
+    for (const l of ls) expect(boxInFrame(l.box), l.text).toBe(true);
+  });
+
+  it('garde les étiquettes dans le cadre près des bords', () => {
+    const spec: MapSpec = {
+      projection: 'conic-france',
+      places: [
+        { name: 'Nice - Côte d’Azur aéroport', lon: 7.26, lat: 43.7 },
+        { name: 'Strasbourg', lon: 7.75, lat: 48.57 },
+        { name: 'Brest', lon: -4.49, lat: 48.39 },
+        { name: 'Ajaccio - Napoléon Bonaparte', lon: 8.8, lat: 41.92 },
+      ],
+    };
+    const ls = labels(renderMap(spec, 'x'));
+    expect(ls).toHaveLength(4);
+    for (const l of ls) expect(boxInFrame(l.box), l.text).toBe(true);
+  });
+
+  it('écarte les étiquettes d’un groupe de 12 lieux proches', () => {
+    const spec: MapSpec = {
+      projection: 'conic-france',
+      places: Array.from({ length: 12 }, (_, i) => ({ name: 'Ville' + i, lon: 2.3 + i * 0.05, lat: 48.8 + i * 0.03 })),
+    };
+    const svg = renderMap(spec, 'x');
+    const ls = labels(svg);
+    expect(ls).toHaveLength(12);
+    for (const l of ls) expect(boxInFrame(l.box), l.text).toBe(true);
+    const first = ls.slice(0, 5).map((l) => l.box);
+    for (let i = 0; i < first.length; i++) for (let j = i + 1; j < first.length; j++) expect(overlap(first[i], first[j]), `${i}/${j}`).toBe(false);
+    // Les étiquettes placées sans conflit ne recouvrent aucun marqueur.
+    const dots = markers(svg).map(([x, y]): Box => ({ x0: x - 3.6, y0: y - 3.6, x1: x + 3.6, y1: y + 3.6 }));
+    for (const b of first) for (const d of dots) expect(overlap(b, d)).toBe(false);
+  });
+
+  it('est stable d’un appel à l’autre', () => {
+    const spec: MapSpec = {
+      projection: 'conic-france',
+      places: Array.from({ length: 12 }, (_, i) => ({ name: 'Ville' + i, lon: 2.3 + i * 0.05, lat: 48.8 + i * 0.03 })),
+    };
+    expect(renderMap(spec, 'x')).toBe(renderMap(structuredClone(spec), 'x'));
+  });
+});

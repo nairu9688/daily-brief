@@ -56,9 +56,14 @@ describe('renderMap', () => {
         { name: 'Sommières', lon: 4.09, lat: 43.78 },
       ],
     };
-    const ys = [...renderMap(spec, 'x').matchAll(/<text x="[^"]+" y="([^"]+)"/g)].map((m) => Number(m[1]));
-    expect(ys).toHaveLength(2);
-    expect(Math.abs(ys[0] - ys[1])).toBeGreaterThanOrEqual(14);
+    // Boîtes des étiquettes : 7,8 px par caractère, 14 px de haut, à gauche si text-anchor="end".
+    const boxes = [...renderMap(spec, 'x').matchAll(/<text x="([^"]+)" y="([^"]+)" class="maplabel" text-anchor="(\w+)">([^<]*)</g)].map((m) => {
+      const [x, y, w] = [Number(m[1]), Number(m[2]), m[4].length * 7.8];
+      return { x0: m[3] === 'end' ? x - w : x, x1: m[3] === 'end' ? x : x + w, y0: y - 11, y1: y + 3 };
+    });
+    expect(boxes).toHaveLength(2);
+    const [a, b] = boxes;
+    expect(a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1).toBe(false);
   });
 
   it('échappe les textes venus du JSON', () => {
