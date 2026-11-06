@@ -7,7 +7,7 @@ import { printPdf, renderPdfHtml, type FooterInfo } from '@daily-brief/render-pd
 import type { FetchLike } from './http';
 import { fetchAsDataUri } from './images';
 import { issueNumber, pdfFileName } from './issue';
-import { findPhoto, PexelsHttpError } from './pexels';
+import { findPhoto, isTrustedPexelsPhoto, PexelsHttpError } from './pexels';
 import { fillPhotos, type PhotoFinder } from './photos';
 
 export type RenderIssue = { level: 'error' | 'warning'; lang?: Lang; message: string };
@@ -114,6 +114,13 @@ export async function runRender(opts: RunRenderOptions): Promise<RunRenderResult
         continue;
       }
       let ed = parsed.data;
+    // Défense en profondeur : seule une photo venue de Pexels (hôtes vérifiés) est conservée.
+    for (const st of ed.sections.flatMap((s) => s.stories)) {
+      if (st.visual.type === 'photo' && st.visual.pexels && !isTrustedPexelsPhoto(st.visual.pexels)) {
+        delete st.visual.pexels;
+        issues.push({ level: 'warning', lang, message: `${st.id} : photo pré-remplie hors Pexels retirée` });
+      }
+    }
       if (opts.pexelsApiKey) {
         const r = await fillPhotos(ed, finder);
         ed = r.edition;

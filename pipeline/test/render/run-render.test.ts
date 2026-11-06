@@ -282,4 +282,22 @@ describe('runRender', () => {
     expect(r.issues.some((i) => /audio\.json/.test(i.message))).toBe(false);
     expect(printed[0].html).toContain('3:24 · voix Chirp HD');
   });
+
+  it('retire une photo pré-remplie hors Pexels, avec un avertissement, et produit le PDF', async () => {
+    const { outDir, dayDir } = day(['fr']);
+    const file = join(dayDir, 'fr.verified.json');
+    const ed = JSON.parse(readFileSync(file, 'utf8'));
+    for (const st of ed.sections.flatMap((s: any) => s.stories)) {
+      if (st.visual.type === 'photo') st.visual.pexels = { ...photo(5), src: 'http://169.254.169.254/x.jpg', photographerUrl: 'https://evil.example/' };
+    }
+    writeFileSync(file, JSON.stringify(ed));
+    const n = net();
+    const { print, printed } = printer();
+    const r = await runRender({ outDir, date: '2026-11-06', fetch: n.fetch, print });
+    expect(r.exitCode).toBe(0);
+    expect(printed).toHaveLength(1);
+    expect(readFileSync(join(dayDir, 'fr.final.json'), 'utf8')).not.toContain('"pexels"');
+    expect(r.issues).toContainEqual(expect.objectContaining({ level: 'warning', lang: 'fr', message: expect.stringContaining('photo pré-remplie hors Pexels retirée') }));
+    expect(n.calls.some((c) => c.url.includes('169.254'))).toBe(false);
+  });
 });

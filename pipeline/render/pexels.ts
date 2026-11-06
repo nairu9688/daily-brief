@@ -2,6 +2,27 @@ import { z } from 'zod';
 import { PexelsPhotoSchema, type PexelsPhoto } from '@daily-brief/schema';
 import type { FetchLike } from './http';
 
+/** Seuls hôtes de confiance : images (téléchargées) et pages de crédit (liées dans le PDF). */
+export const PEXELS_IMAGE_HOST = 'images.pexels.com';
+export const PEXELS_PAGE_HOST = 'www.pexels.com';
+
+export function isHttpsOn(url: string, host: string): boolean {
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' && u.hostname === host;
+  } catch {
+    return false;
+  }
+}
+
+/** Photo conforme au schéma, dont l'image est sur images.pexels.com et les crédits sur www.pexels.com (https). */
+export function isTrustedPexelsPhoto(photo: unknown): photo is PexelsPhoto {
+  const parsed = PexelsPhotoSchema.safeParse(photo);
+  if (!parsed.success) return false;
+  const p = parsed.data;
+  return isHttpsOn(p.src, PEXELS_IMAGE_HOST) && isHttpsOn(p.pexelsUrl, PEXELS_PAGE_HOST) && isHttpsOn(p.photographerUrl, PEXELS_PAGE_HOST);
+}
+
 /** Erreur HTTP de l'API Pexels ; 401 (clé refusée) et 429 (quota) rendent l'API inutilisable pour la suite. */
 export class PexelsHttpError extends Error {
   constructor(readonly status: number, query: string) {
@@ -47,14 +68,6 @@ export async function findPhoto(query: string, opts: { apiKey: string; fetch: Fe
     pexelsUrl: p.url,
     ...(p.alt ? { alt: p.alt } : {}),
   };
-  const creditOk = [photo.pexelsUrl, photo.photographerUrl].every((u) => {
-    try {
-      const x = new URL(u);
-      return x.protocol === 'https:' && x.hostname === 'www.pexels.com';
-    } catch {
-      return false;
-    }
-  });
-  if (!creditOk || !PexelsPhotoSchema.safeParse(photo).success) throw new Error(`photo Pexels invalide pour « ${query} »`);
+  if (!isTrustedPexelsPhoto(photo)) throw new Error(`photo Pexels invalide pour « ${query} »`);
   return photo;
 }

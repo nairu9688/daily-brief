@@ -2143,21 +2143,21 @@ git commit -m "docs: commandes du lot 2 (brief:render, aperçu des cartes)"
 
 ## Écarts après exécution (revues de code)
 
-Le lot a été exécuté par sous-agents, avec une revue de conformité puis une revue qualité après chaque groupe de tâches. Les revues ont durci le code au-delà du texte ci-dessus. **Le dépôt fait foi** ; ce plan reste la trace de la conception initiale. Résultat final : 30 fichiers de test, 251 tests, typage strict propre.
+Le lot a été exécuté par sous-agents, avec une revue de conformité puis une revue qualité après chaque groupe de tâches. Les revues ont durci le code au-delà du texte ci-dessus. **Le dépôt fait foi** ; ce plan reste la trace de la conception initiale. Résultat final : 30 fichiers de test, 252 tests, typage strict propre.
 
 | Zone | Écart par rapport au plan | Raison |
 |---|---|---|
 | Cartes | Monde recentré sur l'antiméridien ; Europe bornée à lon [-25, 50] et lat [33, 71,5], avec une marge autour des lieux ; cadrage France et Espagne inchangé (2 coins du prototype) | Les cartes restent lisibles et cadrées comme la maquette |
 | Cartes | Arcs tracés par `geoPath`, sans arc entre points identiques ou antipodaux ; cercles proportionnels bornés à 56 px | Pas de tracé dégénéré ni de cercle qui déborde |
 | Cartes | Étiquettes tronquées à 28 caractères, gardées dans le cadre et à distance des marqueurs | Pas d'étiquette coupée ni posée sur un marqueur |
-| Cartes | Points consécutifs identiques supprimés (carte du monde : 757 Ko → 210 Ko) ; pays hors cadre ignorés ; outre-mer dessiné comme la France ; archipels ; Kosovo, Chypre du Nord et Somaliland reconnus par leur nom | SVG plus léger et territoires absents des codes numériques de world-atlas |
+| Cartes | Points consécutifs identiques supprimés (carte du monde : 757 → 215 Ko) ; pays hors cadre ignorés ; outre-mer dessiné comme la France ; archipels ; Kosovo, Chypre du Nord et Somaliland reconnus par leur nom | SVG plus léger et territoires absents des codes numériques de world-atlas |
 | R11 dans `brief:verify` | Lieux hors cadre, codes inconnus, pays hors cadre et doublons retirés ; carte vidée remplacée par une photo | Une carte ne montre jamais un lieu hors cadre ni ne reste vide |
 | R11 dans `brief:verify` | Photo Pexels écrite par la rédaction retirée : seul le rendu remplit `visual.pexels` | Une URL écrite par le modèle ne doit être ni téléchargée (SSRF) ni créditée à tort |
 | PDF | Data URI d'image validée (jpeg, png, webp) ; JavaScript désactivé à l'impression | Pas de contenu actif dans le HTML imprimé |
 | PDF | Un lien par source, source principale en premier ; mises en page robustes aux mots longs ; pas de page blanche ; `lang` par édition | Rendu fidèle des sujets réels, pas seulement de la fixture |
-| PDF | Délai d'impression, et fermeture du navigateur bornée à 5 s | Une routine sans surveillance ne reste jamais bloquée |
+| PDF | Délai d'impression, lancement de Chromium borné (au moins 30 s) et fermeture du navigateur bornée à 5 s | Une routine sans surveillance ne reste jamais bloquée |
 | `brief:render` | Rapport toujours écrit (même sur exception), avec `finals` ; `langs` = langues du PDF, vide sans PDF ; `pdf` = nom du fichier | La publication (lot 4) lit un état jamais périmé ; le code 2 peut accompagner des `final.json` valides |
-| `brief:render` | `final.json` toujours valide (photo validée, repli sur l'édition vérifiée) ; édition contrôlée contre son fichier (langue et date) | Aucune donnée fausse ou périmée n'est publiée |
+| `brief:render` | `final.json` toujours valide (photo validée, photo pré-remplie hors Pexels retirée, repli sur l'édition vérifiée) ; édition contrôlée contre son fichier (langue et date) | Aucune donnée fausse ou périmée n'est publiée |
 | `brief:render` | Délais réseau (10 s) ; disjoncteur Pexels sur 401, 429 et délai dépassé, avec un seul avertissement ; recherches mémoïsées entre langues | Publication dégradée plutôt que blocage (§12) |
 | `brief:render` | Images limitées à `images.pexels.com` en https, jpeg/png/webp et 3 Mo (avec contrôle de `content-length`) ; liens de crédit sur `www.pexels.com` | Pas de téléchargement arbitraire |
 | `brief:render` | `.env` chargé sans écraser l'environnement ; seule l'absence du fichier est ignorée ; `audio.json` tolère les clés inconnues | Les secrets du processus priment ; formats tolérants |
