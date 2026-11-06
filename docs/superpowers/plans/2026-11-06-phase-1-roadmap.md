@@ -38,7 +38,9 @@ Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-1-fondations-schema-verify
 
 **Critère de fin :** `npm test` est vert, et `npm run brief:verify -- --date 2026-11-06 --out <dossier>` s'exécute sur les éditions de la fixture copiées dans un dossier de test.
 
-### Lot 2 — Cartes, photos et PDF
+### Lot 2 — Cartes, photos et PDF ✅ plan détaillé
+
+Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-2-cartes-photos-pdf.md`
 
 - `packages/maps` : `renderMap(spec: MapSpec, opts?): string` (SVG). C'est le portage de `reference/mapgen2.mjs` généralisé au `MapSpec` : `conic-france`, `conic-europe`, `conic-spain`, `albers-usa` et `world`. Il reprend `clipExtent`, l'arrondi entier des coordonnées, la grille de points, les classes `land` / `focus` / `focus-soft` / `pulse` / `marker` / `bubble` / `arc` / `maplabel`, les cercles proportionnels (`k = 0.072 × √valeur`, comme le prototype) et l'arc interpolé avec sa flèche sinusoïdale. Les codes ISO alpha-3 du `MapSpec` sont convertis vers les identifiants numériques de world-atlas grâce à une table embarquée.
 - `packages/maps/qr.ts` : `qrSvg(url)`, le QR code de la source principale.
