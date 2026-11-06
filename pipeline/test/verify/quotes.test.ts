@@ -31,31 +31,43 @@ describe('speakerSurname (particules)', () => {
 
 describe('checkQuote (R5) : régressions', () => {
   const Q = 'the party would need to listen more closely to working families';
-  const reject = (text: string, source: string, speaker: string) => checkQuote({ text, speaker }, source).ok;
+  const isOk = (text: string, source: string, speaker: string) => checkQuote({ text, speaker }, source).ok;
 
   it('rejette une paraphrase quand des guillemets ouverts traînent dans d’autres paragraphes', () => {
     const src = `"We will rebuild...\n\n"It starts tomorrow," Vance said.\n\nVance told reporters ${Q}.\n\nThune called it "a tough night".`;
-    expect(reject(Q, src, 'J.D. Vance')).toBe(false);
+    expect(isOk(Q, src, 'J.D. Vance')).toBe(false);
   });
 
   it('rejette une paraphrase quand un guillemet droit sert de symbole de pouces', () => {
     const src = `Vance, who stands 6'2" tall, said ${Q}. Thune said "we lost".`;
-    expect(reject(Q, src, 'J.D. Vance')).toBe(false);
+    expect(isOk(Q, src, 'J.D. Vance')).toBe(false);
   });
 
   it('ne confond pas « Vance » et « advance »', () => {
     const src = '"We had a tough night, no question about it," Thune said in advance of the vote.';
-    expect(reject('We had a tough night, no question about it', src, 'J.D. Vance')).toBe(false);
+    expect(isOk('We had a tough night, no question about it', src, 'J.D. Vance')).toBe(false);
   });
 
   it('ne confond pas « Le Pen » et « pendant »', () => {
     const src = '« Nous avons mené une campagne très difficile », a dit un élu pendant la soirée.';
-    expect(reject('Nous avons mené une campagne très difficile', src, 'Marine Le Pen')).toBe(false);
+    expect(isOk('Nous avons mené une campagne très difficile', src, 'Marine Le Pen')).toBe(false);
   });
 
   it('compare mot entier : un fragment de mots est rejeté', () => {
     const src = '« Je ne suis pas d\'accord avec la réforme », dit Dupont.';
-    expect(reject("s pas d'acc", src, 'Dupont')).toBe(false);
+    const r = checkQuote({ text: "s pas d'accord avec la réforme", speaker: 'Dupont' }, src);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toMatch(/introuvable/);
+  });
+
+  it('ignore les guillemets droits collés à une lettre ou un chiffre (pouces)', () => {
+    expect(isOk(Q, `Vance, who stands 6'2" tall, said ${Q}, standing by a 12" screen.`, 'J.D. Vance')).toBe(false);
+    expect(isOk(Q, `A 55" TV. Vance said ${Q}. Thune said "we lost" and "fine`, 'J.D. Vance')).toBe(false);
+  });
+
+  it('exige le nom complet quand le nom de famille est trop court', () => {
+    const src = '« Nous avons mené une campagne très difficile », a dit un élu.';
+    expect(isOk('Nous avons mené une campagne très difficile', src, 'Kim Jong Un')).toBe(false);
   });
 
   it('rejette une citation trop courte ou vide', () => {
@@ -65,7 +77,7 @@ describe('checkQuote (R5) : régressions', () => {
 
   it('accepte une vraie citation avec orateur à particule', () => {
     const src = '« Nous avons mené une campagne très difficile », a dit Marine Le Pen.';
-    expect(reject('Nous avons mené une campagne très difficile', src, 'Marine Le Pen')).toBe(true);
+    expect(isOk('Nous avons mené une campagne très difficile', src, 'Marine Le Pen')).toBe(true);
   });
 });
 

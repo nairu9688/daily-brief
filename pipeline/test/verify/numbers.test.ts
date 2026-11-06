@@ -31,6 +31,9 @@ describe('checkStat (R6)', () => {
     ['2.ª', 'la 2.ª dimisión'],
     ['$5bn', '$5bn in aid'],
     ['5 Md€', '5 milliards d’euros'],
+    ['176 Md€', '176 milliards d’euros'],
+    ['5 €', 'coûté 5 € par mois'],
+    ['€5bn', 'a €5bn package'],
   ])('trouve « %s » dans « %s »', (value, text) => {
     expect(ok(value, text)).toBe(true);
   });
@@ -49,6 +52,10 @@ describe('checkStat (R6)', () => {
     ['3 %', '0,3 %'],
     ['65', '65,5 %'],
     ['5 Md€', '5 milliards de dollars'],
+    ['5 Md€', '5 milliards de dollars (4,6 Md€)'],
+    ['5 Md€', '5 milliards de dollars (4 milliards d’euros)'],
+    ['$5bn', 'the EU pledged €5bn, while the US gave $2bn'],
+    ['5 €', '5 personnes ont payé 20 €'],
   ])('rejette « %s » absent de « %s »', (value, text) => {
     expect(ok(value, text)).toBe(false);
   });

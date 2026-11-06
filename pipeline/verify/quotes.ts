@@ -6,7 +6,8 @@ import type { CheckResult } from './result';
 type Span = { start: number; end: number; inner: string };
 type Paragraph = { text: string; spans: Span[] };
 
-const SPAN_PATTERNS = [/«([^«»\n]+)»/g, /“([^“”\n]+)”/g, /"([^"\n]+)"/g, /„([^„“”\n]+)[“”]/g];
+const STRAIGHT = /(?<![\p{L}\p{N}])"([^"\n]+)"(?![\p{L}\p{N}])/gu;
+const SPAN_PATTERNS = [/«([^«»\n]+)»/g, /“([^“”\n]+)”/g, STRAIGHT, /„([^„“”\n]+)[“”]/g];
 const SPEAKER_WINDOW = 160;
 const PARTICLES = new Set(['le', 'la', 'de', 'du', 'des', 'von', 'van', 'der', 'den', 'di', 'da', 'del', 'dos']);
 const TOO_SHORT = 'citation trop courte (3 mots et 15 caractères minimum)';
@@ -18,7 +19,7 @@ function paragraphSpans(text: string): Span[] {
   const oddStraight = ((text.match(/"/g) ?? []).length % 2) === 1;
   const spans: Span[] = [];
   for (const re of SPAN_PATTERNS) {
-    if (oddStraight && re.source.startsWith('"')) continue;
+    if (oddStraight && re === STRAIGHT) continue;
     for (const m of text.matchAll(re)) spans.push({ start: m.index!, end: m.index! + m[0].length, inner: m[1] });
   }
   return spans;
@@ -40,10 +41,13 @@ export function speakerSurname(speaker: string): string {
   if (words.length === 0) return name;
   let i = words.length - 1;
   while (i > 0 && PARTICLES.has(words[i - 1].toLowerCase())) i--;
-  return words.slice(i).join(' ');
+  const surname = words.slice(i).join(' ');
+  // Nom trop court (« Un » dans « Kim Jong Un ») : on exige le nom complet.
+  return surname.replace(/[^\p{L}]/gu, '').length < 3 ? name : surname;
 }
 
-/** Le nom, mot entier, doit figurer dans le même paragraphe, à 160 caractères au plus de la citation. */
+/** Limite connue : une autre personne nommée dans les 160 caractères peut passer pour l'orateur (relu côté éditorial).
+ * Le nom, mot entier, doit figurer dans le même paragraphe, à 160 caractères au plus de la citation. */
 function speakerNear(para: Paragraph, span: Span, surname: string): boolean {
   const from = Math.max(0, span.start - SPEAKER_WINDOW);
   const to = Math.min(para.text.length, span.end + SPEAKER_WINDOW);

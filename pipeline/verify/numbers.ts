@@ -8,6 +8,7 @@ const GAP = '[\\s-]*';
 
 // Limites connues : « m » couvre à la fois mètres et millions, le signe (+/−) est ignoré,
 // et les petits nombres ou les années peuvent correspondre n'importe où dans la source.
+// « 1,500 m » est lu comme des milliers ; une citation peut couper une négation (relu à la main, côté éditorial).
 const UNIT_ALIASES: Record<string, string> = {
   '%': '(?:%|pour ?cent|per ?cent|por ?ciento)',
   md: '(?:mds?|milliards?|mrds?|bn|billions?|mil millones)',
@@ -52,7 +53,7 @@ export function statPatterns(value: string): RegExp[][] | null {
       continue;
     }
     const cur = '(?:' + currencies.map((c) => CURRENCIES[c]).join('|') + ')';
-    patterns.push([new RegExp(base + '[\\s\\S]{0,30}?' + cur, 'iu'), new RegExp(cur + '\\s?' + base, 'iu')]);
+    patterns.push([new RegExp(base + '[^\\d€$£\\n]{0,30}?' + cur + '(?!\\s?\\d)', 'iu'), new RegExp(cur + '\\s?' + base, 'iu')]);
   }
   return patterns.length ? patterns : null;
 }
