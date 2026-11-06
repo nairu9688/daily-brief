@@ -4,6 +4,7 @@ import { loadWhitelist } from '../../lib/whitelist';
 import { parseProgrammeSubjects } from '../../verify/prepa';
 import { buildSourceTexts } from '../../verify/sources';
 import { verifyEdition, type VerifyContext } from '../../verify/verify-edition';
+import { DEFAULT_PHOTO_QUERY } from '../../verify/visuals';
 import { fixtureArticles, fixtureEdition, PROGRAMME_PATH, WHITELIST_PATH } from '../helpers';
 
 const ctx: VerifyContext = {
@@ -117,6 +118,37 @@ describe('verifyEdition', () => {
     expect(r.issues).toContainEqual(expect.objectContaining({ rule: 'R11', level: 'fixed', storyId: '2026-11-06-fr-1', message: 'lieu en double retiré : Paris' }));
     const again = verifyEdition(r.edition, ctx);
     expect(again.issues.filter((i) => i.level === 'fixed')).toEqual([]);
+  });
+
+  it('remplace par une photo une carte vidée par les corrections (R11)', () => {
+    const e = fixtureEdition('fr');
+    const fr1 = e.sections.flatMap((s) => s.stories).find((s) => s.id === '2026-11-06-fr-1')!;
+    fr1.visual = { type: 'map', caption: 'Kyiv', map: { projection: 'conic-france', highlight: ['QQQ'], places: [{ name: 'Kyiv', lon: 30.5, lat: 50.45 }] } };
+    const r = verifyEdition(e, ctx);
+    const section = r.edition!.sections.find((s) => s.stories.some((st) => st.id === '2026-11-06-fr-1'))!;
+    const out = section.stories.find((s) => s.id === '2026-11-06-fr-1')!;
+    expect(out.visual).toEqual({ type: 'photo', query: DEFAULT_PHOTO_QUERY[section.key] });
+    expect(r.issues).toContainEqual(
+      expect.objectContaining({ rule: 'R11', storyId: '2026-11-06-fr-1', message: 'carte vide après corrections : remplacée par une photo' }),
+    );
+    expect(verifyEdition(r.edition, ctx).issues.filter((i) => i.level === 'fixed')).toEqual([]);
+  });
+
+  it('retire un pays cité hors du cadre et un pays absent de l’atlas (R11)', () => {
+    const e = fixtureEdition('fr');
+    const fr3 = e.sections.flatMap((s) => s.stories).find((s) => s.id === '2026-11-06-fr-3')!;
+    if (fr3.visual.type !== 'map') throw new Error('fr-3 doit être une carte');
+    fr3.visual.map.highlight = ['USA', 'FRA'];
+    fr3.visual.map.focus = ['GIB'];
+    const r = verifyEdition(e, ctx);
+    const out = r.edition!.sections.flatMap((s) => s.stories).find((s) => s.id === '2026-11-06-fr-3')!;
+    if (out.visual.type !== 'map') throw new Error('fr-3 doit rester une carte');
+    expect(out.visual.map.highlight).toEqual(['FRA']);
+    expect(out.visual.map.focus).toEqual([]);
+    const r11 = r.issues.filter((i) => i.rule === 'R11').map((i) => i.message);
+    expect(r11).toContainEqual(expect.stringMatching(/hors du cadre.*USA/));
+    expect(r11).toContainEqual(expect.stringMatching(/absent de l’atlas.*GIB/));
+    expect(r11.join()).not.toMatch(/inconnu/);
   });
 
   it('remet les libellés officiels des rubriques et retire les rubriques vides', () => {

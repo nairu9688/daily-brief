@@ -24,9 +24,22 @@ export function numericId(alpha3: string): string | undefined {
 }
 
 /** Pays sans identifiant numérique dans world-atlas, retrouvés par leur nom (properties.name). */
-const BY_NAME: Record<string, string> = { XKX: 'Kosovo', CYN: 'N. Cyprus', SOL: 'Somaliland' };
+const BY_NAME: Record<string, string> = { XKX: 'Kosovo', XKK: 'Kosovo', CYN: 'N. Cyprus', SOL: 'Somaliland' };
 
+/**
+ * Régions d'outre-mer que world-atlas dessine dans le polygone de la France : elles sont
+ * dessinées comme la France. Un focus ou un highlight sur GUF surligne donc la France entière.
+ */
+const DRAWN_AS: Record<string, string> = { GUF: 'FRA', REU: 'FRA', MYT: 'FRA', GLP: 'FRA', MTQ: 'FRA' };
+
+/** Code ISO 3166 alpha-3 valide (connu de i18n-iso-countries), qu'il soit ou non dans l'atlas. */
+export function isIsoAlpha3(alpha3: string): boolean {
+  return numericId(alpha3) !== undefined || alpha3 in BY_NAME;
+}
+
+/** Pays world-atlas d'un code alpha-3, ou undefined si le code est inconnu ou absent de l'atlas (GIB, TUV…). */
 export function countryByAlpha3(alpha3: string): CountryFeature | undefined {
+  if (DRAWN_AS[alpha3]) return countryByAlpha3(DRAWN_AS[alpha3]);
   const name = BY_NAME[alpha3];
   if (name) return COUNTRIES.find((f) => !f.id && f.properties.name === name);
   const id = numericId(alpha3);

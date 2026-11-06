@@ -4,6 +4,6 @@
  * ont leur propre sous-chemin (`@daily-brief/maps/qr`).
  */
 export { renderMap, BUBBLE_K } from './render-map';
-export { mapDiagnostics, placesInFrame, unknownCountryCodes } from './diagnostics';
+export { countriesOutOfFrame, countryCodeProblem, mapDiagnostics, placesInFrame } from './diagnostics';
 export { qrSvg } from './qr';
 export { countryByAlpha3, mainBounds, numericId } from './countries';

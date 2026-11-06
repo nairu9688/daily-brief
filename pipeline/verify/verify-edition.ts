@@ -1,4 +1,4 @@
-import { placesInFrame, unknownCountryCodes } from '@daily-brief/maps';
+import { countriesOutOfFrame, countryCodeProblem, placesInFrame } from '@daily-brief/maps';
 import {
   parseEdition,
   RUBRIC_LABELS,
@@ -135,20 +135,34 @@ export function verifyEdition(input: unknown, ctx: VerifyContext): VerifyResult 
       story.prepa = null;
     }
 
+    /** Photo de repli de la rubrique, elle-même soumise à R11. */
+    const fallbackPhoto = (): Story['visual'] => {
+      const fallback = DEFAULT_PHOTO_QUERY[section.key];
+      return { type: 'photo', query: photoQueryProblem(fallback, people) ? 'newspaper' : fallback };
+    };
+
     if (story.visual.type === 'photo') {
       const problem = photoQueryProblem(story.visual.query, people);
       if (problem) {
         fix('R11', `requête photo remplacée (${problem})`, id);
-        const fallback = DEFAULT_PHOTO_QUERY[section.key];
-        story.visual = { type: 'photo', query: photoQueryProblem(fallback, people) ? 'newspaper' : fallback };
+        story.visual = fallbackPhoto();
       }
     } else {
       const map = story.visual.map;
+      const fixesBefore = issues.length;
       for (const key of ['focus', 'highlight'] as const) {
-        const unknown = unknownCountryCodes(map[key]);
-        if (unknown.length === 0) continue;
-        for (const code of unknown) fix('R11', `carte : code pays inconnu retiré (${key}) : ${code}`, id);
-        map[key] = map[key]!.filter((c) => !unknown.includes(c));
+        map[key] = map[key]?.filter((code) => {
+          const problem = countryCodeProblem(code);
+          if (problem) fix('R11', `carte : ${problem}, retiré (${key}) : ${code}`, id);
+          return !problem;
+        });
+      }
+      const outside = new Set(countriesOutOfFrame(map));
+      for (const key of ['focus', 'highlight'] as const) {
+        map[key] = map[key]?.filter((code) => {
+          if (outside.has(code)) fix('R11', `carte : pays cité hors du cadre, retiré (${key}) : ${code}`, id);
+          return !outside.has(code);
+        });
       }
       const inside = placesInFrame(map);
       if (inside.length < map.places.length) {
@@ -168,6 +182,12 @@ export function verifyEdition(input: unknown, ctx: VerifyContext): VerifyResult 
       if (problem) {
         fix('R11', `arc retiré : ${problem}`, id);
         delete map.arc;
+      }
+      // Une carte vidée par ces retraits ne montrerait plus rien (une carte déjà vide reste telle quelle).
+      const emptied = issues.length > fixesBefore && map.places.length === 0 && !map.focus?.length && !map.highlight?.length;
+      if (emptied) {
+        fix('R11', 'carte vide après corrections : remplacée par une photo', id);
+        story.visual = fallbackPhoto();
       }
     }
 
