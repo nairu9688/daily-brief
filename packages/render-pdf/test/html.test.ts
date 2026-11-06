@@ -68,4 +68,20 @@ describe('renderPdfHtml', () => {
   it('refuse un rendu sans édition', async () => {
     await expect(renderPdfHtml({ date: brief.date, issue: '001', editions: [] })).rejects.toThrow(/aucune édition/);
   });
+
+  it('rejette une data URI d’image malveillante (injection) et omet la photo', async () => {
+    const fr = ed('fr');
+    const story = fr.sections.find((s) => s.key === 'eco')!.stories[0];
+    const src = 'https://images.pexels.com/1.jpeg';
+    story.visual = {
+      type: 'photo',
+      query: 'x',
+      pexels: { id: 1, src, width: 6, height: 4, photographer: 'J', photographerUrl: 'https://www.pexels.com/@j', pexelsUrl: 'https://www.pexels.com/photo/1/' },
+    };
+    const evil = 'data:image/jpeg"><script>document.body.innerHTML="PWNED"</script><x a=";base64,AA';
+    const html = await renderPdfHtml({ date: brief.date, issue: '001', editions: [fr] }, { images: { [src]: evil } });
+    expect(html).not.toContain('<img');
+    expect(html).not.toContain('<script');
+  });
+
 });

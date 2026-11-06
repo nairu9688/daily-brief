@@ -18,7 +18,7 @@ export function footerTemplate(info: FooterInfo): string {
 export async function printPdf(html: string, outPath: string, footer: FooterInfo): Promise<void> {
   const browser = await chromium.launch();
   try {
-    const page = await browser.newPage();
+    const page = await browser.newPage({ javaScriptEnabled: false });
     await page.setContent(html, { waitUntil: 'load' });
     await page.evaluate('document.fonts.ready');
     await page.pdf({

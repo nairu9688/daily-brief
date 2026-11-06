@@ -19,6 +19,9 @@ export type PdfOptions = {
   audio?: Partial<Record<Lang, { duration: string }>>;
 };
 
+/** Seules les images raster en base64 sont acceptées : toute autre valeur est omise (injection HTML). */
+const SAFE_IMAGE = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/;
+
 type Ctx = { qr: Map<string, string>; images: Record<string, string> };
 
 const uniqueOutlets = (sources: SourceRef[]) => {
@@ -36,9 +39,9 @@ function visual(story: Story, ctx: Ctx): string {
     return `<div class="fig">${renderMap(v.map, v.caption)}</div><div class="figcap mono">${esc(v.caption)}</div>`;
   }
   const data = v.pexels ? ctx.images[v.pexels.src] : undefined;
-  if (!v.pexels || !data) return '';
+  if (!v.pexels || !data || !SAFE_IMAGE.test(data)) return '';
   const alt = v.pexels.alt ?? v.query;
-  return `<div class="fig"><img src="${data}" alt="${esc(alt)}"></div><div class="figcap mono">Photo : <a href="${esc(v.pexels.photographerUrl)}">${esc(v.pexels.photographer)}</a> · <a href="${esc(v.pexels.pexelsUrl)}">Pexels</a></div>`;
+  return `<div class="fig"><img src="${esc(data)}" alt="${esc(alt)}"></div><div class="figcap mono">Photo : <a href="${esc(v.pexels.photographerUrl)}">${esc(v.pexels.photographer)}</a> · <a href="${esc(v.pexels.pexelsUrl)}">Pexels</a></div>`;
 }
 
 function story(s: Story, lang: Lang, ctx: Ctx): string {

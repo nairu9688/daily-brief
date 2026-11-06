@@ -1,4 +1,5 @@
 import { mkdtempSync, readFileSync } from 'node:fs';
+import { chromium } from 'playwright';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Brief } from '@daily-brief/schema';
@@ -25,4 +26,14 @@ describe('printPdf', () => {
     expect(pages).toBeLessThanOrEqual(14);
     expect(pdf.toString('latin1')).toMatch(/\/MediaBox\s*\[0 0 594\.9\d* 841\.9\d*\]/);
   });
+
+  it('n’exécute pas de JavaScript à l’impression', { timeout: 60_000 }, async () => {
+    const out = join(mkdtempSync(join(tmpdir(), 'pdf-')), 'x.pdf');
+    const html = (await renderPdfHtml(brief)).replace('</body>', `<script>document.body.innerHTML='PWNED'</script></body>`);
+    await printPdf(html, out, { date: brief.date, langs: ['fr'] });
+    const pdf = readFileSync(out).toString('latin1');
+    const pages = (pdf.match(/\/Type\s*\/Page[^s]/g) ?? []).length;
+    expect(pages).toBeGreaterThanOrEqual(8);
+  });
+
 });
