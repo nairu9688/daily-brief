@@ -1,6 +1,6 @@
 import type { Divergence } from '@daily-brief/schema';
 import { normalizeForMatch } from './normalize';
-import type { CheckResult } from './quotes';
+import type { CheckResult } from './result';
 
 /** Mots qui ne changent pas le périmètre d'une mesure : ordres de grandeur, jours et mois (FR, EN, ES). */
 const NEUTRAL = new Set(

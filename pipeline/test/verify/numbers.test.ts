@@ -29,6 +29,8 @@ describe('checkStat (R6)', () => {
     ['14,6 M', '14,6 millones de pasajeros'],
     ['24.000', 'unos 24 000 empleos'],
     ['2.ª', 'la 2.ª dimisión'],
+    ['$5bn', '$5bn in aid'],
+    ['5 Md€', '5 milliards d’euros'],
   ])('trouve « %s » dans « %s »', (value, text) => {
     expect(ok(value, text)).toBe(true);
   });
@@ -38,6 +40,15 @@ describe('checkStat (R6)', () => {
     ['3 %', 'une hausse de 13 % du chiffre'],
     ['65 000', 'dont 650 000 au total'],
     ['9 nov.', 'lundi 9 décembre'],
+    ['1,6 million', 'environ 16 millions'],
+    ['2,5 %', 'soit 25 %'],
+    ['1,50 m', 'un mur de 150 m'],
+    ['500', '1 500 manifestants'],
+    ['265 000', '1 265 000 électeurs'],
+    ['6 millions', '1,6 million'],
+    ['3 %', '0,3 %'],
+    ['65', '65,5 %'],
+    ['5 Md€', '5 milliards de dollars'],
   ])('rejette « %s » absent de « %s »', (value, text) => {
     expect(ok(value, text)).toBe(false);
   });

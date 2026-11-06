@@ -1,11 +1,13 @@
 import type { Stat } from '@daily-brief/schema';
 import { normalizeForMatch } from './normalize';
-import type { CheckResult } from './quotes';
+import type { CheckResult } from './result';
 
 const NUMBER = /\d+(?:[\s.,']\d+)*/g;
 const SEP = "[\\s.,']?";
 const GAP = '[\\s-]*';
 
+// Limites connues : « m » couvre à la fois mètres et millions, le signe (+/−) est ignoré,
+// et les petits nombres ou les années peuvent correspondre n'importe où dans la source.
 const UNIT_ALIASES: Record<string, string> = {
   '%': '(?:%|pour ?cent|per ?cent|por ?ciento)',
   md: '(?:mds?|milliards?|mrds?|bn|billions?|mil millones)',
@@ -22,21 +24,35 @@ function unitPattern(unit: string): string {
   return UNIT_ALIASES[key] ?? escapeRegex(key.slice(0, 3));
 }
 
+const CURRENCIES: Record<string, string> = {
+  '€': '(?:€|euros?(?![\\p{L}]))',
+  $: '(?:\\$|dollars?(?![\\p{L}])|USD)',
+  '£': '(?:£|pounds?(?![\\p{L}])|livres? sterling|libras?(?![\\p{L}]))',
+};
+
 /**
- * Motifs de recherche d'une valeur de chiffre clé (R6) : un motif par nombre,
- * tolérant aux séparateurs (espace, espace fine, point, virgule) et suivi de son unité éventuelle.
- * Renvoie null si la valeur ne contient aucun chiffre.
+ * Motifs de recherche d'une valeur de chiffre clé (R6) : pour chaque nombre, une liste d'alternatives
+ * (au moins une doit correspondre). Les séparateurs de milliers (groupe de 3 chiffres) sont tolérés,
+ * pas les décimales ; le nombre ne doit pas être collé à d'autres chiffres ; l'unité et la devise éventuelles
+ * doivent suivre. Renvoie null si la valeur ne contient aucun chiffre.
  */
-export function statPatterns(value: string): RegExp[] | null {
+export function statPatterns(value: string): RegExp[][] | null {
   const v = value.normalize('NFKC');
-  const patterns: RegExp[] = [];
+  const currencies = Object.keys(CURRENCIES).filter((c) => v.includes(c));
+  const patterns: RegExp[][] = [];
   for (const m of v.matchAll(NUMBER)) {
     const groups = m[0].split(/[\s.,']/);
-    let p = '(?<!\\d)' + groups.join(SEP) + '(?!\\d)';
+    const num = groups.map((g, i) => (i === 0 ? g : (g.length === 3 ? SEP : '[.,]') + g)).join('');
+    let base = "(?<!\\d[\\s.,']?)" + num + "(?![.,]\\d|[\\s']?\\d)";
     const rest = v.slice(m.index! + m[0].length);
     const unit = rest.match(/^[\s-]*(%|[A-Za-zÀ-ÖØ-öø-ÿ]+)/);
-    if (unit) p += GAP + unitPattern(unit[1]);
-    patterns.push(new RegExp(p, 'iu'));
+    if (unit) base += GAP + unitPattern(unit[1]);
+    if (currencies.length === 0) {
+      patterns.push([new RegExp(base, 'iu')]);
+      continue;
+    }
+    const cur = '(?:' + currencies.map((c) => CURRENCIES[c]).join('|') + ')';
+    patterns.push([new RegExp(base + '[\\s\\S]{0,30}?' + cur, 'iu'), new RegExp(cur + '\\s?' + base, 'iu')]);
   }
   return patterns.length ? patterns : null;
 }
@@ -51,6 +67,6 @@ export function checkStat(stat: Pick<Stat, 'value'>, sourceText: string | undefi
       ? { ok: true }
       : { ok: false, reason: `« ${stat.value} » absent de la source` };
   }
-  const missing = patterns.find((re) => !re.test(text));
+  const missing = patterns.find((alts) => !alts.some((re) => re.test(text)));
   return missing ? { ok: false, reason: `« ${stat.value} » absent de la source` } : { ok: true };
 }

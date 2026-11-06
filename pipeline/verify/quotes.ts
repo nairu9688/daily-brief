@@ -1,7 +1,7 @@
 import type { Quote } from '@daily-brief/schema';
 import { normalizeForMatch } from './normalize';
 
-export type CheckResult = { ok: true } | { ok: false; reason: string };
+import type { CheckResult } from './result';
 
 type Span = { start: number; end: number; inner: string };
 
