@@ -65,6 +65,43 @@ describe('verifyEdition', () => {
     expect(v).toEqual({ type: 'photo', query: 'city skyline' });
   });
 
+  it('ne signale aucune carte des fixtures (R11)', () => {
+    for (const lang of ['fr', 'en', 'es'] as const) {
+      const r = verifyEdition(fixtureEdition(lang), ctx);
+      expect(r.issues.filter((i) => i.rule === 'R11'), lang).toEqual([]);
+    }
+  });
+
+  it('retire un lieu hors cadre et l’arc qui y mène (R11)', () => {
+    const e = fixtureEdition('fr');
+    const fr1 = e.sections.flatMap((s) => s.stories).find((s) => s.id === '2026-11-06-fr-1')!;
+    if (fr1.visual.type !== 'map') throw new Error('fr-1 doit être une carte');
+    fr1.visual.map.places.push({ name: 'Kyiv', lon: 30.5, lat: 50.45 });
+    fr1.visual.map.arc = ['Paris', 'Kyiv'];
+    const r = verifyEdition(e, ctx);
+    const out = r.edition!.sections.flatMap((s) => s.stories).find((s) => s.id === '2026-11-06-fr-1')!;
+    if (out.visual.type !== 'map') throw new Error('fr-1 doit rester une carte');
+    expect(out.visual.map.places.map((p) => p.name)).toEqual(['Paris', 'Lyon']);
+    expect(out.visual.map.arc).toBeUndefined();
+    expect(r.issues).toContainEqual(expect.objectContaining({ rule: 'R11', level: 'fixed', storyId: '2026-11-06-fr-1', message: expect.stringContaining('Kyiv') }));
+    expect(r.issues).toContainEqual(expect.objectContaining({ rule: 'R11', storyId: '2026-11-06-fr-1', message: expect.stringMatching(/^arc retiré/) }));
+  });
+
+  it('retire un code pays inconnu (R11)', () => {
+    const e = fixtureEdition('fr');
+    const fr1 = e.sections.flatMap((s) => s.stories).find((s) => s.id === '2026-11-06-fr-1')!;
+    if (fr1.visual.type !== 'map') throw new Error('fr-1 doit être une carte');
+    fr1.visual.map.focus = ['FRA', 'XXX'];
+    fr1.visual.map.highlight = ['QQQ'];
+    const r = verifyEdition(e, ctx);
+    const out = r.edition!.sections.flatMap((s) => s.stories).find((s) => s.id === '2026-11-06-fr-1')!;
+    if (out.visual.type !== 'map') throw new Error('fr-1 doit rester une carte');
+    expect(out.visual.map.focus).toEqual(['FRA']);
+    expect(out.visual.map.highlight).toEqual([]);
+    const r11 = r.issues.filter((i) => i.rule === 'R11');
+    expect(r11.map((i) => i.message)).toEqual([expect.stringContaining('XXX'), expect.stringContaining('QQQ')]);
+  });
+
   it('remet les libellés officiels des rubriques et retire les rubriques vides', () => {
     const e = fixtureEdition('fr');
     e.sections[0].title = 'Politique';

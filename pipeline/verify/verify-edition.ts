@@ -1,3 +1,4 @@
+import { placesInFrame, unknownCountryCodes } from '@daily-brief/maps';
 import {
   parseEdition,
   RUBRIC_LABELS,
@@ -142,10 +143,22 @@ export function verifyEdition(input: unknown, ctx: VerifyContext): VerifyResult 
         story.visual = { type: 'photo', query: photoQueryProblem(fallback, people) ? 'newspaper' : fallback };
       }
     } else {
-      const problem = arcProblem(story.visual.map);
+      const map = story.visual.map;
+      for (const key of ['focus', 'highlight'] as const) {
+        const unknown = unknownCountryCodes(map[key]);
+        if (unknown.length === 0) continue;
+        for (const code of unknown) fix('R11', `carte : code pays inconnu retiré (${key}) : ${code}`, id);
+        map[key] = map[key]!.filter((c) => !unknown.includes(c));
+      }
+      const inside = placesInFrame(map);
+      if (inside.length < map.places.length) {
+        for (const p of map.places) if (!inside.includes(p)) fix('R11', `carte : lieu hors cadre retiré (${map.projection}) : ${p.name}`, id);
+        map.places = inside;
+      }
+      const problem = arcProblem(map);
       if (problem) {
         fix('R11', `arc retiré : ${problem}`, id);
-        delete story.visual.map.arc;
+        delete map.arc;
       }
     }
 
