@@ -1,0 +1,627 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "date": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "lang": {
+      "type": "string",
+      "enum": [
+        "fr",
+        "en",
+        "es"
+      ]
+    },
+    "region": {
+      "type": "string",
+      "minLength": 1
+    },
+    "headline": {
+      "type": "string",
+      "minLength": 1
+    },
+    "morningBrief": {
+      "minItems": 5,
+      "maxItems": 5,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "lead": {
+            "type": "string",
+            "minLength": 1
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "rubric": {
+            "type": "string",
+            "minLength": 1
+          },
+          "storyId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "lead",
+          "text",
+          "rubric"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "audioScript": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "enum": [
+              "pol",
+              "int",
+              "eco",
+              "ent",
+              "dro",
+              "tec",
+              "env",
+              "cul",
+              "spo"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "stories": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "kicker": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "date": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "title": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "summary": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "visual": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "const": "map"
+                        },
+                        "caption": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "map": {
+                          "type": "object",
+                          "properties": {
+                            "projection": {
+                              "type": "string",
+                              "enum": [
+                                "conic-france",
+                                "conic-europe",
+                                "conic-spain",
+                                "albers-usa",
+                                "world"
+                              ]
+                            },
+                            "focus": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "pattern": "^[A-Z]{3}$"
+                              }
+                            },
+                            "highlight": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "pattern": "^[A-Z]{3}$"
+                              }
+                            },
+                            "arc": {
+                              "type": "array",
+                              "prefixItems": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "string"
+                                }
+                              ],
+                              "items": false,
+                              "minItems": 2,
+                              "maxItems": 2
+                            },
+                            "bubbles": {
+                              "type": "boolean"
+                            },
+                            "places": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "lon": {
+                                    "type": "number",
+                                    "minimum": -180,
+                                    "maximum": 180
+                                  },
+                                  "lat": {
+                                    "type": "number",
+                                    "minimum": -90,
+                                    "maximum": 90
+                                  },
+                                  "label": {
+                                    "type": "string"
+                                  },
+                                  "value": {
+                                    "type": "number"
+                                  },
+                                  "primary": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "lon",
+                                  "lat"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          },
+                          "required": [
+                            "projection",
+                            "places"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "caption",
+                        "map"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "const": "photo"
+                        },
+                        "query": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "pexels": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "number"
+                            },
+                            "src": {
+                              "type": "string",
+                              "format": "uri"
+                            },
+                            "width": {
+                              "type": "number"
+                            },
+                            "height": {
+                              "type": "number"
+                            },
+                            "photographer": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "photographerUrl": {
+                              "type": "string",
+                              "format": "uri"
+                            },
+                            "pexelsUrl": {
+                              "type": "string",
+                              "format": "uri"
+                            },
+                            "alt": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "src",
+                            "width",
+                            "height",
+                            "photographer",
+                            "photographerUrl",
+                            "pexelsUrl"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "query"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "stats": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "label": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "sourceUrl": {
+                        "type": "string",
+                        "format": "uri"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "label",
+                      "sourceUrl"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "quote": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "text": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "speaker": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "translation": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "sourceUrl": {
+                          "type": "string",
+                          "format": "uri"
+                        }
+                      },
+                      "required": [
+                        "text",
+                        "speaker",
+                        "translation",
+                        "sourceUrl"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "divergences": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "metric": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "a": {
+                        "type": "object",
+                        "properties": {
+                          "value": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "by": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "required": [
+                          "value",
+                          "by"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "b": {
+                        "type": "object",
+                        "properties": {
+                          "value": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "by": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "required": [
+                          "value",
+                          "by"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "metric",
+                      "a",
+                      "b"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "thread": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "subtitle": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "title",
+                        "subtitle"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "prepa": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "subject": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "text": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "subject",
+                        "text"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "sources": {
+                  "minItems": 1,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "outlet": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "title": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "url": {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      "lang": {
+                        "type": "string",
+                        "minLength": 2
+                      },
+                      "readFull": {
+                        "type": "boolean"
+                      },
+                      "publishedAt": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "outlet",
+                      "title",
+                      "url",
+                      "lang",
+                      "readFull"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "kicker",
+                "date",
+                "title",
+                "summary",
+                "visual",
+                "stats",
+                "quote",
+                "divergences",
+                "thread",
+                "prepa",
+                "sources"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "briefs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "outlet": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "title": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "url": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "lang": {
+                  "type": "string",
+                  "minLength": 2
+                },
+                "readFull": {
+                  "type": "boolean"
+                },
+                "publishedAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "outlet",
+                "title",
+                "url",
+                "lang",
+                "readFull"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "key",
+          "title",
+          "stories",
+          "briefs"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "vocab": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "term": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "pos": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "translation": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "example": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "sourceUrl": {
+                    "type": "string",
+                    "format": "uri"
+                  }
+                },
+                "required": [
+                  "term",
+                  "pos",
+                  "translation",
+                  "example"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "title",
+            "items"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "date",
+    "lang",
+    "region",
+    "headline",
+    "morningBrief",
+    "audioScript",
+    "sections",
+    "vocab"
+  ],
+  "additionalProperties": false
+}
