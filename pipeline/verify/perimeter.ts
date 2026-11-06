@@ -19,7 +19,7 @@ function countryOf(url: string, wl: Whitelist): string | undefined {
  */
 export function checkPerimeter(lang: Lang, src: SourceRef, wl: Whitelist): PerimeterResult {
   if (lang === 'fr') return null;
-  if (src.lang !== lang) return { remove: `${src.outlet} : langue « ${src.lang} » hors édition ${lang.toUpperCase()}` };
+  if (src.lang.toLowerCase().split('-')[0] !== lang) return { remove: `${src.outlet} : langue « ${src.lang} » hors édition ${lang.toUpperCase()}` };
   if (lang === 'es') {
     if (tryNormalizeUrl(src.url) === null) return { remove: `${src.outlet} : URL illisible` };
     const country = countryOf(src.url, wl);

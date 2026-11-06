@@ -36,4 +36,10 @@ describe('checkPerimeter (R2)', () => {
   it('retire une URL illisible', () => {
     expect(checkPerimeter('es', src('pas une url', 'es'), wl)).toEqual({ remove: expect.stringContaining('URL illisible') });
   });
+
+  it('compare la langue sans région ni casse (M6)', () => {
+    expect(checkPerimeter('en', src('https://www.cbsnews.com/x', 'en-US'), wl)).toBeNull();
+    expect(checkPerimeter('es', src('https://www.eldiario.es/x', 'ES'), wl)).toBeNull();
+    expect(checkPerimeter('en', src('https://www.cbsnews.com/x', 'fr-FR'), wl)).toHaveProperty('remove');
+  });
 });

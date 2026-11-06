@@ -80,4 +80,66 @@ describe('verifyEdition', () => {
     verifyEdition(e, ctx);
     expect(JSON.stringify(e)).toBe(before);
   });
+
+  it('retire les chiffres dont la source n’est pas lue en entier après R2 (Infobae en ES)', () => {
+    const url = 'https://www.infobae.com/espana/2026/11/06/x';
+    const e = fixtureEdition('es');
+    const story = e.sections.flatMap((s) => s.stories).find((s) => s.id === '2026-11-06-es-9')!;
+    story.sources.push({ outlet: 'Infobae', title: 'Titre', url, lang: 'es', readFull: true });
+    story.stats = story.stats.map((s) => ({ ...s, sourceUrl: url }));
+    const texts = buildSourceTexts(
+      [...fixtureArticles(), { url, text: '69 fallecidos en Urda. 2.ª tragedia en 9 meses. 197 escaños PP + Vox. 29N elecciones generales.' }],
+      [],
+    );
+    const r = verifyEdition(e, { ...ctx, texts });
+    const out = r.edition!.sections.flatMap((s) => s.stories).find((s) => s.id === '2026-11-06-es-9')!;
+    expect(out.stats).toEqual([]);
+    expect(r.issues).toContainEqual(expect.objectContaining({ rule: 'R2', storyId: story.id }));
+    expect(r.issues).toContainEqual(expect.objectContaining({ rule: 'R6', storyId: story.id, level: 'fixed' }));
+  });
+
+  it('retire une citation dont la source est repassée en « titre + lien » par R1', () => {
+    const url = 'https://www.lemonde.fr/politique/x';
+    const e = fixtureEdition('fr');
+    const story = e.sections.flatMap((s) => s.stories).find((s) => s.id === '2026-11-06-fr-1')!;
+    story.sources.push({ outlet: 'Le Monde', title: 'Titre', url, lang: 'fr', readFull: true });
+    story.quote = { text: 'nous irons jusqu’au bout de cette mobilisation sociale', speaker: 'Sophie Binet', translation: null, sourceUrl: url };
+    const texts = buildSourceTexts(
+      [...fixtureArticles(), { url, text: 'Sophie Binet a déclaré : « nous irons jusqu’au bout de cette mobilisation sociale ».' }],
+      [],
+    );
+    const r = verifyEdition(e, { ...ctx, texts });
+    const out = r.edition!.sections.flatMap((s) => s.stories).find((s) => s.id === story.id)!;
+    expect(out.quote).toBeNull();
+    expect(r.issues).toContainEqual(expect.objectContaining({ rule: 'R1', storyId: story.id }));
+    expect(r.issues).toContainEqual(expect.objectContaining({ rule: 'R5', storyId: story.id, message: expect.stringContaining('pas lue en entier') }));
+  });
+
+  it('vérifie que le repli de requête photo est lui-même valide (M1)', () => {
+    const e = fixtureEdition('fr');
+    e.sections.flatMap((s) => s.stories).find((s) => s.id === '2026-11-06-fr-1')!.quote!.speaker = 'Jane Stadium';
+    const spo = e.sections.find((s) => s.key === 'spo')!;
+    spo.stories.push(e.sections.find((s) => s.key === 'eco')!.stories.splice(0, 1)[0]);
+    spo.stories[0].visual = { type: 'photo', query: 'Stadium crowd' };
+    const r = verifyEdition(e, ctx);
+    expect(r.edition!.sections.find((s) => s.key === 'spo')!.stories[0].visual).toEqual({ type: 'photo', query: 'newspaper' });
+  });
+
+  it('est idempotent : contrôler une édition déjà contrôlée ne corrige plus rien', () => {
+    const first = verifyEdition(fixtureEdition('fr'), ctx);
+    const second = verifyEdition(first.edition, ctx);
+    expect(second.issues.filter((i) => i.level === 'fixed')).toEqual([]);
+  });
+
+  it('ne laisse qu’une fois une URL dans les brèves, y compris après rétrogradation (M3)', () => {
+    const url = 'https://www.lemonde.fr/eco/x';
+    const e = fixtureEdition('fr');
+    const eco = e.sections.find((s) => s.key === 'eco')!;
+    eco.stories[0].sources = [{ outlet: 'Le Monde', title: 'Titre Le Monde', url, lang: 'fr', readFull: true }];
+    eco.briefs.push({ outlet: 'Le Monde', title: 'Déjà là', url: 'https://lemonde.fr/eco/x/', lang: 'fr', readFull: false });
+    const r = verifyEdition(e, ctx);
+    const out = r.edition!.sections.find((s) => s.key === 'eco')!;
+    expect(out.briefs.filter((b) => b.url.includes('lemonde.fr/eco/x'))).toHaveLength(1);
+    expect(out.briefs.find((b) => b.url.includes('lemonde.fr/eco/x'))!.title).toBe('Déjà là');
+  });
 });

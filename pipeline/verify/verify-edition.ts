@@ -7,7 +7,7 @@ import {
   type SourceRef,
   type Story,
 } from '@daily-brief/schema';
-import { normalizeUrl } from '../lib/url';
+import { tryNormalizeUrl } from '../lib/url';
 import { canReadFull, type Whitelist } from '../lib/whitelist';
 import { checkDivergence } from './divergences';
 import { MAX_OUTLET_SHARE, outletShares, storyOutletCount } from './diversity';
@@ -30,7 +30,11 @@ export type VerifyContext = {
 
 export type VerifyResult = { edition: Edition | null; issues: Issue[] };
 
-const sameUrl = (a: string, b: string) => normalizeUrl(a) === normalizeUrl(b);
+const sameUrl = (a: string, b: string) => {
+  const na = tryNormalizeUrl(a);
+  const nb = tryNormalizeUrl(b);
+  return na !== null && nb !== null && na === nb;
+};
 
 /**
  * Contrôle une édition et renvoie une copie corrigée qui respecte R1–R12.
@@ -89,6 +93,9 @@ export function verifyEdition(input: unknown, ctx: VerifyContext): VerifyResult 
       if (!src) {
         fix('R5', 'citation retirée : sa source n’est pas dans les sources du sujet', id);
         story.quote = null;
+      } else if (!src.readFull) {
+        fix('R5', 'citation retirée : sa source n’est pas lue en entier', id);
+        story.quote = null;
       } else if (!verdict.ok) {
         fix('R5', `citation retirée : ${verdict.reason}`, id);
         story.quote = null;
@@ -102,7 +109,12 @@ export function verifyEdition(input: unknown, ctx: VerifyContext): VerifyResult 
 
     if (story.stats.length) {
       const failures = story.stats
-        .map((s) => ({ s, r: checkStat(s, ctx.texts.textFor(s.sourceUrl)) }))
+        .map((s) => ({
+          s,
+          r: story.sources.some((x) => x.readFull && sameUrl(x.url, s.sourceUrl))
+            ? checkStat(s, ctx.texts.textFor(s.sourceUrl))
+            : { ok: false as const, reason: 'source du chiffre absente ou non lue en entier' },
+        }))
         .filter((x) => !x.r.ok);
       if (failures.length) {
         const reasons = [...new Set(failures.map((f) => (f.r.ok ? '' : f.r.reason)))].join(' ; ');
@@ -126,7 +138,8 @@ export function verifyEdition(input: unknown, ctx: VerifyContext): VerifyResult 
       const problem = photoQueryProblem(story.visual.query, people);
       if (problem) {
         fix('R11', `requête photo remplacée (${problem})`, id);
-        story.visual = { type: 'photo', query: DEFAULT_PHOTO_QUERY[section.key] };
+        const fallback = DEFAULT_PHOTO_QUERY[section.key];
+        story.visual = { type: 'photo', query: photoQueryProblem(fallback, people) ? 'newspaper' : fallback };
       }
     } else {
       const problem = arcProblem(story.visual.map);
@@ -156,8 +169,14 @@ export function verifyEdition(input: unknown, ctx: VerifyContext): VerifyResult 
       if ('summary' in out) stories.push(out);
       else briefs.push(out);
     }
+    const seen = new Set<string>();
     section.stories = stories;
-    section.briefs = briefs;
+    section.briefs = briefs.filter((b) => {
+      const key = tryNormalizeUrl(b.url) ?? b.url;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   }
   ed.sections = ed.sections.filter((s) => s.stories.length + s.briefs.length > 0);
 
