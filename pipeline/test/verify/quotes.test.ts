@@ -9,7 +9,7 @@ const pbs = sourceText('pbs-vance.txt');
 describe('normalizeForMatch', () => {
   it('unifie apostrophes, guillemets, espaces insécables et espace avant ponctuation', () => {
     expect(normalizeForMatch('c’est pas “gagner ?”')).toBe(normalizeForMatch('c\'est pas "gagner?"'));
-    expect(normalizeForMatch('575 000')).toBe('575 000');
+    expect(normalizeForMatch('575\u00a0000')).toBe('575 000');
   });
 });
 

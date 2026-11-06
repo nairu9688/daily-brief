@@ -22,7 +22,7 @@ describe('checkDivergence (R7)', () => {
   });
 
   it('rejette valeurs identiques, source identique et valeurs non comparables', () => {
-    expect(checkDivergence(div('575 000', '575 000')).ok).toBe(false);
+    expect(checkDivergence(div('575 000', '575\u00a0000')).ok).toBe(false);
     expect(checkDivergence(div('575 000', '1,6 million', 'CGT', 'cgt')).ok).toBe(false);
     expect(checkDivergence(div('575 000', 'beaucoup')).ok).toBe(false);
   });

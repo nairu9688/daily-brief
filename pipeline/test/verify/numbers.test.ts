@@ -13,7 +13,7 @@ describe('checkStat (R6)', () => {
   });
 
   it.each([
-    ['575 000', 'on compte 575 000 manifestants'],
+    ['575\u00a0000', 'on compte 575\u202f000 manifestants'],
     ['575 000', 'on compte 575,000 people'],
     ['65 000', 'dont 65.000 à Paris'],
     ['1,6 million', 'about 1.6 million marchers'],
