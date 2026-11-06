@@ -1,7 +1,8 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { z } from 'zod';
-import { IsoDateSchema, LANGS, LangSchema, parseEdition, type Edition, type Lang } from '@daily-brief/schema';
+import { IsoDateSchema, LANGS, parseEdition, type Edition, type Lang } from '@daily-brief/schema';
+import type { PexelsPhoto } from '@daily-brief/schema';
 import { printPdf, renderPdfHtml, type FooterInfo } from '@daily-brief/render-pdf';
 import type { FetchLike } from './http';
 import { fetchAsDataUri } from './images';
@@ -19,6 +20,10 @@ export type RunRenderOptions = {
   fetch: FetchLike;
   /** Imprimante PDF, remplaçable dans les tests. */
   print?: (html: string, outPath: string, footer: FooterInfo) => Promise<void>;
+  /** Recherche Pexels, remplaçable dans les tests. */
+  findPhoto?: typeof findPhoto;
+  /** Délai d'une requête Pexels (10 s par défaut). */
+  pexelsTimeoutMs?: number;
 };
 
 export type RunRenderResult = { issues: RenderIssue[]; exitCode: 0 | 2; pdfPath: string | null; langs: Lang[]; finals: Lang[] };
@@ -29,7 +34,8 @@ const photoSrcs = (editions: Edition[]): Set<string> =>
   new Set(editions.flatMap((e) => e.sections.flatMap((s) => s.stories.flatMap((st) => (st.visual.type === 'photo' && st.visual.pexels ? [st.visual.pexels.src] : [])))));
 
 /** `audio.json` (écrit par le lot 5) : durée par édition, toutes facultatives. */
-const AudioSchema = z.partialRecord(LangSchema, z.object({ duration: z.string().min(1) }));
+const AudioEntry = z.object({ duration: z.string().min(1) });
+const AudioSchema = z.object({ fr: AudioEntry, en: AudioEntry, es: AudioEntry }).partial();
 
 /**
  * Lit `out/<date>/{lang}.verified.json`, complète les photos Pexels, écrit `{lang}.final.json`
@@ -50,99 +56,119 @@ export async function runRender(opts: RunRenderOptions): Promise<RunRenderResult
   const dayDir = join(opts.outDir, opts.date);
   mkdirSync(dayDir, { recursive: true });
   const pdfPath = join(dayDir, pdfFileName(opts.date));
-  rmSync(pdfPath, { force: true });
-  rmSync(join(dayDir, 'render-report.json'), { force: true });
-
-  // Un seul chercheur pour toutes les langues : mémoïsé par requête, coupé après un 401/429.
-  const cache = new Map<string, Awaited<ReturnType<PhotoFinder>>>();
-  let pexelsDown: number | null = null;
-  const apiKey = opts.pexelsApiKey;
-  const finder: PhotoFinder = async (q) => {
-    if (pexelsDown !== null) throw new Error(PEXELS_DOWN);
-    if (cache.has(q)) return cache.get(q)!;
-    try {
-      const photo = await findPhoto(q, { apiKey: apiKey!, fetch: opts.fetch });
-      cache.set(q, photo);
-      return photo;
-    } catch (e) {
-      if (e instanceof PexelsHttpError && (e.status === 401 || e.status === 429)) {
-        pexelsDown = e.status;
-        issues.push({ level: 'warning', message: `Pexels indisponible (${e.status}) : photos omises` });
-        throw new Error(PEXELS_DOWN);
-      }
-      throw e;
-    }
-  };
-
-  const editions: Edition[] = [];
-  for (const lang of LANGS) {
-    const path = join(dayDir, `${lang}.verified.json`);
-    rmSync(join(dayDir, `${lang}.final.json`), { force: true });
-    if (!existsSync(path)) {
-      issues.push({ level: 'warning', lang, message: `${lang}.verified.json absent : édition omise` });
-      continue;
-    }
-    let parsed: ReturnType<typeof parseEdition>;
-    try {
-      parsed = parseEdition(JSON.parse(readFileSync(path, 'utf8')));
-    } catch (e) {
-      issues.push({ level: 'error', lang, message: `${lang}.verified.json illisible : ${(e as Error).message}` });
-      continue;
-    }
-    if (!parsed.success) {
-      issues.push({ level: 'error', lang, message: `${lang}.verified.json invalide : ${parsed.errors.join(' ; ')}` });
-      continue;
-    }
-    let ed = parsed.data;
-    if (opts.pexelsApiKey) {
-      const r = await fillPhotos(ed, finder);
-      ed = r.edition;
-      for (const message of r.problems) if (!message.endsWith(`: ${PEXELS_DOWN}`)) issues.push({ level: 'warning', lang, message });
-    } else if (ed.sections.some((s) => s.stories.some((st) => st.visual.type === 'photo' && !st.visual.pexels))) {
-      issues.push({ level: 'warning', lang, message: 'PEXELS_API_KEY absente : sujets illustrés rendus sans photo' });
-    }
-    const check = parseEdition(ed);
-    if (!check.success) {
-      issues.push({ level: 'error', lang, message: `édition finale invalide, photos omises : ${check.errors.join(' ; ')}` });
-      ed = parsed.data;
-    }
-    writeFileSync(join(dayDir, `${lang}.final.json`), JSON.stringify(ed, null, 2) + '\n');
-    editions.push(ed);
-  }
-
-  if (editions.length === 0) {
-    issues.push({ level: 'error', message: 'aucune édition à rendre : pas de PDF' });
-    return finish(dayDir, opts.date, issues, null, [], []);
-  }
-
-  const images: Record<string, string> = {};
-  for (const src of photoSrcs(editions)) {
-    const data = await fetchAsDataUri(src, opts.fetch);
-    if (data) images[src] = data;
-    else issues.push({ level: 'warning', message: `image Pexels non téléchargée : ${src}` });
-  }
-
-  let audio: z.infer<typeof AudioSchema> | undefined;
-  const audioPath = join(dayDir, 'audio.json');
-  if (existsSync(audioPath)) {
-    try {
-      audio = AudioSchema.parse(JSON.parse(readFileSync(audioPath, 'utf8')));
-    } catch (e) {
-      issues.push({ level: 'warning', message: `audio.json illisible, PDF sans encart audio : ${(e as Error).message}` });
-    }
-  }
-
-  const langs = editions.map((e) => e.lang);
-  const finals = langs;
+  const finals: Lang[] = [];
   try {
-    const html = await renderPdfHtml({ date: opts.date, issue, editions }, { images, audio });
-    await (opts.print ?? printPdf)(html, pdfPath, { date: opts.date, langs });
-  } catch (e) {
     rmSync(pdfPath, { force: true });
-    issues.push({ level: 'error', message: `impression PDF impossible : ${(e as Error).message}` });
-    return finish(dayDir, opts.date, issues, null, langs, finals);
+    rmSync(join(dayDir, 'render-report.json'), { force: true });
+
+    // Un seul chercheur pour toutes les langues : mémoïsé par requête, coupé après un 401/429.
+    const cache = new Map<string, { photo?: PexelsPhoto | null; error?: Error }>();
+    let pexelsDown: number | null = null;
+    const apiKey = opts.pexelsApiKey;
+    const search = opts.findPhoto ?? findPhoto;
+    const finder: PhotoFinder = async (q) => {
+      if (pexelsDown !== null) throw new Error(PEXELS_DOWN);
+      const hit = cache.get(q);
+      if (hit) {
+        if (hit.error) throw hit.error;
+        return hit.photo!;
+      }
+      try {
+        const photo = await search(q, { apiKey: apiKey!, fetch: opts.fetch, timeoutMs: opts.pexelsTimeoutMs });
+        cache.set(q, { photo });
+        return photo;
+      } catch (e) {
+        const status = e instanceof PexelsHttpError ? e.status : null;
+        const timedOut = e instanceof Error && (e.name === 'TimeoutError' || e.name === 'AbortError');
+        if (status === 401 || status === 429 || timedOut) {
+          pexelsDown = status ?? 0;
+          issues.push({ level: 'warning', message: `Pexels indisponible (${status ?? 'délai dépassé'}) : photos omises` });
+          throw new Error(PEXELS_DOWN);
+        }
+        cache.set(q, { error: e as Error });
+        throw e;
+      }
+    };
+
+    const editions: Edition[] = [];
+    for (const lang of LANGS) {
+      const path = join(dayDir, `${lang}.verified.json`);
+      rmSync(join(dayDir, `${lang}.final.json`), { force: true });
+      if (!existsSync(path)) {
+        issues.push({ level: 'warning', lang, message: `${lang}.verified.json absent : édition omise` });
+        continue;
+      }
+      let parsed: ReturnType<typeof parseEdition>;
+      try {
+        parsed = parseEdition(JSON.parse(readFileSync(path, 'utf8')));
+      } catch (e) {
+        issues.push({ level: 'error', lang, message: `${lang}.verified.json illisible : ${(e as Error).message}` });
+        continue;
+      }
+      if (!parsed.success) {
+        issues.push({ level: 'error', lang, message: `${lang}.verified.json invalide : ${parsed.errors.join(' ; ')}` });
+        continue;
+      }
+      if (parsed.data.lang !== lang || parsed.data.date !== opts.date) {
+        issues.push({ level: 'error', lang, message: `${lang}.verified.json contient l’édition ${parsed.data.lang} du ${parsed.data.date} (attendu : ${lang}, ${opts.date}) : édition omise` });
+        continue;
+      }
+      let ed = parsed.data;
+      if (opts.pexelsApiKey) {
+        const r = await fillPhotos(ed, finder);
+        ed = r.edition;
+        for (const message of r.problems) if (!message.endsWith(`: ${PEXELS_DOWN}`)) issues.push({ level: 'warning', lang, message });
+      } else if (ed.sections.some((s) => s.stories.some((st) => st.visual.type === 'photo' && !st.visual.pexels))) {
+        issues.push({ level: 'warning', lang, message: 'PEXELS_API_KEY absente : sujets illustrés rendus sans photo' });
+      }
+      const check = parseEdition(ed);
+      if (!check.success) {
+        issues.push({ level: 'error', lang, message: `édition finale invalide, photos omises : ${check.errors.join(' ; ')}` });
+        ed = parsed.data;
+      }
+      writeFileSync(join(dayDir, `${lang}.final.json`), JSON.stringify(ed, null, 2) + '\n');
+      finals.push(lang);
+      editions.push(ed);
+    }
+
+    if (editions.length === 0) {
+      issues.push({ level: 'error', message: 'aucune édition à rendre : pas de PDF' });
+      return finish(dayDir, opts.date, issues, null, [], finals);
+    }
+
+    const images: Record<string, string> = {};
+    for (const src of photoSrcs(editions)) {
+      const data = await fetchAsDataUri(src, opts.fetch);
+      if (data) images[src] = data;
+      else issues.push({ level: 'warning', message: `image Pexels non téléchargée : ${src}` });
+    }
+
+    let audio: z.infer<typeof AudioSchema> | undefined;
+    const audioPath = join(dayDir, 'audio.json');
+    if (existsSync(audioPath)) {
+      try {
+        audio = AudioSchema.parse(JSON.parse(readFileSync(audioPath, 'utf8')));
+      } catch (e) {
+        issues.push({ level: 'warning', message: `audio.json illisible, PDF sans encart audio : ${(e as Error).message}` });
+      }
+    }
+
+    const langs = editions.map((e) => e.lang);
+    try {
+      const html = await renderPdfHtml({ date: opts.date, issue, editions }, { images, audio });
+      await (opts.print ?? printPdf)(html, pdfPath, { date: opts.date, langs });
+    } catch (e) {
+      rmSync(pdfPath, { force: true });
+      issues.push({ level: 'error', message: `impression PDF impossible : ${(e as Error).message}` });
+      return finish(dayDir, opts.date, issues, null, [], finals);
+    }
+    return finish(dayDir, opts.date, issues, pdfPath, langs, finals);
+  } catch (e) {
+    // Quoi qu'il arrive, le rapport est écrit : la routine ne doit jamais lire un état de succès périmé.
+    rmSync(pdfPath, { force: true });
+    issues.push({ level: 'error', message: `erreur inattendue : ${(e as Error).message}` });
+    return finish(dayDir, opts.date, issues, null, [], finals);
   }
-  return finish(dayDir, opts.date, issues, pdfPath, langs, finals);
 }
 
 function finish(dayDir: string, date: string, issues: RenderIssue[], pdfPath: string | null, langs: Lang[], finals: Lang[]): RunRenderResult {

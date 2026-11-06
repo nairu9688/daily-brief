@@ -16,7 +16,8 @@ export function footerTemplate(info: FooterInfo): string {
 
 /** Imprime le HTML en PDF A4 avec Chromium (Playwright), polices et couleurs comprises. JavaScript désactivé. */
 export async function printPdf(html: string, outPath: string, footer: FooterInfo, opts: { timeoutMs?: number } = {}): Promise<void> {
-  const browser = await chromium.launch();
+  const timeoutMs = opts.timeoutMs ?? 120_000;
+  const browser = await chromium.launch({ timeout: Math.max(timeoutMs, 30_000) });
   let timer: NodeJS.Timeout | undefined;
   try {
     const work = (async () => {
@@ -35,11 +36,19 @@ export async function printPdf(html: string, outPath: string, footer: FooterInfo
     })();
     work.catch(() => {}); // évite un rejet non géré si le délai l'emporte puis que le navigateur se ferme
     const deadline = new Promise<never>((_, reject) => {
-      timer = setTimeout(() => reject(new Error('impression PDF : délai dépassé')), opts.timeoutMs ?? 120_000);
+      timer = setTimeout(() => reject(new Error('impression PDF : délai dépassé')), timeoutMs);
     });
     await Promise.race([work, deadline]);
   } finally {
     clearTimeout(timer);
-    await browser.close();
+    // Une fermeture bloquée ne doit pas bloquer la routine : on abandonne après 5 s.
+    let closeTimer: NodeJS.Timeout | undefined;
+    await Promise.race([
+      browser.close().catch(() => {}),
+      new Promise<void>((resolve) => {
+        closeTimer = setTimeout(resolve, 5_000);
+      }),
+    ]);
+    clearTimeout(closeTimer);
   }
 }
