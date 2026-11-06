@@ -2,6 +2,13 @@ import { z } from 'zod';
 import { PexelsPhotoSchema, type PexelsPhoto } from '@daily-brief/schema';
 import type { FetchLike } from './http';
 
+/** Erreur HTTP de l'API Pexels ; 401 (clé refusée) et 429 (quota) rendent l'API inutilisable pour la suite. */
+export class PexelsHttpError extends Error {
+  constructor(readonly status: number, query: string) {
+    super(`Pexels ${status} pour « ${query} »`);
+  }
+}
+
 const SEARCH = 'https://api.pexels.com/v1/search';
 
 const PexelsSearchSchema = z.object({
@@ -14,7 +21,7 @@ const PexelsSearchSchema = z.object({
       photographer: z.string(),
       photographer_url: z.string(),
       alt: z.string().nullable().optional(),
-      src: z.object({ large: z.string(), landscape: z.string() }),
+      src: z.object({ large: z.string() }),
     }),
   ),
 });
@@ -26,7 +33,7 @@ const PexelsSearchSchema = z.object({
 export async function findPhoto(query: string, opts: { apiKey: string; fetch: FetchLike; timeoutMs?: number }): Promise<PexelsPhoto | null> {
   const url = `${SEARCH}?${new URLSearchParams({ query, orientation: 'landscape', per_page: '5', size: 'medium' })}`;
   const res = await opts.fetch(url, { headers: { Authorization: opts.apiKey }, signal: AbortSignal.timeout(opts.timeoutMs ?? 10_000) });
-  if (!res.ok) throw new Error(`Pexels ${res.status} pour « ${query} »`);
+  if (!res.ok) throw new PexelsHttpError(res.status, query);
   const { photos } = PexelsSearchSchema.parse(await res.json());
   const p = photos.find((x) => x.width > x.height) ?? photos[0];
   if (!p) return null;

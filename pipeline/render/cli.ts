@@ -6,8 +6,9 @@ import { runRender } from './run-render';
 try {
   try {
     process.loadEnvFile('.env');
-  } catch {
-    /* pas de .env : variables d'environnement du processus seulement */
+  } catch (e) {
+    // Pas de .env : variables d'environnement du processus seulement. Toute autre erreur est remontée.
+    if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e;
   }
   const { values } = parseArgs({ options: { date: { type: 'string' }, out: { type: 'string', default: 'out' } } });
   const date = values.date ?? parisToday();

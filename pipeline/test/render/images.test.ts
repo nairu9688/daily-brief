@@ -39,4 +39,20 @@ describe('fetchAsDataUri', () => {
     const { fetch } = fakeFetch({ 'https://img/': { hang: true } });
     expect(await fetchAsDataUri('https://img/slow.jpg', fetch, 20)).toBeNull();
   });
+
+  it('refuse sur content-length trop grand sans lire le corps', async () => {
+    let read = false;
+    const { fetch } = fakeFetch({ 'https://img/': { body: new Uint8Array([1]), type: 'image/png', length: String(MAX_IMAGE_BYTES + 1) } });
+    const spy: typeof fetch = async (u, i) => {
+      const res = await fetch(u, i);
+      return { ...res, arrayBuffer: async () => ((read = true), res.arrayBuffer()) };
+    };
+    expect(await fetchAsDataUri('https://img/big', spy)).toBeNull();
+    expect(read).toBe(false);
+  });
+
+  it('refuse une réponse sans content-type', async () => {
+    const { fetch } = fakeFetch({ 'https://img/': { body: new Uint8Array([1, 2, 3]), type: null } });
+    expect(await fetchAsDataUri('https://img/a', fetch)).toBeNull();
+  });
 });

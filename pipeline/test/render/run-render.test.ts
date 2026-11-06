@@ -126,4 +126,54 @@ describe('runRender', () => {
     expect(JSON.stringify(fr)).not.toContain('"pexels"');
     expect(r.issues).toContainEqual(expect.objectContaining({ message: expect.stringMatching(/photo Pexels invalide/) }));
   });
+
+  it('après un 429, Pexels n’est plus appelé et un seul avertissement est émis, le PDF est produit', async () => {
+    const { outDir } = day();
+    const n = fakeFetch({ 'https://api.pexels.com/v1/search': { status: 429, json: {} } });
+    const { print, printed } = printer();
+    const r = await runRender({ outDir, date: '2026-11-06', pexelsApiKey: 'k', fetch: n.fetch, print });
+    expect(r.exitCode).toBe(0);
+    expect(printed).toHaveLength(1);
+    expect(n.calls).toHaveLength(1);
+    const msgs = r.issues.map((i) => i.message).filter((m) => /Pexels/.test(m));
+    expect(msgs).toEqual(['Pexels indisponible (429) : photos omises']);
+  });
+
+  it('une image non téléchargée donne un avertissement et le PDF est quand même produit', async () => {
+    const { outDir } = day(['fr']);
+    const n = fakeFetch({
+      'https://api.pexels.com/v1/search': { json: search },
+      'https://images.pexels.com/': { status: 500 },
+    });
+    const r = await runRender({ outDir, date: '2026-11-06', pexelsApiKey: 'k', fetch: n.fetch, print: printer().print });
+    expect(r.exitCode).toBe(0);
+    expect(r.issues).toContainEqual(expect.objectContaining({ level: 'warning', message: expect.stringMatching(/image Pexels non téléchargée/) }));
+  });
+
+  it('supprime un fr.final.json périmé quand fr.verified.json est absent', async () => {
+    const { outDir, dayDir } = day(['en']);
+    writeFileSync(join(dayDir, 'fr.final.json'), '{"vieux":true}');
+    await runRender({ outDir, date: '2026-11-06', fetch: net().fetch, print: printer().print });
+    expect(existsSync(join(dayDir, 'fr.final.json'))).toBe(false);
+  });
+
+  it('le rapport liste les finals et le nom du PDF, sans chemin ni clé API', async () => {
+    const { outDir, dayDir } = day(['fr', 'es']);
+    const r = await runRender({ outDir, date: '2026-11-06', pexelsApiKey: 'SECRETKEY', fetch: net().fetch, print: printer().print });
+    expect(r.finals).toEqual(['fr', 'es']);
+    const raw = readFileSync(join(dayDir, 'render-report.json'), 'utf8');
+    expect(JSON.parse(raw)).toMatchObject({ finals: ['fr', 'es'], pdf: 'Daily Brief 2026-11-06.pdf' });
+    expect(raw).not.toContain('SECRETKEY');
+    for (const l of ['fr', 'es']) expect(readFileSync(join(dayDir, `${l}.final.json`), 'utf8')).not.toContain('SECRETKEY');
+  });
+
+  it('PDF impossible : finals listés dans le rapport, pdf null, code 2', async () => {
+    const { outDir, dayDir } = day(['fr']);
+    const print = async () => {
+      throw new Error('boom');
+    };
+    const r = await runRender({ outDir, date: '2026-11-06', fetch: net().fetch, print });
+    expect(r.exitCode).toBe(2);
+    expect(JSON.parse(readFileSync(join(dayDir, 'render-report.json'), 'utf8'))).toMatchObject({ finals: ['fr'], pdf: null, exitCode: 2 });
+  });
 });

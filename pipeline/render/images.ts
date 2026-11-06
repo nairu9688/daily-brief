@@ -10,8 +10,10 @@ export async function fetchAsDataUri(url: string, fetch: FetchLike, timeoutMs = 
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
     if (!res.ok) return null;
-    const type = (res.headers.get('content-type') ?? 'image/jpeg').split(';')[0].trim().toLowerCase();
+    const type = (res.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
     if (!ALLOWED_IMAGE_TYPES.has(type)) return null;
+    const declared = Number(res.headers.get('content-length'));
+    if (Number.isFinite(declared) && declared > MAX_IMAGE_BYTES) return null;
     const buf = Buffer.from(await res.arrayBuffer());
     if (buf.length === 0 || buf.length > MAX_IMAGE_BYTES) return null;
     return `data:${type};base64,${buf.toString('base64')}`;
