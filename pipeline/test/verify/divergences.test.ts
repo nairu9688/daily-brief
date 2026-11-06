@@ -26,4 +26,11 @@ describe('checkDivergence (R7)', () => {
     expect(checkDivergence(div('575 000', '1,6 million', 'CGT', 'cgt')).ok).toBe(false);
     expect(checkDivergence(div('575 000', 'beaucoup')).ok).toBe(false);
   });
+
+  it('traite les symboles d’unité comme une partie du périmètre', () => {
+    expect(checkDivergence(div('4 %', '4 €')).ok).toBe(false);
+    expect(checkDivergence(div('3 %', '2 M')).ok).toBe(false);
+    expect(checkDivergence(div('1,50 m', '2 millions')).ok).toBe(false);
+    expect(checkDivergence(div('3 %', '2 %')).ok).toBe(true);
+  });
 });

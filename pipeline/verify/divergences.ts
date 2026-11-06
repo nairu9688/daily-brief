@@ -5,7 +5,7 @@ import type { CheckResult } from './result';
 /** Mots qui ne changent pas le périmètre d'une mesure : ordres de grandeur, jours et mois (FR, EN, ES). */
 const NEUTRAL = new Set(
   (
-    'million millions milliard milliards millón millones mil billion billions bn md mds m k ' +
+    'million millions milliard milliards millón millones mil billion billions bn md mds ' +
     'de del of the le la les el los ' +
     'lun mar mer jeu ven sam dim lundi mardi mercredi jeudi vendredi samedi dimanche ' +
     'janv janvier févr février fév mars avr avril mai juin juil juillet août sept septembre oct octobre nov novembre déc décembre ' +
@@ -20,12 +20,13 @@ const hasDigit = (s: string) => /\d/.test(s);
 
 /** Ce qui reste d'une valeur une fois retirés les nombres et les mots neutres : son « périmètre ». */
 export function scopeWords(value: string): string {
-  return value
-    .normalize('NFKC')
-    .toLowerCase()
+  const v = value.normalize('NFKC').toLowerCase();
+  const symbols = v.match(/[%€$£°]/g) ?? [];
+  return v
     .replace(/\d+/g, ' ')
     .split(/[^\p{L}]+/u)
     .filter((w) => w && !NEUTRAL.has(w))
+    .concat(symbols)
     .join(' ');
 }
 

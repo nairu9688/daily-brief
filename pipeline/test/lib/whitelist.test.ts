@@ -1,3 +1,6 @@
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { canReadFull, loadWhitelist, lookupDomain } from '../../lib/whitelist';
 import { WHITELIST_PATH } from '../helpers';
@@ -22,5 +25,21 @@ describe('liste blanche (R1)', () => {
   it('choisit l’entrée la plus spécifique', () => {
     expect(lookupDomain(wl, 'https://news.sky.com/x')?.status).toBe('feed');
     expect(lookupDomain(wl, 'https://www.infobae.com/x')?.country).toBe('AR');
+  });
+});
+
+describe('robustesse', () => {
+  it('traite une URL malformée comme inconnue, sans lever', () => {
+    expect(canReadFull(wl, 'not a url')).toBe(false);
+    expect(lookupDomain(wl, '')).toBeUndefined();
+  });
+
+  it('valide le fichier à la lecture', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'wl-'));
+    const bad = join(dir, 'bad.json');
+    writeFileSync(bad, JSON.stringify({ checkedAt: '2026-11-06', domains: [{ domain: 'x.com', country: 'fr', status: 'full' }] }));
+    expect(() => loadWhitelist(bad)).toThrow();
+    writeFileSync(bad, JSON.stringify({ checkedAt: '2026-11-06', domains: [{ domain: 'x.com', country: 'FR', status: 'oui' }] }));
+    expect(() => loadWhitelist(bad)).toThrow();
   });
 });

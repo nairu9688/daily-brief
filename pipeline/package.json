@@ -3,5 +3,5 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "dependencies": { "@daily-brief/schema": "*" }
+  "dependencies": { "@daily-brief/schema": "*", "zod": "^4.0.0" }
 }
