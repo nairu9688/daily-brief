@@ -1,7 +1,7 @@
 import type { MapSpec, Place } from '@daily-brief/schema';
 import { geoDistance, geoInterpolate, geoPath, type GeoProjection } from 'd3-geo';
-import { COUNTRIES, countryByAlpha3, type CountryFeature } from './countries';
-import { framing, inFrame } from './projections';
+import { COUNTRIES, COUNTRY_BOUNDS, countryByAlpha3, type CountryFeature } from './countries';
+import { framing, inFrame, mayIntersect } from './projections';
 import { dotGrid, escapeXml, H, r1, roundedPath, W, wrapSvg } from './svg';
 
 /** Rayon des cercles proportionnels, comme le prototype : 65 000 manifestants → 18,4 px. */
@@ -67,7 +67,7 @@ function arcPath(proj: GeoProjection, a: Place, b: Place): string {
  * (définies dans design/app.css et design/pdf.css).
  */
 export function renderMap(spec: MapSpec, label: string): string {
-  const { projection, onlyCountry } = framing(spec);
+  const { projection, onlyCountry, visible: area } = framing(spec);
   const path = geoPath(projection);
   const focus = features(spec.focus);
   const highlight = features(spec.highlight);
@@ -75,6 +75,7 @@ export function renderMap(spec: MapSpec, label: string): string {
   let body = dotGrid();
   for (const f of COUNTRIES) {
     if (onlyCountry && f !== onlyCountry) continue;
+    if (area && !mayIntersect(COUNTRY_BOUNDS.get(f)!, area)) continue;
     const d = roundedPath(path, f);
     if (d) body += `<path d="${d}" class="${landClass(f, focus, highlight)}"/>`;
   }

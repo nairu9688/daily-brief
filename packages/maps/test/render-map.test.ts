@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import type { Brief, MapSpec } from '@daily-brief/schema';
 import { describe, expect, it } from 'vitest';
@@ -77,8 +78,20 @@ describe('renderMap', () => {
     expect(renderMap({ projection: 'world', places: [] }, 'Monde')).toContain('class="land"');
   });
 
-  it('est déterministe', () => {
-    const m = fixtureMaps[0];
-    expect(renderMap(m.map, m.caption)).toBe(renderMap(m.map, m.caption));
+  it('rend une carte du monde vide en moins de 300 Ko', () => {
+    expect(renderMap({ projection: 'world', places: [] }, 'Monde').length).toBeLessThan(300_000);
+  });
+
+  it('ne dessine aucun point répété dans les tracés des pays', () => {
+    for (const m of fixtureMaps) {
+      for (const [, d] of renderMap(m.map, 'x').matchAll(/<path d="([^"]+)" class="land/g)) {
+        expect(d, m.id).not.toMatch(/[ML](-?\d+,-?\d+)L\1(?![\d.])/);
+      }
+    }
+  });
+
+  it('rend fr-1 à l’identique (empreinte du SVG)', () => {
+    const fr1 = fixtureMaps.find((m) => m.id === '2026-11-06-fr-1')!;
+    expect(createHash('sha256').update(renderMap(fr1.map, fr1.caption)).digest('hex')).toMatchSnapshot();
   });
 });

@@ -113,7 +113,44 @@ function worldProjection(spec: MapSpec): GeoProjection {
   return proj.scale(k).translate([W / 2 - (k * (x0 + x1)) / 2, H / 2 - (k * (y0 + y1)) / 2]);
 }
 
-export type Framing = { projection: GeoProjection; onlyCountry?: CountryFeature };
+/**
+ * Framing.visible : emprise géographique (lon, lat) qui contient tout ce que montre le cadre,
+ * marge comprise. Les pays dont l'emprise ne la touche pas sont sautés sans être projetés.
+ * Calculée seulement en conique : on y inverse le bord du cadre, et un extremum de longitude
+ * ou de latitude ne peut être intérieur que si le pôle (sommet du cône) est dans le cadre.
+ * En Equal Earth tournée (coupure à l'antiméridien), ce n'est pas sûr : pas d'emprise.
+ */
+export type Framing = { projection: GeoProjection; onlyCountry?: CountryFeature; visible?: Bounds };
+
+const VISIBLE_MARGIN = 1;
+
+function conicVisible(proj: GeoProjection): Bounds | undefined {
+  if (!proj.invert) return undefined;
+  const pole = proj([0, 90]);
+  if (pole && pole[0] >= -20 && pole[0] <= W + 20 && pole[1] >= -20 && pole[1] <= H + 20) return undefined;
+  const lons: number[] = [];
+  const lats: number[] = [];
+  const N = 64;
+  for (let i = 0; i <= N; i++) {
+    const t = i / N;
+    for (const xy of [[t * W, 0], [t * W, H], [0, t * H], [W, t * H]] as [number, number][]) {
+      const ll = proj.invert(xy);
+      if (!ll || !ll.every(Number.isFinite)) return undefined;
+      lons.push(ll[0]);
+      lats.push(ll[1]);
+    }
+  }
+  const [x0, x1, y0, y1] = [Math.min(...lons), Math.max(...lons), Math.min(...lats), Math.max(...lats)];
+  if (x1 - x0 > 180) return undefined; // cadre à cheval sur la coupure : pas de raccourci
+  return [[x0 - VISIBLE_MARGIN, y0 - VISIBLE_MARGIN], [x1 + VISIBLE_MARGIN, y1 + VISIBLE_MARGIN]];
+}
+
+/** Une emprise de pays peut-elle toucher l'emprise visible ? Prudent si elle traverse l'antiméridien. */
+export function mayIntersect(b: Bounds, visible: Bounds): boolean {
+  if (b[1][1] < visible[0][1] || b[0][1] > visible[1][1]) return false;
+  if (b[0][0] > b[1][0]) return true;
+  return !(b[1][0] < visible[0][0] || b[0][0] > visible[1][0]);
+}
 
 /**
  * Projection et cadrage d'un MapSpec.
@@ -140,7 +177,7 @@ export function framing(spec: MapSpec): Framing {
         .rotate(c.rotate as unknown as [number, number])
         .fitExtent(c.pad as unknown as Extent, { type: 'FeatureCollection', features: [corners, ...targets] });
       proj.clipExtent([[0, 0], [W, H]]);
-      return { projection: proj };
+      return { projection: proj, visible: conicVisible(proj) };
     }
     case 'albers-usa': {
       const usa = countryByAlpha3('USA')!;

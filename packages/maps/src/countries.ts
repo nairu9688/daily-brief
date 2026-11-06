@@ -15,6 +15,9 @@ export const COUNTRIES: CountryFeature[] = (
   feature(topology, topology.objects.countries) as unknown as FeatureCollection<Geometry, { name: string }>
 ).features as CountryFeature[];
 
+/** Emprise de chaque pays (geoBounds), calculée une fois au chargement. x0 > x1 si elle traverse l'antiméridien. */
+export const COUNTRY_BOUNDS: ReadonlyMap<CountryFeature, Bounds> = new Map(COUNTRIES.map((f) => [f, geoBounds(f) as Bounds]));
+
 /** Code alpha-3 (« FRA ») → identifiant world-atlas (« 250 »), ou undefined si inconnu. */
 export function numericId(alpha3: string): string | undefined {
   return isoCountries.alpha3ToNumeric(alpha3) ?? undefined;
