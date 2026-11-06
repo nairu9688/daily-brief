@@ -25,6 +25,8 @@ npm run schema:emit    # régénère packages/schema/edition.schema.json
 npm run brief:verify -- --date AAAA-MM-JJ [--out out]
 ```
 
-`brief:verify` contrôle `out/<date>/{fr,en,es}.json` selon les règles R1 à R12 de la spec. Il écrit `{lang}.verified.json` (toujours conforme) et `verify-report.json`. Code de sortie : 0 si propre, 1 si des corrections ont été appliquées, 2 si une édition est invalide.
+`brief:verify` contrôle `out/<date>/{fr,en,es}.json` selon les règles R1 à R12 de la spec. Il écrit `{lang}.verified.json` (conforme aux règles R1 à R12 détectables automatiquement) et `verify-report.json`. Code de sortie : 0 si propre, 1 si des corrections ont été appliquées, 2 en cas d’erreur : édition invalide ou absente, fichier d’entrée illisible, ou date incorrecte (l’édition doit alors être corrigée avant publication).
+
+`context.json`, `raw.json` et `newsletters/` sont facultatifs. Sans textes sources, toutes les citations et tous les chiffres sont retirés.
 
 Plans d'implémentation : `docs/superpowers/plans/`.
