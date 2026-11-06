@@ -1,7 +1,7 @@
 import type { MapSpec, Place } from '@daily-brief/schema';
 import { geoDistance, geoInterpolate, geoPath, type GeoProjection } from 'd3-geo';
-import { COUNTRIES, numericId } from './countries';
-import { framing } from './projections';
+import { COUNTRIES, countryByAlpha3, type CountryFeature } from './countries';
+import { framing, inFrame } from './projections';
 import { dotGrid, escapeXml, H, r1, roundedPath, W, wrapSvg } from './svg';
 
 /** Rayon des cercles proportionnels, comme le prototype : 65 000 manifestants → 18,4 px. */
@@ -12,30 +12,40 @@ const LABEL_H = 14;
 type Box = { x0: number; y0: number; x1: number; y1: number };
 const overlaps = (a: Box, b: Box) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
 
-function landClass(id: string | undefined, focus: Set<string>, highlight: Set<string>): string {
-  if (id && highlight.has(id)) return 'land focus';
-  if (id && focus.has(id)) return 'land focus-soft';
+function landClass(f: CountryFeature, focus: Set<CountryFeature>, highlight: Set<CountryFeature>): string {
+  if (highlight.has(f)) return 'land focus';
+  if (focus.has(f)) return 'land focus-soft';
   return 'land';
 }
 
-function ids(codes: string[] | undefined): Set<string> {
-  return new Set((codes ?? []).map(numericId).filter((x): x is string => x !== undefined));
+function features(codes: string[] | undefined): Set<CountryFeature> {
+  return new Set((codes ?? []).map(countryByAlpha3).filter((f): f is CountryFeature => f !== undefined));
 }
 
-/** Arc en pointillés : grand cercle, bombé vers le nord d'environ 13 % de la distance. */
+const clampLat = (lat: number) => Math.max(-89, Math.min(89, lat));
+
+/**
+ * Arc en pointillés : grand cercle, bombé vers le nord d'environ 13 % de la distance.
+ * Tracé comme une LineString par geoPath : coupé à l'antiméridien et au cadre.
+ * Pas d'arc si l'une des extrémités est hors cadre.
+ */
 function arcPath(proj: GeoProjection, a: Place, b: Place): string {
   const from: [number, number] = [a.lon, a.lat];
   const to: [number, number] = [b.lon, b.lat];
-  const bump = (geoDistance(from, to) * 180) / Math.PI * 0.13;
+  if (!inFrame(proj(from)) || !inFrame(proj(to))) return '';
+  const distance = geoDistance(from, to);
+  if (!(distance > 0 && distance < Math.PI - 1e-3)) return ''; // même point, ou antipodes : grand cercle indéfini
+  const bump = (distance * 180) / Math.PI * 0.13;
   const at = geoInterpolate(from, to);
-  let d = '';
+  const coordinates: [number, number][] = [];
   for (let i = 0; i <= 40; i++) {
     const t = i / 40;
     const [lon, lat] = at(t);
-    const p = proj([lon, lat + Math.sin(Math.PI * t) * bump]);
-    if (!p) continue;
-    d += (d ? 'L' : 'M') + r1(p[0]) + ',' + r1(p[1]);
+    const point: [number, number] = [lon, clampLat(lat + Math.sin(Math.PI * t) * bump)];
+    if (point.every(Number.isFinite)) coordinates.push(point);
   }
+  if (coordinates.length < 2) return '';
+  const d = geoPath(proj).digits(1)({ type: 'LineString', coordinates });
   return d ? `<path d="${d}" class="arc"/>` : '';
 }
 
@@ -47,14 +57,14 @@ function arcPath(proj: GeoProjection, a: Place, b: Place): string {
 export function renderMap(spec: MapSpec, label: string): string {
   const { projection, onlyCountry } = framing(spec);
   const path = geoPath(projection);
-  const focus = ids(spec.focus);
-  const highlight = ids(spec.highlight);
+  const focus = features(spec.focus);
+  const highlight = features(spec.highlight);
 
   let body = dotGrid();
   for (const f of COUNTRIES) {
-    if (onlyCountry && f.id !== onlyCountry) continue;
+    if (onlyCountry && f !== onlyCountry) continue;
     const d = roundedPath(path, f);
-    if (d) body += `<path d="${d}" class="${landClass(f.id, focus, highlight)}"/>`;
+    if (d) body += `<path d="${d}" class="${landClass(f, focus, highlight)}"/>`;
   }
 
   if (spec.arc) {
@@ -66,7 +76,7 @@ export function renderMap(spec: MapSpec, label: string): string {
   const ordered = [...spec.places].sort((a, b) => Number(b.primary ?? false) - Number(a.primary ?? false));
   for (const place of ordered) {
     const xy = projection([place.lon, place.lat]);
-    if (!xy || xy[0] < 0 || xy[0] > W || xy[1] < 0 || xy[1] > H) continue;
+    if (!inFrame(xy)) continue;
     const [x, y] = xy;
     const r = spec.bubbles && place.value !== undefined ? r1(Math.sqrt(place.value) * BUBBLE_K) : null;
     body += r

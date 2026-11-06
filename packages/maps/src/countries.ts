@@ -26,15 +26,22 @@ export function countryByAlpha3(alpha3: string): CountryFeature | undefined {
 }
 
 /**
- * Emprise du plus grand polygone du pays (en surface sphérique) : la métropole,
+ * Polygones principaux du pays : le plus grand en surface sphérique (la métropole),
  * sans les outre-mer ni les îles lointaines (Guyane pour FRA, Canaries pour ESP).
  */
-export function mainBounds(f: CountryFeature): Bounds {
+export function mainPolygons(f: CountryFeature): Feature<Polygon | MultiPolygon> {
   const g = f.geometry;
-  if (g.type !== 'MultiPolygon') return geoBounds(f) as Bounds;
-  const polygons = (g as MultiPolygon).coordinates.map(
-    (coordinates): Feature<Polygon> => ({ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates } }),
-  );
-  const largest = polygons.reduce((a, b) => (geoArea(b) > geoArea(a) ? b : a));
-  return geoBounds(largest) as Bounds;
+  if (g.type === 'Polygon') return { type: 'Feature', properties: {}, geometry: g as Polygon };
+  if (g.type !== 'MultiPolygon') return { type: 'Feature', properties: {}, geometry: { type: 'MultiPolygon', coordinates: [] } };
+  const areas = (g as MultiPolygon).coordinates.map((coordinates) => geoArea({ type: 'Polygon', coordinates }));
+  const largest = Math.max(...areas);
+  const kept = (g as MultiPolygon).coordinates.filter((_, i) => areas[i] >= largest);
+  return { type: 'Feature', properties: {}, geometry: { type: 'MultiPolygon', coordinates: kept } };
+}
+
+/**
+ * Emprise des polygones principaux. Peut traverser l'antiméridien : x0 > x1 (Russie, Fidji).
+ */
+export function mainBounds(f: CountryFeature): Bounds {
+  return geoBounds(mainPolygons(f)) as Bounds;
 }
