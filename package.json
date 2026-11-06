@@ -14,6 +14,7 @@
     "typecheck": "tsc -p tsconfig.json",
     "schema:emit": "tsx packages/schema/scripts/emit-json-schema.ts",
     "brief:verify": "tsx pipeline/verify/cli.ts",
+    "brief:render": "tsx pipeline/render/cli.ts",
     "maps:preview": "tsx packages/maps/scripts/preview.ts"
   },
   "devDependencies": {
