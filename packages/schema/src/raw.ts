@@ -1,10 +1,10 @@
 import { z } from 'zod';
-import { IsoDateSchema, LangSchema } from './edition';
+import { IsoDateSchema, LangSchema, UrlSchema } from './edition';
 
 /** Un article collecté (lot 3). `text` n'est rempli que pour les domaines au statut `full` (R1). */
 export const RawArticleSchema = z.object({
   id: z.string().min(1),
-  url: z.string().url(),
+  url: UrlSchema,
   outlet: z.string().min(1),
   title: z.string().min(1),
   description: z.string().nullable(),
@@ -17,7 +17,7 @@ export const RawArticleSchema = z.object({
 
 export const RawCollectionSchema = z.object({
   date: IsoDateSchema,
-  collectedAt: z.string(),
+  collectedAt: z.iso.datetime({ offset: true }),
   articles: z.array(RawArticleSchema),
   errors: z.array(z.object({ source: z.string(), message: z.string() })),
 });
@@ -27,7 +27,7 @@ export const OpenThreadSchema = z.object({
   slug: z.string().min(1),
   title: z.string().min(1),
   lang: LangSchema,
-  updatedAt: z.string(),
+  updatedAt: z.iso.datetime({ offset: true }),
 });
 
 /** Sortie de `brief:context` : Threads ouverts et sujets de la veille. */

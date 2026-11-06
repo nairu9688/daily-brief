@@ -1,14 +1,15 @@
 import { z } from 'zod';
 import { LANGS, RUBRIC_KEYS } from './rubrics';
 
-export const IsoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'date AAAA-MM-JJ attendue');
-const Url = z.string().url();
+export const IsoDateSchema = z.iso.date();
+export const UrlSchema = z.url({ protocol: /^https?$/ });
+const Url = UrlSchema;
 const Iso3 = z.string().regex(/^[A-Z]{3}$/, 'code ISO 3166 alpha-3 attendu');
 
 export const LangSchema = z.enum(LANGS);
 export const RubricKeySchema = z.enum(RUBRIC_KEYS);
 
-export const SourceRefSchema = z.object({
+export const SourceRefSchema = z.strictObject({
   outlet: z.string().min(1),
   title: z.string().min(1),
   url: Url,
@@ -17,7 +18,7 @@ export const SourceRefSchema = z.object({
   publishedAt: z.string().optional(),
 });
 
-export const PlaceSchema = z.object({
+export const PlaceSchema = z.strictObject({
   name: z.string().min(1),
   lon: z.number().min(-180).max(180),
   lat: z.number().min(-90).max(90),
@@ -26,7 +27,7 @@ export const PlaceSchema = z.object({
   primary: z.boolean().optional(),
 });
 
-export const MapSpecSchema = z.object({
+export const MapSpecSchema = z.strictObject({
   projection: z.enum(['conic-france', 'conic-europe', 'conic-spain', 'albers-usa', 'world']),
   focus: z.array(Iso3).optional(),
   highlight: z.array(Iso3).optional(),
@@ -35,7 +36,7 @@ export const MapSpecSchema = z.object({
   places: z.array(PlaceSchema),
 });
 
-export const PexelsPhotoSchema = z.object({
+export const PexelsPhotoSchema = z.strictObject({
   id: z.number(),
   src: Url,
   width: z.number(),
@@ -47,38 +48,38 @@ export const PexelsPhotoSchema = z.object({
 });
 
 export const VisualSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('map'), caption: z.string().min(1), map: MapSpecSchema }),
-  z.object({ type: z.literal('photo'), query: z.string().min(1), pexels: PexelsPhotoSchema.optional() }),
+  z.strictObject({ type: z.literal('map'), caption: z.string().min(1), map: MapSpecSchema }),
+  z.strictObject({ type: z.literal('photo'), query: z.string().min(1), pexels: PexelsPhotoSchema.optional() }),
 ]);
 
-export const StatSchema = z.object({ value: z.string().min(1), label: z.string().min(1), sourceUrl: Url });
+export const StatSchema = z.strictObject({ value: z.string().min(1), label: z.string().min(1), sourceUrl: Url });
 
-export const QuoteSchema = z.object({
+export const QuoteSchema = z.strictObject({
   text: z.string().min(1),
   speaker: z.string().min(1),
   translation: z.string().min(1).nullable(),
   sourceUrl: Url,
 });
 
-const DivergenceSide = z.object({ value: z.string().min(1), by: z.string().min(1) });
-export const DivergenceSchema = z.object({ metric: z.string().min(1), a: DivergenceSide, b: DivergenceSide });
+const DivergenceSide = z.strictObject({ value: z.string().min(1), by: z.string().min(1) });
+export const DivergenceSchema = z.strictObject({ metric: z.string().min(1), a: DivergenceSide, b: DivergenceSide });
 
-export const StoryThreadSchema = z.object({
+export const StoryThreadSchema = z.strictObject({
   id: z.string().optional(),
   title: z.string().min(1),
   subtitle: z.string(),
 });
 
-export const PrepaSchema = z.object({ subject: z.string().min(1), text: z.string().min(1) });
+export const PrepaSchema = z.strictObject({ subject: z.string().min(1), text: z.string().min(1) });
 
-export const StorySchema = z.object({
+export const StorySchema = z.strictObject({
   id: z.string().min(1),
   kicker: z.string().min(1),
   date: z.string().min(1),
   title: z.string().min(1),
   summary: z.string().min(1),
   visual: VisualSchema,
-  stats: z.array(StatSchema).refine((a) => a.length === 0 || a.length === 4, 'stats : 0 ou 4 chiffres'),
+  stats: z.array(StatSchema).refine((a) => a.length === 0 || a.length === 4, '0 ou 4 chiffres'),
   quote: QuoteSchema.nullable(),
   divergences: z.array(DivergenceSchema),
   thread: StoryThreadSchema.nullable(),
@@ -86,21 +87,21 @@ export const StorySchema = z.object({
   sources: z.array(SourceRefSchema).min(1, 'au moins une source'),
 });
 
-export const SectionSchema = z.object({
+export const SectionSchema = z.strictObject({
   key: RubricKeySchema,
   title: z.string().min(1),
   stories: z.array(StorySchema),
   briefs: z.array(SourceRefSchema),
 });
 
-export const MorningBriefItemSchema = z.object({
+export const MorningBriefItemSchema = z.strictObject({
   lead: z.string().min(1),
   text: z.string().min(1),
   rubric: z.string().min(1),
   storyId: z.string().optional(),
 });
 
-export const VocabItemSchema = z.object({
+export const VocabItemSchema = z.strictObject({
   term: z.string().min(1),
   pos: z.string().min(1),
   translation: z.string().min(1),
@@ -108,7 +109,7 @@ export const VocabItemSchema = z.object({
   sourceUrl: Url.optional(),
 });
 
-export const VocabSchema = z.object({ title: z.string().min(1), items: z.array(VocabItemSchema) });
+export const VocabSchema = z.strictObject({ title: z.string().min(1), items: z.array(VocabItemSchema) });
 
 export const EditionSchema = z
   .object({
@@ -116,7 +117,7 @@ export const EditionSchema = z
     lang: LangSchema,
     region: z.string().min(1),
     headline: z.string().min(1),
-    morningBrief: z.array(MorningBriefItemSchema).length(5, 'morningBrief : exactement 5 infos (R8)'),
+    morningBrief: z.array(MorningBriefItemSchema).length(5, 'exactement 5 infos (R8)'),
     audioScript: z.string().min(1),
     sections: z.array(SectionSchema),
     vocab: VocabSchema.nullable(),
@@ -126,7 +127,7 @@ export const EditionSchema = z
       ctx.addIssue({ code: 'custom', path: ['vocab'], message: 'vocab doit être null pour l’édition FR' });
     }
     if (ed.lang !== 'fr' && (ed.vocab === null || ed.vocab.items.length !== 6)) {
-      ctx.addIssue({ code: 'custom', path: ['vocab'], message: 'vocab : exactement 6 mots pour EN et ES (R10)' });
+      ctx.addIssue({ code: 'custom', path: ['vocab'], message: 'exactement 6 mots pour EN et ES (R10)' });
     }
     const keys = ed.sections.map((s) => s.key);
     if (new Set(keys).size !== keys.length) {

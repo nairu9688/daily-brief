@@ -18,7 +18,7 @@ describe('schémas de collecte et de contexte', () => {
   it('valide un contexte et refuse une langue inconnue', () => {
     const ctx = {
       date: '2026-11-06',
-      openThreads: [{ id: 't1', slug: 'midterms-2026', title: 'Midterms 2026', lang: 'en', updatedAt: '2026-11-05' }],
+      openThreads: [{ id: 't1', slug: 'midterms-2026', title: 'Midterms 2026', lang: 'en', updatedAt: '2026-11-05T10:00:00Z' }],
       yesterdayTopics: [{ lang: 'fr', title: 'Grève' }],
     };
     expect(ContextSchema.safeParse(ctx).success).toBe(true);

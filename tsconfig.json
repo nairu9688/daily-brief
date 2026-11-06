@@ -9,6 +9,7 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
+    "isolatedModules": true,
     "noEmit": true
   },
   "include": ["packages/*/src", "packages/*/scripts", "packages/*/test", "pipeline/**/*.ts", "vitest.config.ts"]
