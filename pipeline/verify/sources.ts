@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { RawCollectionSchema } from '@daily-brief/schema';
-import { normalizeUrl } from '../lib/url';
+import { tryNormalizeUrl } from '../lib/url';
 
 /** Textes lus du jour, indexés par URL : articles en texte intégral (R1) et newsletters. */
 export interface SourceTexts {
@@ -12,12 +12,20 @@ export interface SourceTexts {
 
 const URL_IN_TEXT = /https?:\/\/[^\s<>()\[\]"']+/g;
 
-function safeNormalize(url: string): string | null {
-  try {
-    return normalizeUrl(url.replace(/[.,;:]+$/, ''));
-  } catch {
-    return null;
+/** Découpe une newsletter en blocs : lignes vides et titres markdown. */
+function blocksOf(newsletter: string): string[] {
+  return newsletter.split(/\n\s*\n|\n(?=#)/).filter((b) => b.trim() !== '');
+}
+
+/** URL citées dans un bloc, normalisées ; une URL suivie de « ( » est ignorée plutôt que tronquée. */
+function urlsIn(block: string): string[] {
+  const out: string[] = [];
+  for (const m of block.matchAll(URL_IN_TEXT)) {
+    if (block[(m.index ?? 0) + m[0].length] === '(') continue;
+    const u = tryNormalizeUrl(m[0].replace(/&amp;/g, '&').replace(/[.,;:!?*_)\]]+$/, ''));
+    if (u) out.push(u);
   }
+  return out;
 }
 
 export function buildSourceTexts(articles: { url: string; text: string | null }[], newsletters: string[]): SourceTexts {
@@ -26,23 +34,28 @@ export function buildSourceTexts(articles: { url: string; text: string | null }[
     if (!url) return;
     byUrl.set(url, [...(byUrl.get(url) ?? []), text]);
   };
-  for (const a of articles) if (a.text) add(safeNormalize(a.url), a.text);
+  for (const a of articles) if (a.text) add(tryNormalizeUrl(a.url), a.text);
   const newsletterUrls = new Set<string>();
   for (const nl of newsletters) {
-    for (const m of nl.matchAll(URL_IN_TEXT)) {
-      const u = safeNormalize(m[0]);
-      if (u && !newsletterUrls.has(u)) {
+    // Le texte d'une URL est son bloc et le bloc précédent (le lien suit souvent le paragraphe).
+    // Les fragments sont ignorés : une newsletter qui cite a.com/live#p1 fait lire a.com/live.
+    const seen = new Set<string>();
+    const blocks = blocksOf(nl);
+    blocks.forEach((block, i) => {
+      for (const u of urlsIn(block)) {
         newsletterUrls.add(u);
-        add(u, nl);
+        if (seen.has(u)) continue;
+        seen.add(u);
+        add(u, i > 0 ? `${blocks[i - 1]}\n\n${block}` : block);
       }
-    }
+    });
   }
   return {
     textFor: (url) => {
-      const texts = byUrl.get(safeNormalize(url) ?? '');
+      const texts = byUrl.get(tryNormalizeUrl(url) ?? '');
       return texts ? texts.join('\n\n') : undefined;
     },
-    inNewsletter: (url) => newsletterUrls.has(safeNormalize(url) ?? ''),
+    inNewsletter: (url) => newsletterUrls.has(tryNormalizeUrl(url) ?? ''),
   };
 }
 
@@ -56,6 +69,7 @@ export function loadSourceTexts(dayDir: string): SourceTexts {
   const newsletters = existsSync(nlDir)
     ? readdirSync(nlDir)
         .filter((f) => f.endsWith('.md'))
+        .sort()
         .map((f) => readFileSync(join(nlDir, f), 'utf8'))
     : [];
   return buildSourceTexts(articles, newsletters);

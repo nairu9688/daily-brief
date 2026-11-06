@@ -21,4 +21,17 @@ describe('resolveThread (R12)', () => {
       thread: { title: 'Nouvelle affaire', subtitle: '' },
     });
   });
+
+  it('retire un id ouvert mais d’une autre langue', () => {
+    const r = resolveThread({ id: 't-1', title: 'Autre', subtitle: '' }, 'fr', open);
+    expect(r.thread.id).toBeUndefined();
+    expect(r.fix).toMatch(/t-1/);
+  });
+
+  it('rattache par le titre après avoir retiré un id invalide', () => {
+    const r = resolveThread({ id: 't-9', title: 'Midterms 2026', subtitle: '' }, 'en', open);
+    expect(r.thread.id).toBe('t-1');
+    expect(r.fix).toMatch(/t-9/);
+    expect(r.fix).toMatch(/rattaché/);
+  });
 });

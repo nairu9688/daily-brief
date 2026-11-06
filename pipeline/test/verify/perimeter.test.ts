@@ -23,7 +23,17 @@ describe('checkPerimeter (R2)', () => {
     expect(checkPerimeter('es', src('https://www.exteriores.gob.es/x', 'es'), wl)).toBeNull();
   });
 
-  it('signale un média au pays inconnu sans le retirer', () => {
-    expect(checkPerimeter('es', src('https://nouveau-media.com/x', 'es'), wl)).toHaveProperty('warn');
+  it('retire un média au pays inconnu', () => {
+    expect(checkPerimeter('es', src('https://nouveau-media.com/x', 'es'), wl)).toHaveProperty('remove');
+  });
+
+  it('déduit le pays du domaine national quand la liste blanche l’ignore', () => {
+    expect(checkPerimeter('es', src('https://elcomercio.pe/x', 'es'), wl)).toHaveProperty('remove');
+    expect(checkPerimeter('es', src('https://www.elpais.com.co/x', 'es'), wl)).toHaveProperty('remove');
+    expect(checkPerimeter('es', src('https://nouveau-media.es/x', 'es'), wl)).toBeNull();
+  });
+
+  it('retire une URL illisible', () => {
+    expect(checkPerimeter('es', src('pas une url', 'es'), wl)).toEqual({ remove: expect.stringContaining('URL illisible') });
   });
 });
