@@ -74,6 +74,11 @@ describe('renderMap', () => {
     expect(svg).toContain('aria-label="Carte &quot;test&quot;"');
   });
 
+  it('surligne le Kosovo, sans identifiant dans world-atlas', () => {
+    const svg = renderMap({ projection: 'conic-europe', highlight: ['XKX'], places: [] }, 'x');
+    expect(count(svg, /class="land focus"/g)).toBe(1);
+  });
+
   it('rend une carte du monde sans lieu ni pays', () => {
     expect(renderMap({ projection: 'world', places: [] }, 'Monde')).toContain('class="land"');
   });

@@ -23,14 +23,23 @@ export function numericId(alpha3: string): string | undefined {
   return isoCountries.alpha3ToNumeric(alpha3) ?? undefined;
 }
 
+/** Pays sans identifiant numérique dans world-atlas, retrouvés par leur nom (properties.name). */
+const BY_NAME: Record<string, string> = { XKX: 'Kosovo', CYN: 'N. Cyprus', SOL: 'Somaliland' };
+
 export function countryByAlpha3(alpha3: string): CountryFeature | undefined {
+  const name = BY_NAME[alpha3];
+  if (name) return COUNTRIES.find((f) => !f.id && f.properties.name === name);
   const id = numericId(alpha3);
   return id ? COUNTRIES.find((f) => f.id === id) : undefined;
 }
 
+/** Part minimale de la surface du plus grand polygone pour qu'une île compte parmi les polygones principaux. */
+const MAIN_SHARE = 0.25;
+
 /**
- * Polygones principaux du pays : le plus grand en surface sphérique (la métropole),
- * sans les outre-mer ni les îles lointaines (Guyane pour FRA, Canaries pour ESP).
+ * Polygones principaux du pays : ceux dont la surface sphérique atteint 25 % du plus grand.
+ * La métropole, sans les outre-mer ni les îles lointaines (Guyane ≈ 15 % pour FRA, Canaries pour ESP),
+ * mais toutes les grandes îles d'un archipel (Sumatra, Java, Bornéo, Sulawesi, Nouvelle-Guinée pour IDN).
  */
 export function mainPolygons(f: CountryFeature): Feature<Polygon | MultiPolygon> {
   const g = f.geometry;
@@ -38,12 +47,13 @@ export function mainPolygons(f: CountryFeature): Feature<Polygon | MultiPolygon>
   if (g.type !== 'MultiPolygon') return { type: 'Feature', properties: {}, geometry: { type: 'MultiPolygon', coordinates: [] } };
   const areas = (g as MultiPolygon).coordinates.map((coordinates) => geoArea({ type: 'Polygon', coordinates }));
   const largest = Math.max(...areas);
-  const kept = (g as MultiPolygon).coordinates.filter((_, i) => areas[i] >= largest);
+  const kept = (g as MultiPolygon).coordinates.filter((_, i) => areas[i] >= largest * MAIN_SHARE);
   return { type: 'Feature', properties: {}, geometry: { type: 'MultiPolygon', coordinates: kept } };
 }
 
 /**
- * Emprise des polygones principaux. Peut traverser l'antiméridien : x0 > x1 (Russie, Fidji).
+ * Emprise des polygones principaux, par geoBounds sur leur union : elle ne traverse l'antiméridien
+ * (x0 > x1) que si les polygones le font vraiment (Russie, Fidji), sans artefact d'union.
  */
 export function mainBounds(f: CountryFeature): Bounds {
   return geoBounds(mainPolygons(f)) as Bounds;
