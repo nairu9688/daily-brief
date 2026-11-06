@@ -47,6 +47,14 @@ export async function findPhoto(query: string, opts: { apiKey: string; fetch: Fe
     pexelsUrl: p.url,
     ...(p.alt ? { alt: p.alt } : {}),
   };
-  if (!PexelsPhotoSchema.safeParse(photo).success) throw new Error(`photo Pexels invalide pour « ${query} »`);
+  const creditOk = [photo.pexelsUrl, photo.photographerUrl].every((u) => {
+    try {
+      const x = new URL(u);
+      return x.protocol === 'https:' && x.hostname === 'www.pexels.com';
+    } catch {
+      return false;
+    }
+  });
+  if (!creditOk || !PexelsPhotoSchema.safeParse(photo).success) throw new Error(`photo Pexels invalide pour « ${query} »`);
   return photo;
 }

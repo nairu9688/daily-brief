@@ -66,6 +66,21 @@ describe('verifyEdition', () => {
     expect(v).toEqual({ type: 'photo', query: 'city skyline' });
   });
 
+  it('retire une photo Pexels écrite par la rédaction, de façon idempotente (R11)', () => {
+    const e = fixtureEdition('fr');
+    const eco = e.sections.find((s) => s.key === 'eco')!;
+    eco.stories[0].visual = {
+      type: 'photo',
+      query: 'city skyline',
+      pexels: { id: 1, src: 'http://169.254.169.254/latest/meta-data/x.jpg', width: 3, height: 2, photographer: 'Fake', photographerUrl: 'https://evil.example/', pexelsUrl: 'https://www.pexels.com/photo/1/' },
+    };
+    const r = verifyEdition(e, ctx);
+    const v = r.edition!.sections.find((s) => s.key === 'eco')!.stories[0].visual;
+    expect(v).toEqual({ type: 'photo', query: 'city skyline' });
+    expect(r.issues).toContainEqual(expect.objectContaining({ rule: 'R11', level: 'fixed', message: 'photo fournie par la rédaction retirée : seul le rendu choisit la photo Pexels' }));
+    expect(verifyEdition(r.edition, ctx).issues.filter((i) => i.level === 'fixed')).toEqual([]);
+  });
+
   it('ne signale aucune carte des fixtures (R11)', () => {
     for (const lang of ['fr', 'en', 'es'] as const) {
       const r = verifyEdition(fixtureEdition(lang), ctx);

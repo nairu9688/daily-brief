@@ -47,4 +47,15 @@ describe('findPhoto', () => {
     const { fetch } = fakeFetch({ 'https://api.pexels.com': { hang: true } });
     await expect(findPhoto('x', { apiKey: 'k', fetch, timeoutMs: 20 })).rejects.toThrow();
   });
+
+  it('rejette une photo dont les liens de crédit ne sont pas sur www.pexels.com', async () => {
+    const bad = (patch: (p: any) => void) => {
+      const s = structuredClone(search);
+      s.photos = [s.photos[1]];
+      patch(s.photos[0]);
+      return fakeFetch({ 'https://api.pexels.com': { json: s } }).fetch;
+    };
+    await expect(findPhoto('x', { apiKey: 'k', fetch: bad((p) => (p.photographer_url = 'https://evil.example/@jo')) })).rejects.toThrow(/photo Pexels invalide/);
+    await expect(findPhoto('x', { apiKey: 'k', fetch: bad((p) => (p.url = 'http://www.pexels.com/photo/1/')) })).rejects.toThrow(/photo Pexels invalide/);
+  });
 });

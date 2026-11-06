@@ -1,5 +1,8 @@
 import type { FetchLike } from './http';
 
+/** Seul hôte d'images autorisé : évite qu'une URL écrite par le modèle fasse télécharger autre chose. */
+export const IMAGE_HOST = 'images.pexels.com';
+
 export const MAX_IMAGE_BYTES = 3_000_000;
 
 /** Seuls formats raster acceptés : exclut svg (scripts), gif, html, etc. */
@@ -8,6 +11,8 @@ export const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/we
 /** Télécharge une image et la renvoie en data URI pour l'intégrer au PDF ; null en cas d'échec, de type non autorisé ou si trop lourde. */
 export async function fetchAsDataUri(url: string, fetch: FetchLike, timeoutMs = 10_000): Promise<string | null> {
   try {
+    const u = new URL(url);
+    if (u.protocol !== 'https:' || u.hostname !== IMAGE_HOST) return null;
     const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
     if (!res.ok) return null;
     const type = (res.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();

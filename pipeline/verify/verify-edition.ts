@@ -142,6 +142,10 @@ export function verifyEdition(input: unknown, ctx: VerifyContext): VerifyResult 
     };
 
     if (story.visual.type === 'photo') {
+      if (story.visual.pexels) {
+        fix('R11', 'photo fournie par la rédaction retirée : seul le rendu choisit la photo Pexels', id);
+        delete story.visual.pexels;
+      }
       const problem = photoQueryProblem(story.visual.query, people);
       if (problem) {
         fix('R11', `requête photo remplacée (${problem})`, id);
