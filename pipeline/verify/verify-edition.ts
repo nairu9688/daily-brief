@@ -155,6 +155,15 @@ export function verifyEdition(input: unknown, ctx: VerifyContext): VerifyResult 
         for (const p of map.places) if (!inside.includes(p)) fix('R11', `carte : lieu hors cadre retiré (${map.projection}) : ${p.name}`, id);
         map.places = inside;
       }
+      const names = new Set<string>();
+      map.places = map.places.filter((p) => {
+        if (names.has(p.name)) {
+          fix('R11', `lieu en double retiré : ${p.name}`, id);
+          return false;
+        }
+        names.add(p.name);
+        return true;
+      });
       const problem = arcProblem(map);
       if (problem) {
         fix('R11', `arc retiré : ${problem}`, id);

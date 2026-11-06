@@ -34,7 +34,7 @@ export const MapSpecSchema = z.strictObject({
   arc: z.tuple([z.string(), z.string()]).optional(),
   bubbles: z.boolean().optional(),
   places: z.array(PlaceSchema),
-}).refine((m) => new Set(m.places.map((p) => p.name)).size === m.places.length, 'noms de lieux en double');
+});
 
 export const PexelsPhotoSchema = z.strictObject({
   id: z.number(),

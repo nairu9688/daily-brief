@@ -102,6 +102,23 @@ describe('verifyEdition', () => {
     expect(r11.map((i) => i.message)).toEqual([expect.stringContaining('XXX'), expect.stringContaining('QQQ')]);
   });
 
+  it('retire un lieu en double sans bloquer l’édition, de façon idempotente (R11)', () => {
+    const e = fixtureEdition('fr');
+    const fr1 = e.sections.flatMap((s) => s.stories).find((s) => s.id === '2026-11-06-fr-1')!;
+    if (fr1.visual.type !== 'map') throw new Error('fr-1 doit être une carte');
+    fr1.visual.map.places.push({ name: 'Paris', lon: 5.37, lat: 43.3 });
+    fr1.visual.map.arc = ['Lyon', 'Paris'];
+    const r = verifyEdition(e, ctx);
+    expect(r.edition).not.toBeNull();
+    const out = r.edition!.sections.flatMap((s) => s.stories).find((s) => s.id === '2026-11-06-fr-1')!;
+    if (out.visual.type !== 'map') throw new Error('fr-1 doit rester une carte');
+    expect(out.visual.map.places.map((p) => [p.name, p.lon])).toEqual([['Paris', 2.35], ['Lyon', 4.84]]);
+    expect(out.visual.map.arc).toEqual(['Lyon', 'Paris']);
+    expect(r.issues).toContainEqual(expect.objectContaining({ rule: 'R11', level: 'fixed', storyId: '2026-11-06-fr-1', message: 'lieu en double retiré : Paris' }));
+    const again = verifyEdition(r.edition, ctx);
+    expect(again.issues.filter((i) => i.level === 'fixed')).toEqual([]);
+  });
+
   it('remet les libellés officiels des rubriques et retire les rubriques vides', () => {
     const e = fixtureEdition('fr');
     e.sections[0].title = 'Politique';

@@ -17,6 +17,8 @@ const CONIC = {
 
 /** Fenêtre de la carte Europe : pays et lieux cités n'élargissent le cadre qu'à l'intérieur. */
 export const EUROPE_WINDOW: Bounds = [[-25, 33], [50, 71.5]];
+/** Marge ajoutée autour de chaque lieu de la carte Europe avant l'ajustement (degrés lon, lat). */
+const PLACE_PAD = [2, 1.5] as const;
 
 /**
  * Points d'ajustement d'une emprise : les 4 coins et les 4 milieux des côtés.
@@ -49,7 +51,7 @@ const citedCountries = (spec: MapSpec): CountryFeature[] =>
 const within = (b: Bounds, w: Bounds) => b[0][0] <= b[1][0] && b[0][0] >= w[0][0] && b[1][0] <= w[1][0] && b[0][1] >= w[0][1] && b[1][1] <= w[1][1];
 
 /**
- * Ce que la carte Europe doit montrer, dans la fenêtre : les lieux, les polygones principaux
+ * Ce que la carte Europe doit montrer, dans la fenêtre : les lieux avec leur marge, les polygones principaux
  * des pays qui y tiennent, et pour les autres les 4 coins et 4 milieux de leur emprise
  * restreinte à la fenêtre. Ce qui est entièrement hors fenêtre est ignoré.
  */
@@ -64,7 +66,10 @@ function europeTargets(spec: MapSpec): Feature<Geometry>[] {
     }
   }
   for (const p of spec.places) {
-    if (clampToWindow([[p.lon, p.lat], [p.lon, p.lat]], EUROPE_WINDOW)) out.push(point(p.lon, p.lat));
+    if (!clampToWindow([[p.lon, p.lat], [p.lon, p.lat]], EUROPE_WINDOW)) continue;
+    // Marge autour du lieu (±2° lon, ±1,5° lat, dans la fenêtre) : marqueur et étiquette loin du bord.
+    const padded = clampToWindow([[p.lon - PLACE_PAD[0], p.lat - PLACE_PAD[1]], [p.lon + PLACE_PAD[0], p.lat + PLACE_PAD[1]]], EUROPE_WINDOW)!;
+    out.push(fitPoints(padded));
   }
   return out;
 }

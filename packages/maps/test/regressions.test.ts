@@ -83,7 +83,10 @@ describe('cadrage (revue 2)', () => {
       projection: 'conic-europe',
       places: [{ name: 'Reykjavik', lon: -21.9, lat: 64.1 }, { name: 'Bakou', lon: 49.9, lat: 40.4 }],
     };
-    expect(markers(renderMap(spec, 'x'))).toHaveLength(2);
+    const ms = markers(renderMap(spec, 'x'));
+    expect(ms).toHaveLength(2);
+    // Marge autour des lieux : aucun marqueur collé au bord du cadre.
+    for (const [x, y] of ms) expect(Math.min(x, W - x, y, H - y)).toBeGreaterThanOrEqual(30);
   });
 
   it('Europe : les États-Unis surlignés ne déforment pas la carte', () => {

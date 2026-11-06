@@ -62,16 +62,6 @@ describe('schéma Edition', () => {
     expect(parseEdition(e).success).toBe(false);
   });
 
-  it('refuse deux lieux du même nom sur une carte', () => {
-    const e = edition('fr');
-    const v = e.sections[0].stories[0].visual;
-    if (v.type !== 'map') throw new Error('la fixture doit commencer par une carte');
-    v.map.places.push({ ...v.map.places[0], lon: 5.37, lat: 43.3 });
-    const r = parseEdition(e);
-    expect(r.success).toBe(false);
-    if (!r.success) expect(r.errors.join()).toMatch(/noms de lieux en double/);
-  });
-
   it('refuse un sujet sans source et un id de sujet en double', () => {
     const e = edition('fr');
     e.sections[0].stories[0].sources = [];
