@@ -1013,7 +1013,7 @@ const pbs = sourceText('pbs-vance.txt');
 describe('normalizeForMatch', () => {
   it('unifie apostrophes, guillemets, espaces insécables et espace avant ponctuation', () => {
     expect(normalizeForMatch('c’est pas “gagner ?”')).toBe(normalizeForMatch('c\'est pas "gagner?"'));
-    expect(normalizeForMatch('575 000')).toBe('575 000');
+    expect(normalizeForMatch('575\u00a0000')).toBe('575 000');
   });
 });
 
@@ -1186,7 +1186,7 @@ describe('checkStat (R6)', () => {
   });
 
   it.each([
-    ['575 000', 'on compte 575 000 manifestants'],
+    ['575\u00a0000', 'on compte 575\u202f000 manifestants'],
     ['575 000', 'on compte 575,000 people'],
     ['65 000', 'dont 65.000 à Paris'],
     ['1,6 million', 'about 1.6 million marchers'],
@@ -1336,7 +1336,7 @@ describe('checkDivergence (R7)', () => {
   });
 
   it('rejette valeurs identiques, source identique et valeurs non comparables', () => {
-    expect(checkDivergence(div('575 000', '575 000')).ok).toBe(false);
+    expect(checkDivergence(div('575 000', '575\u00a0000')).ok).toBe(false);
     expect(checkDivergence(div('575 000', '1,6 million', 'CGT', 'cgt')).ok).toBe(false);
     expect(checkDivergence(div('575 000', 'beaucoup')).ok).toBe(false);
   });
