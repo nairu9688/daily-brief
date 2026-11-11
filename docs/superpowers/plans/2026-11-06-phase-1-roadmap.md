@@ -137,3 +137,12 @@ Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-3-collecte.md`
 - **Lot 3 (collecte)** : remplir `text` dans `raw.json` uniquement pour les domaines `full`. Le contrôle l'exige de toute façon et retire sinon citations et chiffres. Émettre `lang` en code ISO 639-1. Utiliser `tryNormalizeUrl`, jamais `normalizeUrl`, sur les URL des API. Tout média espagnol absent de `whitelist.json` sera retiré de l'édition ES : l'y ajouter avec son pays.
 - **Lot 7 (routine)** : les fichiers `newsletters/*.md` comptent comme textes lus (R1). Ils doivent donc être écrits **mot pour mot** à partir de Gmail par une étape mécanique, jamais réécrits par la rédaction, sinon le contrôle R1/R5/R6 perd sa valeur. La routine relance `brief:verify` jusqu'à 3 fois ; code 1 : publier les `.verified.json` ; code 2 : ne pas publier l'édition concernée et notifier « Brief incomplet » (le rapport `editions[].written` dit lesquelles sont prêtes).
 - **Lot 6 (appli)** : `transpilePackages: ['@daily-brief/schema']`, car le paquet exporte du TypeScript source.
+
+### Consignes issues du lot 3
+
+- **Lot 4 (Supabase)** : implémenter `ContextStore` (`pipeline/context/store.ts`) avec la clé service, sur le modèle de `MemoryContextStore`. Le dernier événement d'un Thread est `max(thread_events.date)`, sinon `updated_at` en date de Paris. Un Thread est fermé quand cette date est antérieure ou égale à `staleCutoff(date)` (`pipeline/context/stale.ts`). Brancher ce store dans `pipeline/context/select-store.ts`, à la place du store vide. `runContext` revalide déjà chaque ligne, borne chaque appel à 30 s et masque `SUPABASE_SERVICE_ROLE_KEY`.
+- **Lot 6 (appli)** : le bandeau « édition allégée » se fonde sur `perLang.<lang>.light` de `collect-report.json` (moins de 15 textes lus), que la publication recopie dans `runs`.
+- **Lot 7 (routine)** :
+  - **Mise en place.** Lancer `npm run check:thenewsapi` dès que la clé existe. Code 1 : passer `"primary": "exa"` dans `pipeline/config/collect.json` et commiter.
+  - **Codes de sortie.** `brief:collect` code 2 : pas de `raw.json`, notifier « Brief incomplet ». `brief:context` code 2 : rédiger sans rattacher ni créer de Thread ce jour-là, et le signaler.
+  - **Rubriques.** Affiner `pipeline/editorial/rubriques.json` (catégories, mots-clés et requêtes Exa par langue).

@@ -22,10 +22,19 @@ npm install
 npm test               # tests unitaires (Vitest)
 npm run typecheck      # TypeScript strict
 npm run schema:emit    # régénère packages/schema/edition.schema.json
+npm run brief:context -- --date AAAA-MM-JJ [--out out]
+npm run brief:collect -- --date AAAA-MM-JJ [--out out]
+npm run check:thenewsapi   # vérification §16 : TheNewsAPI est-elle en temps réel ?
 npm run brief:verify -- --date AAAA-MM-JJ [--out out]
 npm run brief:render -- --date AAAA-MM-JJ [--out out]
 npm run maps:preview   # aperçu des cartes de la fixture (out/maps-preview.html)
 ```
+
+`brief:context` ferme les Threads sans événement depuis 21 jours (R12), puis écrit `out/<date>/context.json` (Threads ouverts et sujets de la veille) et `context-report.json`. Tant que le store Supabase n'existe pas (lot 4), il écrit un contexte vide avec un avertissement. Une erreur ou un délai dépassé du store donne le code 2, sans `context.json`.
+
+`brief:collect` interroge, chacune indépendamment, la découverte principale (TheNewsAPI, ou Exa selon `primary` dans `pipeline/config/collect.json`), Exa, les flux de `pipeline/config/feeds.json` et, en secours, Webz.io. Il dédoublonne les articles, ne télécharge le texte intégral que pour les domaines `full` de la liste blanche (R1), puis écrit `out/<date>/raw.json` et `collect-report.json` : requêtes par source, budget TheNewsAPI, erreurs sans secret et textes lus par langue, avec `light: true` sous 15 textes (édition allégée, §12). Les clés `THENEWSAPI_KEY`, `EXA_API_KEY` et `WEBZ_TOKEN` viennent de l'environnement ou de `.env` ; sans clé, la source est ignorée avec un avertissement. Le plafond de 90 requêtes TheNewsAPI par jour est suivi dans `out/thenewsapi-usage.json`. Code de sortie : 0 si au moins un article est collecté, 2 sinon.
+
+`check:thenewsapi` (vérification §16) appelle une fois `/v1/news/top` par langue avec `THENEWSAPI_KEY` et affiche l'âge de l'article le plus récent. Si une langue dépasse 2 h, il conseille de passer `"primary": "exa"` dans `pipeline/config/collect.json`. Code 0 : temps réel ; 1 : passer à Exa ; 2 : vérification impossible. Il consomme 3 requêtes, hors du budget de 90.
 
 `brief:verify` contrôle `out/<date>/{fr,en,es}.json` selon les règles R1 à R12 de la spec. Il écrit `{lang}.verified.json` (conforme aux règles R1 à R12 détectables automatiquement) et `verify-report.json`. Code de sortie : 0 si propre, 1 si des corrections ont été appliquées, 2 en cas d’erreur : édition invalide ou absente, fichier d’entrée illisible, ou date incorrecte (l’édition doit alors être corrigée avant publication).
 
