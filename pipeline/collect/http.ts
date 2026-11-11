@@ -48,10 +48,25 @@ export class BodyError extends Error {
 }
 
 /** Message d'une erreur quelconque. */
-export const messageOf = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+const causeCode = (e: unknown): string | undefined => {
+  const code = (e as { cause?: { code?: unknown } } | null)?.cause?.code;
+  return typeof code === 'string' ? code : undefined;
+};
+
+/** Message d'une erreur quelconque ; le code de la cause réseau s'y ajoute (« fetch failed (ECONNREFUSED) »). */
+export const messageOf = (e: unknown): string => {
+  if (!(e instanceof Error)) return String(e);
+  const code = causeCode(e);
+  return code ? `${e.message} (${code})` : e.message;
+};
+
+const UNDICI_TIMEOUTS = new Set(['UND_ERR_CONNECT_TIMEOUT', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT']);
 
 export function isTimeout(e: unknown): boolean {
-  return e instanceof Error && (e.name === 'TimeoutError' || e.name === 'AbortError');
+  if (!(e instanceof Error)) return false;
+  if (e.name === 'TimeoutError' || e.name === 'AbortError') return true;
+  const code = causeCode(e);
+  return code !== undefined && UNDICI_TIMEOUTS.has(code);
 }
 
 /** Signal qui expire après `timeoutMs`, ou plus tôt si `parent` est interrompu. */
@@ -65,7 +80,10 @@ export async function fetchJson(fetch: HttpFetch, url: string, init: HttpInit & 
   const { timeoutMs, ...rest } = init;
   const signal = deadline(timeoutMs, rest.signal);
   const res = await fetch(url, { ...rest, signal });
-  if (!res.ok) throw new HttpError(res.status, url);
+  if (!res.ok) {
+    await res.body?.cancel().catch(() => {});
+    throw new HttpError(res.status, url);
+  }
   return await res.json();
 }
 
@@ -75,7 +93,10 @@ export async function fetchJson(fetch: HttpFetch, url: string, init: HttpInit & 
  */
 export async function readCapped(res: HttpResponse, maxBytes: number): Promise<Buffer> {
   const declared = Number(res.headers.get('content-length'));
-  if (Number.isFinite(declared) && declared > maxBytes) throw new BodyError(`corps trop lourd (${declared} octets)`);
+  if (Number.isFinite(declared) && declared > maxBytes) {
+    await res.body?.cancel().catch(() => {});
+    throw new BodyError(`corps trop lourd (${declared} octets)`);
+  }
   if (res.body) {
     const reader = res.body.getReader();
     const chunks: Uint8Array[] = [];
@@ -97,9 +118,18 @@ export async function readCapped(res: HttpResponse, maxBytes: number): Promise<B
   return buf;
 }
 
-/** Décode un corps texte selon le `charset` de l'en-tête (UTF-8 par défaut ou si le jeu est inconnu). */
+/**
+ * Décode un corps texte. Un BOM UTF-8 l'emporte ; sinon le `charset` de l'en-tête ; sinon la déclaration
+ * `<?xml encoding>` ou `<meta charset>` / `http-equiv` des 1024 premiers octets ; sinon UTF-8 (aussi si le jeu est inconnu).
+ */
 export function decodeBody(buf: Buffer, contentType: string | null): string {
-  const charset = /charset=["']?([\w-]+)/i.exec(contentType ?? '')?.[1];
+  const bom = buf.length >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf;
+  const head = buf.subarray(0, 1024).toString('latin1');
+  const charset = bom
+    ? 'utf-8'
+    : /charset=["']?([\w-]+)/i.exec(contentType ?? '')?.[1] ??
+      /<\?xml[^>]*?encoding=["']([\w-]+)["']/i.exec(head)?.[1] ??
+      /<meta[^>]*?charset=["']?([\w-]+)/i.exec(head)?.[1];
   try {
     return new TextDecoder(charset ?? 'utf-8').decode(buf);
   } catch {

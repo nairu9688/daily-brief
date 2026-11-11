@@ -5,11 +5,11 @@ import { hostOf, tryNormalizeUrl } from './url';
 /** full = texte intégral lisible (R1) ; feed = flux lisible, articles à vérifier ; meta = métadonnées seulement. */
 const DomainStatusSchema = z.enum(['full', 'feed', 'meta']);
 const WhitelistEntrySchema = z.object({
-  domain: z.string().min(1),
+  domain: z.string().regex(/^(?!www\.)[a-z0-9.-]+$/, 'domaine en minuscules, sans www. ni chemin'),
   country: z.union([z.literal('INT'), z.string().regex(/^[A-Z]{2}$/)]),
   status: DomainStatusSchema,
 });
-const WhitelistSchema = z.object({
+export const WhitelistSchema = z.object({
   checkedAt: z.string(),
   note: z.string().optional(),
   domains: z.array(WhitelistEntrySchema),

@@ -17,6 +17,7 @@ export class Breaker {
 
   /** Enregistre l'erreur ; renvoie vrai si elle coupe la source. */
   trip(e: unknown): boolean {
+    if (this.open) return true;
     if (e instanceof HttpError && FATAL_STATUS.has(e.status)) this.reason = `HTTP ${e.status}`;
     else if (isTimeout(e)) this.reason = 'délai dépassé';
     return this.open;
@@ -25,6 +26,7 @@ export class Breaker {
 
 /** Ajoute l'erreur au bilan de la source ; renvoie vrai si elle coupe la source. */
 export function recordFailure(run: SourceRun, breaker: Breaker, where: string, e: unknown): boolean {
+  if (breaker.open) return true;
   if (breaker.trip(e)) {
     run.stoppedBy = breaker.reason;
     run.errors.push(`${where} : ${messageOf(e)} — source coupée`);

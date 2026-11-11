@@ -17,6 +17,7 @@ function dayStart(date: string): number {
 
 /** Date AAAA-MM-JJ décalée de `days` jours (calendrier, sans fuseau). */
 export function addDays(date: string, days: number): string {
+  if (!Number.isInteger(days)) throw new Error(`décalage de jours invalide : ${days}`);
   return new Date(dayStart(date) + days * 86_400_000).toISOString().slice(0, 10);
 }
 

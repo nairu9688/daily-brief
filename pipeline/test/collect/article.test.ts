@@ -61,7 +61,7 @@ describe('makeArticle', () => {
 
 describe('utilitaires', () => {
   it('plainText décode les entités numériques et toIso refuse une date illisible', () => {
-    expect(plainText('L&#8217;&#xE9;t&eacute;')).toBe('L’ét&eacute;');
+    expect(plainText('L&#8217;&#xE9;t&eacute;')).toBe('L’été');
     expect(toIso('hier')).toBeNull();
     expect(toIso('Thu, 06 Nov 2026 05:00:00 GMT')).toBe('2026-11-06T05:00:00.000Z');
   });
