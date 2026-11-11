@@ -1,0 +1,95 @@
+import { describe, expect, it } from 'vitest';
+import { checkRealtime, describeRealtime } from '../../collect/realtime';
+import { THENEWSAPI_BASE } from '../../collect/thenewsapi';
+import { runCli } from '../run-cli';
+import { fakeHttp, type Reply } from './fake-http';
+
+const TOKEN = 'tna-SECRET-123';
+const NOW = new Date('2026-11-06T10:00:00Z');
+
+/** Réponse /top dont l'article le plus récent a `ages[lang]` minutes (null : aucun article). */
+function top(ages: Record<string, number | null>) {
+  return (url: string): Reply => {
+    const lang = new URL(url).searchParams.get('language')!;
+    const age = ages[lang];
+    if (age === null) return { json: { meta: { found: 0, returned: 0, limit: 3, page: 1 }, data: [] } };
+    const at = (m: number) => new Date(NOW.getTime() - m * 60_000).toISOString().replace('Z', '000Z');
+    return {
+      json: {
+        meta: { found: 50, returned: 2, limit: 3, page: 1 },
+        data: [
+          { uuid: `${lang}-1`, title: 'Ancien', url: `https://ex.com/${lang}/1`, language: lang, published_at: at(age + 300), source: 'ex.com' },
+          { uuid: `${lang}-2`, title: 'Récent', url: `https://ex.com/${lang}/2`, language: lang, published_at: at(age), source: 'ex.com' },
+        ],
+      },
+    };
+  };
+}
+
+describe('vérification §16 : TheNewsAPI en temps réel', () => {
+  it('un appel /top par langue, sans published_after ; trois langues fraîches : TheNewsAPI reste principale', async () => {
+    const { fetch, calls } = fakeHttp({ [`${THENEWSAPI_BASE}/top`]: top({ fr: 12, en: 3, es: 120 }) });
+    const r = await checkRealtime({ token: TOKEN, fetch, now: NOW });
+    expect(calls.map((c) => Object.fromEntries(new URL(c.url).searchParams))).toEqual(
+      ['fr', 'en', 'es'].map((language) => ({ api_token: TOKEN, language, limit: '3' })),
+    );
+    expect(r.perLang.fr).toEqual({ newest: '2026-11-06T09:48:00.000Z', ageMinutes: 12, articles: 2, error: null });
+    expect(r.perLang.es.ageMinutes).toBe(120);
+    expect(r).toMatchObject({ verdict: 'thenewsapi', requests: 3, maxAgeMinutes: 120, checkedAt: '2026-11-06T10:00:00.000Z' });
+    expect(describeRealtime(r, 'thenewsapi')).toEqual([
+      'FR : article le plus récent publié il y a 12 min (2026-11-06T09:48:00.000Z)',
+      'EN : article le plus récent publié il y a 3 min (2026-11-06T09:57:00.000Z)',
+      'ES : article le plus récent publié il y a 120 min (2026-11-06T08:00:00.000Z)',
+      'Verdict : TheNewsAPI est en temps réel (au plus 120 min dans les trois langues).',
+      'Requêtes TheNewsAPI utilisées : 3 (hors budget quotidien de 90 de brief:collect).',
+    ]);
+  });
+
+  it('plus de 2 h ou aucun article dans une langue : Exa doit devenir principale', async () => {
+    const late = await checkRealtime({ token: TOKEN, fetch: fakeHttp({ [`${THENEWSAPI_BASE}/top`]: top({ fr: 5, en: 121, es: 5 }) }).fetch, now: NOW });
+    expect(late.verdict).toBe('exa');
+    const lines = describeRealtime(late, 'thenewsapi');
+    expect(lines).toContain('À faire : passer "primary": "exa" dans pipeline/config/collect.json.');
+    const empty = await checkRealtime({ token: TOKEN, fetch: fakeHttp({ [`${THENEWSAPI_BASE}/top`]: top({ fr: 5, en: 5, es: null }) }).fetch, now: NOW });
+    expect(empty.verdict).toBe('exa');
+    expect(describeRealtime(empty, 'exa')[2]).toBe('ES : aucun article daté (0 renvoyés)');
+    expect(describeRealtime(empty, 'exa')).not.toContain('À faire : passer "primary": "exa" dans pipeline/config/collect.json.');
+  });
+
+  it('clé refusée : arrêt au premier appel, verdict inconnu, aucun secret', async () => {
+    const { fetch, calls } = fakeHttp({ [`${THENEWSAPI_BASE}/top`]: { status: 401, json: { error: { code: 'invalid_api_token' } } } });
+    const r = await checkRealtime({ token: TOKEN, fetch, now: NOW });
+    expect(calls).toHaveLength(1);
+    expect(r.verdict).toBe('unknown');
+    expect(r.perLang.fr.error).toBe('HTTP 401 (https://api.thenewsapi.com/v1/news/top?api_token=***&language=fr&limit=3)');
+    expect(r.perLang.es.error).toBe('non vérifié (HTTP 401)');
+    expect(JSON.stringify(r) + describeRealtime(r, 'thenewsapi').join('\n')).not.toContain(TOKEN);
+    expect(describeRealtime(r, 'thenewsapi')).toContain('Verdict : vérification impossible, configuration inchangée. Relance plus tard.');
+  });
+
+  it('ne reste pas bloquée : délai dépassé, puis arrêt', async () => {
+    const { fetch, calls } = fakeHttp({ [`${THENEWSAPI_BASE}/top`]: { hang: true } });
+    const r = await checkRealtime({ token: TOKEN, fetch, now: NOW, timeoutMs: 20 });
+    expect(calls).toHaveLength(1);
+    expect(r.verdict).toBe('unknown');
+    expect(r.perLang.en.error).toBe('non vérifié (délai dépassé)');
+  });
+
+  it('une erreur réseau qui cite le jeton est masquée ; une langue en retard l’emporte sur une erreur', async () => {
+    let n = 0;
+    const route = (url: string): Reply => (++n === 1 ? { error: new Error(`ECONNRESET ${url}`) } : top({ en: 500, es: 1 })(url));
+    const r = await checkRealtime({ token: TOKEN, fetch: fakeHttp({ [`${THENEWSAPI_BASE}/top`]: route }).fetch, now: NOW });
+    expect(r.perLang.fr.error).not.toContain(TOKEN);
+    expect(r.perLang.fr.error).toContain('api_token=***');
+    expect(r.requests).toBe(3);
+    expect(r.verdict).toBe('exa');
+  });
+});
+
+describe('CLI check:thenewsapi', () => {
+  it('sans clé : code 2, aucun appel réseau', () => {
+    const r = runCli('pipeline/collect/check-thenewsapi.ts', []);
+    expect(r.status).toBe(2);
+    expect(r.stdout).toBe('check:thenewsapi (découverte principale actuelle : thenewsapi)\nTHENEWSAPI_KEY absente (environnement ou .env) : vérification impossible.\n');
+  }, 30_000);
+});

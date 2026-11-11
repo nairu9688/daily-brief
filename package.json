@@ -16,6 +16,7 @@
     "brief:collect": "tsx pipeline/collect/cli.ts",
     "brief:verify": "tsx pipeline/verify/cli.ts",
     "brief:render": "tsx pipeline/render/cli.ts",
+    "check:thenewsapi": "tsx pipeline/collect/check-thenewsapi.ts",
     "maps:preview": "tsx packages/maps/scripts/preview.ts"
   },
   "devDependencies": {
