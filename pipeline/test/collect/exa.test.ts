@@ -85,3 +85,31 @@ describe('collectExa', () => {
     expect(JSON.stringify(run)).not.toContain(KEY);
   });
 });
+
+describe('Exa : réponses illisibles, dates', () => {
+  it('une réponse de forme inattendue ou non JSON est résumée sans fragment du corps', async () => {
+    const bad = fakeHttp({ [EXA_SEARCH]: { json: { results: 'SECRET-FRAGMENT' } } });
+    const run = await collectExa(testContext(bad.fetch, (c) => (c.exa.maxRequests = 1)), KEY, { broad: false });
+    expect(run.errors[0]).toMatch(/: réponse inattendue \(1 champs invalides\)$/);
+    const html = fakeHttp({ [EXA_SEARCH]: { body: '<html>SECRET-FRAGMENT</html>' } });
+    const run2 = await collectExa(testContext(html.fetch, (c) => (c.exa.maxRequests = 1)), KEY, { broad: false });
+    expect(run2.errors[0]).toMatch(/: réponse non JSON$/);
+    expect(JSON.stringify([run, run2])).not.toContain('SECRET-FRAGMENT');
+    const three = fakeHttp({ [EXA_SEARCH]: { body: '<html></html>' } });
+    const run3 = await collectExa(testContext(three.fetch), KEY, { broad: true });
+    expect(three.calls).toHaveLength(3);
+    expect(run3.stoppedBy).toBe('source coupée après 3 échecs consécutifs');
+  });
+
+  it('écarte un résultat sans date (compté) et un résultat d’avant la fenêtre', async () => {
+    const results = [
+      { url: 'https://sudradio.fr/a', title: 'Récent', publishedDate: '2026-11-06T03:00:00Z' },
+      { url: 'https://sudradio.fr/b', title: 'Sans date' },
+      { url: 'https://sudradio.fr/c', title: 'Ancien', publishedDate: '2026-10-01T03:00:00Z' },
+    ];
+    const { fetch } = fakeHttp({ [EXA_SEARCH]: { json: { results } } });
+    const run = await collectExa(testContext(fetch, (c) => (c.exa.maxRequests = 1)), KEY, { broad: false });
+    expect(run.candidates.map((c) => c.article.title)).toEqual(['Récent']);
+    expect(run.undated).toBe(1);
+  });
+});

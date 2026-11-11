@@ -112,6 +112,7 @@ export async function collectTheNewsApi(ctx: SourceContext, token: string, budge
             common,
           );
           add(items, lang);
+          breaker.success();
           if (rawCount < cfg.limit) active.splice(active.indexOf(key), 1);
         } catch (e) {
           if (recordFailure(run, breaker, `top ${lang}/${key} p${page}`, e)) break;
@@ -127,6 +128,7 @@ export async function collectTheNewsApi(ctx: SourceContext, token: string, budge
     try {
       const items = await similarNews(uuids.get(seed.article.id)!, { language: seed.article.lang, publishedAfter: ctx.windowStart, limit: cfg.limit }, common);
       add(items, seed.article.lang as Lang, seed.article.id);
+      breaker.success();
     } catch (e) {
       if (recordFailure(run, breaker, `similar ${seed.article.lang}`, e)) break;
     }
@@ -136,9 +138,10 @@ export async function collectTheNewsApi(ctx: SourceContext, token: string, budge
 
 /** Ordre des graines de `/similar` : une par article, domaines `full` d'abord, langues en alternance. */
 export function similarSeeds(discovered: Candidate[], ctx: Pick<SourceContext, 'whitelist'>): Candidate[] {
-  const seen = new Set<string>();
+  // Une graine par article : la première occurrence de chaque identifiant (la Map garde l'ordre d'insertion).
+  const unique = [...new Map(discovered.map((c) => [c.article.id, c] as const).reverse()).values()].reverse();
   const perLang = LANGS.map((lang) => {
-    const mine = discovered.filter((c) => c.article.lang === lang && !seen.has(c.article.id) && seen.add(c.article.id));
+    const mine = unique.filter((c) => c.article.lang === lang);
     return [...mine.filter((c) => canReadFull(ctx.whitelist, c.article.url)), ...mine.filter((c) => !canReadFull(ctx.whitelist, c.article.url))];
   });
   const out: Candidate[] = [];

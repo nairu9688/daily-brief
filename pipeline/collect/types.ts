@@ -15,6 +15,8 @@ export type SourceRun = {
   requests: number;
   errors: string[];
   discardedTexts: number;
+  /** Articles écartés faute de date. */
+  undated: number;
   /** Raison de la coupure du disjoncteur, le cas échéant. */
   stoppedBy: string | null;
 };
@@ -29,4 +31,4 @@ export type SourceContext = {
   windowStart: Date;
 };
 
-export const emptyRun = (): SourceRun => ({ candidates: [], requests: 0, errors: [], discardedTexts: 0, stoppedBy: null });
+export const emptyRun = (): SourceRun => ({ candidates: [], requests: 0, errors: [], discardedTexts: 0, undated: 0, stoppedBy: null });

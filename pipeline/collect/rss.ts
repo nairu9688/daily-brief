@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { z } from 'zod';
 import { LangSchema, UrlSchema } from '@daily-brief/schema';
 import { lookupDomain, type Whitelist } from '../lib/whitelist';
-import { makeArticle, toIso } from './article';
+import { makeArticle, toIso, windowVerdict } from './article';
 import { parseFeed, type FeedItem } from './feed-parse';
 import { ACCEPT_FEED, decodeBody, deadline, HttpError, messageOf, readCapped, USER_AGENT, type HttpFetch } from './http';
 import { mapLimit } from './limit';
@@ -27,7 +27,10 @@ export function isReadableFeedDomain(wl: Whitelist, url: string): boolean {
 /** Télécharge et analyse un flux (délai, taille bornée). */
 export async function fetchFeed(url: string, c: { fetch: HttpFetch; timeoutMs: number; maxBytes: number }): Promise<FeedItem[]> {
   const res = await c.fetch(url, { signal: deadline(c.timeoutMs), headers: { accept: ACCEPT_FEED, 'user-agent': USER_AGENT } });
-  if (!res.ok) throw new HttpError(res.status, url);
+  if (!res.ok) {
+    await res.body?.cancel().catch(() => {});
+    throw new HttpError(res.status, url);
+  }
   return parseFeed(decodeBody(await readCapped(res, c.maxBytes), res.headers.get('content-type')));
 }
 
@@ -40,24 +43,28 @@ export async function collectRss(ctx: SourceContext, feeds: Feed[]): Promise<Sou
   const cfg = ctx.config.rss;
   const run = emptyRun();
   const since = ctx.windowStart.toISOString();
-  const perFeed = await mapLimit(feeds, 4, async (feed): Promise<{ candidates: Candidate[]; error?: string }> => {
+  const perFeed = await mapLimit(feeds, 4, async (feed): Promise<{ candidates: Candidate[]; undated?: number; error?: string }> => {
     if (!isReadableFeedDomain(ctx.whitelist, feed.url)) return { candidates: [], error: `rss ${feed.url} : domaine ni full ni feed, flux ignoré` };
     run.requests++;
     try {
       const items = await fetchFeed(feed.url, { fetch: ctx.fetch, timeoutMs: cfg.timeoutMs, maxBytes: cfg.maxBytes });
       const candidates: Candidate[] = [];
+      let undated = 0;
       for (const it of items) {
         if (candidates.length >= cfg.maxItemsPerFeed) break;
         if (!it.link || !isReadableFeedDomain(ctx.whitelist, it.link)) continue;
         const published = toIso(it.published);
-        if (published && published < since) continue;
+        const verdict = windowVerdict(published, since);
+        if (verdict === 'old') continue;
         const { article } = makeArticle(
           { url: it.link, title: it.title, outlet: feed.outlet, description: it.description, lang: feed.lang, publishedAt: published, origin: 'rss' },
           ctx.whitelist,
         );
-        if (article) candidates.push({ article });
+        if (!article) continue;
+        if (verdict === 'undated') undated++;
+        else candidates.push({ article });
       }
-      return { candidates };
+      return { candidates, undated };
     } catch (e) {
       return { candidates: [], error: `rss ${feed.url} : ${messageOf(e)}` };
     }
@@ -65,6 +72,7 @@ export async function collectRss(ctx: SourceContext, feeds: Feed[]): Promise<Sou
   // Ordre de feeds.json, quel que soit l'ordre d'arrivée des réponses.
   for (const r of perFeed) {
     run.candidates.push(...r.candidates);
+    run.undated += r.undated ?? 0;
     if (r.error) run.errors.push(r.error);
   }
   return run;

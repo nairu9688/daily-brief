@@ -164,3 +164,23 @@ describe('réponses bornées', () => {
     expect(calls.some((c) => new URL(c.url).searchParams.get('page') === '2')).toBe(true);
   });
 });
+
+describe('réponses illisibles', () => {
+  it('du HTML au lieu de JSON : « réponse non JSON », sans fragment du corps, et coupure après 3 échecs', async () => {
+    const { fetch, calls } = fakeHttp({ [THENEWSAPI_BASE]: { body: '<html>SECRET-FRAGMENT</html>' } });
+    const ctx = testContext(fetch);
+    const budget = budgetOf(ctx.config);
+    const run = await collectTheNewsApi(ctx, TOKEN, budget);
+    expect(calls).toHaveLength(3);
+    expect(budget.usage()).toEqual({ fr: 3, en: 0, es: 0, similar: 0 });
+    expect(run.stoppedBy).toBe('source coupée après 3 échecs consécutifs');
+    expect(run.errors[0]).toMatch(/^top fr\/pol p1 : réponse non JSON$/);
+    expect(JSON.stringify(run)).not.toContain('SECRET-FRAGMENT');
+  });
+
+  it('une réponse JSON de forme inattendue est résumée', async () => {
+    const { fetch } = fakeHttp({ [THENEWSAPI_BASE]: { json: { error: { code: 'x' } } } });
+    const run = await collectTheNewsApi(testContext(fetch), TOKEN, budgetOf(testContext(fetch).config));
+    expect(run.errors[0]).toMatch(/: réponse inattendue \(1 champs invalides\)$/);
+  });
+});

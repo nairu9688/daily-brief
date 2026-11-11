@@ -107,9 +107,9 @@ describe('runCollect', () => {
     const net = network({ [`${THENEWSAPI_BASE}/top`]: leak, [WEBZ_LITE]: leak, [EXA_SEARCH]: { error: new Error(`refus pour la clé ${KEYS.exa}`) } });
     const r = await run(net.fetch);
     expect(r.exitCode).toBe(0);
-    expect(r.report.sources.thenewsapi.errors).toHaveLength(27);
+    expect(r.report.sources.thenewsapi.errors).toHaveLength(3);
     expect(r.report.sources.webz.errors).toHaveLength(3);
-    expect(r.report.sources.exa.errors).toHaveLength(27);
+    expect(r.report.sources.exa.errors).toHaveLength(3);
     expect(r.report.sources.rss.candidates).toBeGreaterThan(0);
     noSecret(readFileSync(join(dayDir, 'raw.json'), 'utf8') + readFileSync(join(dayDir, 'collect-report.json'), 'utf8'));
     expect(JSON.stringify(r.report)).toContain('api_token=***');

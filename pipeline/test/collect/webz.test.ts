@@ -67,3 +67,12 @@ describe('réponses bornées', () => {
     expect(run.candidates).toHaveLength(100);
   });
 });
+
+describe('Webz : dates', () => {
+  it('écarte et compte un post sans date', async () => {
+    const { fetch } = fakeHttp({ [WEBZ_LITE]: { json: { posts: [{ url: 'https://eldiario.es/a', title: 'A' }, { url: 'https://eldiario.es/b', title: 'B', published: '2026-11-06T04:00:00Z' }] } } });
+    const run = await collectWebz(testContext(fetch), TOKEN, ['es']);
+    expect(run.candidates.map((c) => c.article.title)).toEqual(['B']);
+    expect(run.undated).toBe(1);
+  });
+});

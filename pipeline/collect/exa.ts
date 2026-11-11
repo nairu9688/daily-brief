@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { LANGS, RUBRIC_KEYS } from '@daily-brief/schema';
 import { lookupDomain, type Whitelist } from '../lib/whitelist';
-import { makeArticle } from './article';
+import { makeArticle, toIso, windowVerdict } from './article';
 import { Breaker, recordFailure } from './breaker';
 import { fetchJson, type HttpFetch } from './http';
 import { emptyRun, type SourceContext, type SourceRun } from './types';
@@ -68,6 +68,7 @@ export async function collectExa(ctx: SourceContext, apiKey: string, opts: { bro
   const cfg = ctx.config.exa;
   const run = emptyRun();
   const breaker = new Breaker();
+  const since = ctx.windowStart.toISOString();
   const common = { apiKey, fetch: ctx.fetch, timeoutMs: cfg.timeoutMs, whitelist: ctx.whitelist };
   outer: for (const lang of LANGS) {
     for (const key of RUBRIC_KEYS) {
@@ -84,8 +85,12 @@ export async function collectExa(ctx: SourceContext, apiKey: string, opts: { bro
             const text = textRequested ? r.text : null;
             const { article, discardedText } = makeArticle({ url: r.url, title: r.title, lang, publishedAt: r.publishedDate, origin: 'exa', text }, ctx.whitelist);
             if (discardedText || (!textRequested && r.text)) run.discardedTexts++;
-            if (article) run.candidates.push({ article });
+            if (!article) continue;
+            const verdict = windowVerdict(article.publishedAt, since);
+            if (verdict === 'undated') run.undated++;
+            else if (verdict === 'ok') run.candidates.push({ article });
           }
+          breaker.success();
         } catch (e) {
           if (recordFailure(run, breaker, `exa ${lang}/${key}${includeDomains ? ' (full)' : ''}`, e)) break outer;
         }

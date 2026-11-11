@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { Lang } from '@daily-brief/schema';
-import { makeArticle, toIso } from './article';
+import { makeArticle, toIso, windowVerdict } from './article';
 import { Breaker, recordFailure } from './breaker';
 import { fetchJson, type HttpFetch } from './http';
 import { emptyRun, type SourceContext, type SourceRun } from './types';
@@ -58,7 +58,8 @@ export async function collectWebz(ctx: SourceContext, token: string, langs: Lang
     try {
       for (const p of await webzSearch(cfg.queries[lang], { token, fetch: ctx.fetch, timeoutMs: cfg.timeoutMs })) {
         const published = toIso(p.published);
-        if (published && published < ctx.windowStart.toISOString()) continue;
+        const verdict = windowVerdict(published, ctx.windowStart.toISOString());
+        if (verdict === 'old') continue;
         const { article, discardedText } = makeArticle(
           {
             url: p.url,
@@ -72,8 +73,11 @@ export async function collectWebz(ctx: SourceContext, token: string, langs: Lang
           ctx.whitelist,
         );
         if (discardedText) run.discardedTexts++;
-        if (article) run.candidates.push({ article });
+        if (!article) continue;
+        if (verdict === 'undated') run.undated++;
+        else run.candidates.push({ article });
       }
+      breaker.success();
     } catch (e) {
       if (recordFailure(run, breaker, `webz ${lang}`, e)) break;
     }

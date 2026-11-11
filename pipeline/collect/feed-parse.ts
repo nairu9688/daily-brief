@@ -6,7 +6,10 @@ export type FeedItem = { title: string; link: string | null; description: string
 const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
-  processEntities: true,
+  // Les valeurs restent du texte : « 1e3 » ou « 007 » ne deviennent pas des nombres.
+  parseTagValue: false,
+  // Entités bornées : taille d'une définition, nombre de définitions, expansions et longueur développée.
+  processEntities: { enabled: true, maxEntitySize: 1000, maxEntityCount: 20, maxTotalExpansions: 100, maxExpandedLength: 100_000 },
   htmlEntities: true,
   isArray: (name) => name === 'item' || name === 'entry' || name === 'link',
 });
@@ -25,8 +28,9 @@ function linkOf(v: unknown): string | null {
   const links = Array.isArray(v) ? v : v === undefined ? [] : [v];
   for (const l of links) if (typeof l === 'string' && l.trim()) return l.trim();
   const atom = links.filter((l): l is Record<string, unknown> => !!l && typeof l === 'object');
-  const best = atom.find((l) => l['@_rel'] === undefined || l['@_rel'] === 'alternate') ?? atom[0];
-  const href = best?.['@_href'];
+  // Seul un lien `alternate` (ou sans `rel`) désigne l'article : une pièce jointe seule ne donne pas de lien.
+  const best = atom.find((l) => l['@_rel'] === undefined || l['@_rel'] === 'alternate');
+  const href = best?.['@_href'] ?? textOf(best?.['#text']);
   return typeof href === 'string' && href.trim() ? href.trim() : null;
 }
 

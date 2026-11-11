@@ -43,9 +43,13 @@ export function plainText(html: string | null | undefined): string {
 }
 
 /** Date ISO 8601 (UTC) ou null si la date est absente ou illisible. */
+const ZONES: Record<string, string> = { CET: '+0100', CEST: '+0200', BST: '+0100', GMT: '+0000', UTC: '+0000' };
+
 export function toIso(value: string | null | undefined): string | null {
   if (!value) return null;
   let v = value.trim();
+  // Abréviations de fuseau des dates RFC 822 que Date.parse ignore (CET, CEST, BST) : remplacées par leur décalage.
+  v = v.replace(/\s(CEST|CET|BST|GMT|UTC)$/i, (_, z: string) => ' ' + ZONES[z.toUpperCase()]);
   // Date-heure sans décalage (« 2026-11-06T05:00:00 » ou avec espace) : lue en UTC, pas en heure locale.
   if (/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(v)) v = v.replace(' ', 'T') + 'Z';
   const t = Date.parse(v);
@@ -82,3 +86,7 @@ export function makeArticle(input: ArticleInput, wl: Whitelist): { article: RawA
   const parsed = RawArticleSchema.safeParse(candidate);
   return { article: parsed.success ? parsed.data : null, discardedText: rawText !== null && !full };
 }
+
+/** Position d'une date par rapport à la fenêtre de collecte (`since` : ISO) : absente, trop ancienne ou dans la fenêtre. */
+export const windowVerdict = (publishedAt: string | null, since: string): 'undated' | 'old' | 'ok' =>
+  publishedAt === null ? 'undated' : publishedAt < since ? 'old' : 'ok';

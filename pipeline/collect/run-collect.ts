@@ -5,6 +5,7 @@ import { canReadFull, loadWhitelist } from '../lib/whitelist';
 import { RequestBudget } from './budget';
 import { loadCollectConfig, THENEWSAPI_DAILY_CAP, type BudgetBucket, type CollectConfig } from './config';
 import { dedupe } from './dedupe';
+import { applyEditionPerimeter } from './perimeter';
 import { collectExa } from './exa';
 import { fillFullTexts, type FullTextStats } from './fulltext';
 import { messageOf, type HttpFetch } from './http';
@@ -153,6 +154,7 @@ export async function runCollect(opts: RunCollectOptions): Promise<RunCollectRes
       report.sources[name] = { used: true, requests: run.requests, candidates: run.candidates.length, stoppedBy: run.stoppedBy, errors: run.errors.map(clean) };
       report.discardedTexts += run.discardedTexts;
       for (const m of run.errors) issue('warning', m, name);
+      if (run.undated > 0) issue('warning', `${run.undated} article(s) sans date écarté(s)`, name);
     };
     /** Lance une source ; une exception inattendue est consignée sans arrêter les autres. */
     const guarded = async (name: SourceName, fn: () => Promise<SourceRun>) => {
@@ -211,7 +213,11 @@ export async function runCollect(opts: RunCollectOptions): Promise<RunCollectRes
     }
 
     // 5. Dédoublonnage, textes intégraux (domaines full seulement), dernière garde R1.
-    const candidates = SOURCES.flatMap((s) => runs[s]?.candidates ?? []);
+    const { kept: candidates, dropped } = applyEditionPerimeter(
+      SOURCES.flatMap((s) => runs[s]?.candidates ?? []),
+      ctx.whitelist,
+    );
+    if (dropped > 0) issue('warning', `R2 : ${dropped} article(s) en espagnol d'un média non espagnol (ou de pays inconnu) écarté(s)`);
     let articles = dedupe(candidates, ctx.whitelist);
     const ft = config.fulltext;
     const filled = await fillFullTexts(articles, { whitelist: ctx.whitelist, fetch: opts.fetch, ...ft });

@@ -63,6 +63,8 @@ describe('utilitaires', () => {
   it('plainText décode les entités numériques et toIso refuse une date illisible', () => {
     expect(plainText('L&#8217;&#xE9;t&eacute;')).toBe('L’été');
     expect(toIso('hier')).toBeNull();
+    expect(toIso('Fri, 06 Nov 2026 05:00:00 CET')).toBe('2026-11-06T04:00:00.000Z');
+    expect(toIso('Mon, 06 Jul 2026 05:00:00 CEST')).toBe('2026-07-06T03:00:00.000Z');
     expect(toIso('Thu, 06 Nov 2026 05:00:00 GMT')).toBe('2026-11-06T05:00:00.000Z');
   });
 });
