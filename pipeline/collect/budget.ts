@@ -9,14 +9,17 @@ export class RequestBudget<K extends string> {
   constructor(
     private readonly limits: Record<K, number>,
     private readonly total: number,
+    /** Rappel après chaque réservation réussie, avec le total dépensé. */
+    private readonly onTake?: (spent: number) => void,
   ) {}
 
   /** Réserve une requête du poste ; faux si le poste ou le total est épuisé. */
   take(bucket: K): boolean {
     const n = this.used.get(bucket) ?? 0;
-    if (n >= this.limits[bucket] || this.spent >= this.total) return false;
+    if (!(n < this.limits[bucket]) || !(this.spent < this.total)) return false;
     this.used.set(bucket, n + 1);
     this.spent += 1;
+    this.onTake?.(this.spent);
     return true;
   }
 
