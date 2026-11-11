@@ -37,13 +37,17 @@ const TopicSchema = z.object({ lang: LangSchema, title: z.string().trim().min(1)
 const ClosedSchema = z.array(z.string().min(1));
 
 /** Appel au store borné dans le temps : une base muette ne bloque jamais la routine. */
-async function withTimeout<T>(label: string, ms: number, fn: () => Promise<T>): Promise<T> {
+async function withTimeout<T>(label: string, ms: number, fn: (signal: AbortSignal) => Promise<T>): Promise<T> {
   let timer: NodeJS.Timeout | undefined;
+  const controller = new AbortController();
   const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(`${label} : délai dépassé (${ms} ms)`)), ms);
+    timer = setTimeout(() => {
+      controller.abort(); // le store doit cesser et ne plus écrire
+      reject(new Error(`${label} : délai dépassé (${ms} ms)`));
+    }, ms);
   });
   try {
-    return await Promise.race([fn(), timeout]);
+    return await Promise.race([fn(controller.signal), timeout]);
   } finally {
     clearTimeout(timer);
   }
@@ -55,7 +59,7 @@ const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 /**
  * `brief:context` : ferme les Threads périmés (R12, 21 jours), lit les Threads ouverts et les sujets
  * de la veille, puis écrit `out/<date>/context.json` (ContextSchema) et `context-report.json`.
- * Chaque élément est revalidé : un élément invalide est retiré avec un avertissement. Une erreur ou
+ * Chaque élément est revalidé : un sujet invalide, un Thread en double ou déjà fermé est retiré avec un avertissement, mais un Thread ouvert invalide bloque (code 2). Une erreur ou
  * un délai dépassé du store : pas de context.json et code 2 (un contexte faux ferait dupliquer des
  * Threads). Les anciens fichiers sont supprimés d'abord ; le rapport est toujours écrit.
  */
@@ -94,24 +98,35 @@ export async function runContext(opts: RunContextOptions): Promise<{ exitCode: 0
   };
 
   try {
-    const closed = ClosedSchema.parse(await withTimeout('fermeture des Threads', ms, () => opts.store.closeStaleThreads(opts.date, STALE_DAYS)));
-    report.closedThreads = [...new Set(closed)].sort();
-    const rawThreads: unknown[] = await withTimeout('Threads ouverts', ms, () => opts.store.openThreads());
-    const rawTopics: unknown[] = await withTimeout('sujets de la veille', ms, () => opts.store.yesterdayTopics(opts.date));
+    const closed = ClosedSchema.safeParse(await withTimeout('fermeture des Threads', ms, (s) => opts.store.closeStaleThreads(opts.date, STALE_DAYS, s)));
+    if (!closed.success) throw new Error('résultat de fermeture invalide');
+    report.closedThreads = [...new Set(closed.data)].sort();
+    const rawThreads: unknown[] = await withTimeout('Threads ouverts', ms, (s) => opts.store.openThreads(s));
+    const rawTopics: unknown[] = await withTimeout('sujets de la veille', ms, (s) => opts.store.yesterdayTopics(opts.date, s));
+    const anomalies = opts.store.anomalies ? await withTimeout('anomalies', ms, (s) => opts.store.anomalies!(opts.date, s)) : [];
+    for (const a of anomalies) issue('warning', a);
 
     const threads = new Map<string, OpenThread>();
+    const invalidThreads: string[] = [];
     for (const [i, raw] of rawThreads.entries()) {
       const t = OpenThreadSchema.safeParse(raw);
-      if (!t.success) issue('warning', `Thread n° ${i + 1} invalide, ignoré : ${t.error.issues.map((x) => `${x.path.join('.')} ${x.message}`).join(' ; ')}`);
-      else if (report.closedThreads.includes(t.data.id)) issue('warning', `Thread ${t.data.id} fermé mais encore listé ouvert, ignoré`);
+      if (!t.success) {
+        // Un Thread réel perdu ferait créer un doublon : on bloque plutôt que d'ignorer.
+        const id = typeof (raw as { id?: unknown } | null)?.id === 'string' ? (raw as { id: string }).id : `n° ${i + 1}`;
+        invalidThreads.push(`Thread ouvert invalide (id ${id}) : ${t.error.issues.map((x) => `${x.path.join('.')} ${x.message}`).join(' ; ')}`);
+      } else if (report.closedThreads.includes(t.data.id)) issue('warning', `Thread ${t.data.id} fermé mais encore listé ouvert, ignoré`);
       else if (threads.has(t.data.id)) issue('warning', `Thread ${t.data.id} en double, ignoré`);
       else threads.set(t.data.id, t.data);
+    }
+    if (invalidThreads.length) {
+      for (const m of invalidThreads) issue('error', m);
+      return finish(null);
     }
     const topics: Topic[] = [];
     for (const [i, raw] of rawTopics.entries()) {
       const t = TopicSchema.safeParse(raw);
       if (t.success) topics.push(t.data);
-      else issue('warning', `sujet de la veille n° ${i + 1} invalide, ignoré`);
+      else issue('warning', `sujet de la veille n° ${i + 1} invalide, ignoré : ${t.error.issues.map((x) => `${x.path.join('.')} ${x.message}`).join(' ; ')}`);
     }
 
     const context = ContextSchema.parse({

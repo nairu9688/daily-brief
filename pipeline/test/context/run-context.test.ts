@@ -36,6 +36,7 @@ describe('runContext', () => {
         thread('fr-ancien', 'fr', '2026-10-01T10:00:00Z', ['2026-10-01']),
         thread('fr-b', 'fr', '2026-11-04T10:00:00Z', ['2026-11-04']),
         thread('fr-a', 'fr', '2026-11-05T09:00:00+01:00', ['2026-11-05']),
+        thread('fr-c', 'fr', '2026-11-05T08:00:00Z', ['2026-11-05']),
         thread('en-1', 'en', '2026-11-02T10:00:00Z', ['2026-11-02']),
       ],
       topics: [
@@ -47,7 +48,7 @@ describe('runContext', () => {
     const r = await runContext({ outDir, date: DAY, store, now: NOW });
     expect(r.exitCode).toBe(0);
     const ctx = ContextSchema.parse(read(join(dayDir, 'context.json')));
-    expect(ctx.openThreads.map((t) => t.id)).toEqual(['fr-a', 'fr-b', 'en-1', 'es-1']);
+    expect(ctx.openThreads.map((t) => t.id)).toEqual(['fr-a', 'fr-c', 'fr-b', 'en-1', 'es-1']);
     expect(ctx.yesterdayTopics.map((t) => t.title)).toEqual(['Budget au Sénat', 'Retraites', 'Presupuestos']);
     expect(read(join(dayDir, 'context-report.json'))).toEqual({
       date: DAY,
@@ -56,7 +57,7 @@ describe('runContext', () => {
       store: 'mémoire',
       staleDays: 21,
       closedThreads: ['fr-ancien'],
-      openThreads: 4,
+      openThreads: 5,
       yesterdayTopics: 3,
       issues: [],
     });
@@ -73,7 +74,7 @@ describe('runContext', () => {
     expect(selectStore({ SUPABASE_URL: 'https://x.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'k' }).warning).toBe('store Supabase pas encore disponible (lot 4) : contexte vide');
   });
 
-  it('retire les éléments invalides, en double ou fermés, avec un avertissement', async () => {
+  it('retire les doublons, Threads fermés et sujets invalides avec un avertissement', async () => {
     const { outDir, dayDir } = setup();
     const store: ContextStore = {
       name: 'test',
@@ -83,7 +84,6 @@ describe('runContext', () => {
           { id: 'ok', slug: 'ok', title: 'OK', lang: 'fr', updatedAt: '2026-11-05T10:00:00Z' },
           { id: 'ok', slug: 'ok', title: 'OK', lang: 'fr', updatedAt: '2026-11-05T10:00:00Z' },
           { id: 'ferme', slug: 'f', title: 'Fermé', lang: 'fr', updatedAt: '2026-11-05T10:00:00Z' },
-          { id: 'de', slug: 'de', title: 'Allemand', lang: 'de', updatedAt: '2026-11-05T10:00:00Z' },
         ] as never,
       yesterdayTopics: async () => [{ lang: 'fr', title: '  ' }, { lang: 'en', title: 'Midterms' }] as never,
     };
@@ -95,8 +95,7 @@ describe('runContext', () => {
     expect(r.report.issues.map((i) => i.message)).toEqual([
       'Thread ok en double, ignoré',
       'Thread ferme fermé mais encore listé ouvert, ignoré',
-      expect.stringMatching(/^Thread n° 4 invalide, ignoré : lang /),
-      'sujet de la veille n° 1 invalide, ignoré',
+      expect.stringMatching(/^sujet de la veille n° 1 invalide, ignoré : title /),
     ]);
   });
 
@@ -133,5 +132,102 @@ describe('runContext', () => {
     expect(r.exitCode).toBe(2);
     expect(r.report.issues).toEqual([{ level: 'error', message: 'date incorrecte : « ../2026-13-45 »' }]);
     expect(existsSync(join(outDir, '2026-13-45'))).toBe(false);
+  });
+
+  it('un Thread ouvert invalide bloque : code 2, pas de context.json', async () => {
+    for (const bad of [
+      { id: 'vide', slug: 'v', title: '', lang: 'fr', updatedAt: '2026-11-05T10:00:00Z' },
+      { id: 'pg', slug: 'p', title: 'PG', lang: 'fr', updatedAt: '2026-11-05 10:00:00+00' },
+    ]) {
+      const { outDir, dayDir } = setup();
+      const store: ContextStore = {
+        name: 'test',
+        closeStaleThreads: async () => [],
+        openThreads: async () => [{ id: 'ok', slug: 'ok', title: 'OK', lang: 'fr', updatedAt: '2026-11-05T10:00:00Z' }, bad] as never,
+        yesterdayTopics: async () => [],
+      };
+      const r = await runContext({ outDir, date: DAY, store, now: NOW });
+      expect(r.exitCode).toBe(2);
+      expect(existsSync(join(dayDir, 'context.json'))).toBe(false);
+      expect(r.report.issues).toHaveLength(1);
+      expect(r.report.issues[0].level).toBe('error');
+      expect(r.report.issues[0].message).toMatch(new RegExp(`^Thread ouvert invalide \\(id ${bad.id}\\) : `));
+    }
+  });
+
+  it('un doublon seul reste un avertissement', async () => {
+    const { outDir } = setup();
+    const row = { id: 'ok', slug: 'ok', title: 'OK', lang: 'fr' as const, updatedAt: '2026-11-05T10:00:00Z' };
+    const store: ContextStore = { name: 'test', closeStaleThreads: async () => [], openThreads: async () => [row, row], yesterdayTopics: async () => [] };
+    const r = await runContext({ outDir, date: DAY, store, now: NOW });
+    expect(r.exitCode).toBe(0);
+    expect(r.report.issues).toEqual([{ level: 'warning', message: 'Thread ok en double, ignoré' }]);
+  });
+
+  it('délai sur la fermeture : signal levé avant l’écriture, aucun Thread fermé', async () => {
+    const { outDir, dayDir } = setup();
+    class Slow extends MemoryContextStore {
+      async closeStaleThreads(date: string, days?: number, signal?: AbortSignal) {
+        await new Promise((r) => setTimeout(r, 120));
+        return super.closeStaleThreads(date, days, signal);
+      }
+    }
+    const store = new Slow({ threads: [thread('vieux', 'fr', '2026-10-01T10:00:00Z', ['2026-10-01'])] });
+    const r = await runContext({ outDir, date: DAY, store, timeoutMs: 30, now: NOW });
+    expect(r.exitCode).toBe(2);
+    expect(r.report.issues).toEqual([{ level: 'error', message: 'store mémoire : fermeture des Threads : délai dépassé (30 ms)' }]);
+    await new Promise((res) => setTimeout(res, 250));
+    expect(store.threads[0].status).toBe('open');
+    expect(existsSync(join(dayDir, 'context.json'))).toBe(false);
+  });
+
+  it('échec partiel : fermeture réussie puis openThreads en erreur, Threads fermés listés, code 2', async () => {
+    const { outDir, dayDir } = setup();
+    const store: ContextStore = {
+      name: 'test',
+      closeStaleThreads: async () => ['b', 'a'],
+      openThreads: async () => {
+        throw new Error('panne');
+      },
+      yesterdayTopics: async () => [],
+    };
+    const r = await runContext({ outDir, date: DAY, store, now: NOW });
+    expect(r.exitCode).toBe(2);
+    expect(r.report.closedThreads).toEqual(['a', 'b']);
+    expect(read(join(dayDir, 'context-report.json')).closedThreads).toEqual(['a', 'b']);
+    expect(existsSync(join(dayDir, 'context.json'))).toBe(false);
+  });
+
+  it('résultat de fermeture invalide : message court', async () => {
+    const { outDir } = setup();
+    const store: ContextStore = { name: 'test', closeStaleThreads: async () => [42] as never, openThreads: async () => [], yesterdayTopics: async () => [] };
+    const r = await runContext({ outDir, date: DAY, store, now: NOW });
+    expect(r.exitCode).toBe(2);
+    expect(r.report.issues).toEqual([{ level: 'error', message: 'store test : résultat de fermeture invalide' }]);
+  });
+
+  it('avertit d’un événement daté de plus de 7 jours dans le futur, en nommant le Thread', async () => {
+    const { outDir } = setup();
+    const store = new MemoryContextStore({
+      threads: [thread('futur', 'fr', '2026-11-05T10:00:00Z', ['2026-11-05', '2026-11-20']), thread('proche', 'fr', '2026-11-05T10:00:00Z', ['2026-11-13'])],
+    });
+    const r = await runContext({ outDir, date: DAY, store, now: NOW });
+    expect(r.exitCode).toBe(0);
+    expect(r.report.issues).toEqual([{ level: 'warning', message: 'Thread futur : événement daté du 2026-11-20, à plus de 7 jours dans le futur' }]);
+  });
+
+  it('masque la clé dans le rapport', async () => {
+    const { outDir, dayDir } = setup();
+    const store: ContextStore = {
+      name: 'supabase',
+      closeStaleThreads: async () => {
+        throw new Error('401 avec la clé sk-123');
+      },
+      openThreads: async () => [],
+      yesterdayTopics: async () => [],
+    };
+    const r = await runContext({ outDir, date: DAY, store, secrets: ['sk-123'], now: NOW });
+    expect(r.exitCode).toBe(2);
+    expect(readFileSync(join(dayDir, 'context-report.json'), 'utf8')).not.toContain('sk-123');
   });
 });

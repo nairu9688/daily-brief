@@ -64,4 +64,12 @@ describe('R12 : Thread sans événement depuis 21 jours', () => {
     const store = new EmptyContextStore();
     expect([await store.openThreads(), await store.yesterdayTopics(), await store.closeStaleThreads()]).toEqual([[], [], []]);
   });
+
+  it('refuse d’écrire une fois le signal levé', async () => {
+    const store = new MemoryContextStore({ threads: [thread('vieux', ['2026-10-01'])] });
+    const c = new AbortController();
+    c.abort();
+    await expect(store.closeStaleThreads('2026-11-06', 21, c.signal)).rejects.toThrow();
+    expect(store.threads[0].status).toBe('open');
+  });
 });

@@ -12,13 +12,14 @@ try {
   }
   const { values } = parseArgs({ options: { date: { type: 'string' }, out: { type: 'string', default: 'out' } } });
   const date = values.date ?? parisToday();
-  const { store, warning } = selectStore(process.env);
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  const { store, warning } = selectStore({ ...process.env, SUPABASE_SERVICE_ROLE_KEY: serviceKey });
   const { exitCode, report } = await runContext({
     outDir: values.out!,
     date,
     store,
     warnings: [warning],
-    secrets: [process.env.SUPABASE_SERVICE_ROLE_KEY],
+    secrets: [serviceKey],
   });
   console.log(`brief:context ${date} (store ${report.store})`);
   for (const i of report.issues) console.log(`[${i.level}] ${i.message}`);

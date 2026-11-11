@@ -20,4 +20,12 @@ describe('CLI brief:context', () => {
     expect(r.status).toBe(2);
     expect(r.stdout).toContain('[error] date incorrecte : « 2026-02-30 »');
   }, 30_000);
+
+  it('rogne la clé de service : une clé blanche compte pour absente, une clé entourée d’espaces pour présente', () => {
+    const blank = runCli('pipeline/context/cli.ts', ['--date', '2026-11-06'], { SUPABASE_URL: 'https://x.supabase.co', SUPABASE_SERVICE_ROLE_KEY: '   ' });
+    expect(blank.stdout).toContain('SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY absente');
+    const padded = runCli('pipeline/context/cli.ts', ['--date', '2026-11-06'], { SUPABASE_URL: 'https://x.supabase.co', SUPABASE_SERVICE_ROLE_KEY: '  clé-secrète  ' });
+    expect(padded.stdout).toContain('store Supabase pas encore disponible (lot 4)');
+    expect(padded.stdout).not.toContain('clé-secrète');
+  }, 30_000);
 });

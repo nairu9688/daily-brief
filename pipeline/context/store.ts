@@ -10,12 +10,22 @@ export interface ContextStore {
   /** Nom affiché dans le rapport (« vide », « mémoire », « supabase »). */
   readonly name: string;
   /** Threads ouverts. */
-  openThreads(): Promise<OpenThread[]>;
+  openThreads(signal?: AbortSignal): Promise<OpenThread[]>;
   /** Sujets publiés la veille de `date` (AAAA-MM-JJ), toutes langues. */
-  yesterdayTopics(date: string): Promise<Topic[]>;
+  yesterdayTopics(date: string, signal?: AbortSignal): Promise<Topic[]>;
   /** R12 : ferme les Threads sans événement depuis `days` jours à la date `date` ; renvoie leurs id. */
-  closeStaleThreads(date: string, days?: number): Promise<string[]>;
+  closeStaleThreads(date: string, days?: number, signal?: AbortSignal): Promise<string[]>;
+  /**
+   * Optionnel : anomalies de données à signaler en avertissement (ex. événement daté trop loin dans
+   * le futur). Ne bloque jamais le contexte.
+   */
+  anomalies?(date: string, signal?: AbortSignal): Promise<string[]>;
 }
+
+/**
+ * Chaque appel reçoit un `AbortSignal` déclenché au dépassement du délai : le store doit cesser
+ * le travail et ne rien écrire une fois le signal levé (Supabase : `.abortSignal(signal)`).
+ */
 
 /** Store sans base : aucun Thread, aucun sujet, rien à fermer. */
 export class EmptyContextStore implements ContextStore {
