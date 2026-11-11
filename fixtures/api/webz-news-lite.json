@@ -1,0 +1,62 @@
+{
+  "posts": [
+    {
+      "thread": {
+        "uuid": "1f0e2d3c4b5a69788796a5b4c3d2e1f0a9b8c7d6",
+        "url": "https://www.eldiario.es/politica/congreso-aprueba-presupuestos_1_11000001.html",
+        "site": "eldiario.es",
+        "site_type": "news",
+        "country": "ES",
+        "title": "El Congreso aprueba los Presupuestos",
+        "published": "2026-11-06T05:10:00.000+01:00"
+      },
+      "uuid": "1f0e2d3c4b5a69788796a5b4c3d2e1f0a9b8c7d6",
+      "url": "https://www.eldiario.es/politica/congreso-aprueba-presupuestos_1_11000001.html",
+      "author": "Redacción",
+      "published": "2026-11-06T05:10:00.000+01:00",
+      "title": "El Congreso aprueba los Presupuestos",
+      "text": "El pleno del Congreso aprobó este jueves los Presupuestos Generales del Estado.\nLa votación salió adelante por un estrecho margen.",
+      "language": "spanish",
+      "sentiment": "neutral",
+      "categories": ["Politics"]
+    },
+    {
+      "thread": {
+        "uuid": "2a1b0c9d8e7f60514233241506f7e8d9c0b1a2f3",
+        "url": "https://elpais.com/economia/2026-11-06/el-paro-baja.html",
+        "site": "elpais.com",
+        "site_type": "news",
+        "country": "ES",
+        "title": "El paro baja en octubre",
+        "published": "2026-11-06T04:00:00.000+01:00"
+      },
+      "uuid": "2a1b0c9d8e7f60514233241506f7e8d9c0b1a2f3",
+      "url": "https://elpais.com/economia/2026-11-06/el-paro-baja.html",
+      "author": "",
+      "published": "2026-11-06T04:00:00.000+01:00",
+      "title": "El paro baja en octubre",
+      "text": "Texto íntegro de un medio con estado meta: nunca debe conservarse.",
+      "language": "spanish",
+      "sentiment": "neutral",
+      "categories": ["Economy"]
+    },
+    {
+      "thread": { "site": "ejemplo.es", "title": "Noticia antigua" },
+      "uuid": "3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c",
+      "url": "https://ejemplo.es/noticia-antigua",
+      "published": "2026-10-01T08:00:00.000+02:00",
+      "title": "Noticia antigua (hors fenêtre, doit être ignorée)",
+      "text": "",
+      "language": "spanish"
+    },
+    {
+      "uuid": "sans-url",
+      "title": "Post mal formé"
+    }
+  ],
+  "totalResults": 4,
+  "moreResultsAvailable": 0,
+  "next": "/newsApiLite?token=WEBZ-SECRET-789&q=language%3Aspanish&from=10",
+  "requestsLeft": 987,
+  "warnings": null
+}
