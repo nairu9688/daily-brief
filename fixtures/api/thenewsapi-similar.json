@@ -1,0 +1,35 @@
+{
+  "meta": { "found": 12, "returned": 2, "limit": 3, "page": 1 },
+  "data": [
+    {
+      "uuid": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c01",
+      "title": "Retraites : l'intersyndicale annonce une grève nationale",
+      "description": "Une nouvelle journée d'action est prévue fin novembre.",
+      "keywords": "retraites, grève",
+      "snippet": "L'intersyndicale a fixé jeudi…",
+      "url": "https://www.sudradio.fr/societe/retraites-l-intersyndicale-annonce-une-greve-nationale",
+      "image_url": null,
+      "language": "fr",
+      "published_at": "2026-11-06T04:30:00.000000Z",
+      "source": "sudradio.fr",
+      "categories": ["general"],
+      "relevance_score": 31.4,
+      "locale": "fr"
+    },
+    {
+      "uuid": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c02",
+      "title": "Retraites : une nouvelle journée de mobilisation fin novembre",
+      "description": "Les syndicats maintiennent la pression sur le gouvernement.",
+      "keywords": "",
+      "snippet": "Les syndicats…",
+      "url": "https://www.lefigaro.fr/social/retraites-une-nouvelle-journee-de-mobilisation-20261106",
+      "image_url": null,
+      "language": "fr",
+      "published_at": "2026-11-06T04:05:00.000000Z",
+      "source": "lefigaro.fr",
+      "categories": ["general"],
+      "relevance_score": 28.9,
+      "locale": "fr"
+    }
+  ]
+}

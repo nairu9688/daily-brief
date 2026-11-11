@@ -1,0 +1,49 @@
+{
+  "meta": { "found": 1284, "returned": 3, "limit": 3, "page": 1 },
+  "data": [
+    {
+      "uuid": "6f1c0a52-3b7e-4d0e-9a51-2c8e7d4f1a01",
+      "title": "Budget 2027 : le Sénat adopte la première partie du texte",
+      "description": "Les sénateurs ont voté dans la nuit la partie recettes du projet de loi de finances.",
+      "keywords": "budget, Sénat, finances publiques",
+      "snippet": "Les sénateurs ont adopté dans la nuit de mercredi à jeudi la première partie du projet de loi de finances pour 2027…",
+      "url": "https://www.lemonde.fr/politique/article/2026/11/06/budget-2027-le-senat-adopte-la-premiere-partie_6512345_823448.html",
+      "image_url": "https://img.lemde.fr/2026/11/06/0/0/4000/2666/1440/960/60/0/abc123_1.jpg",
+      "language": "fr",
+      "published_at": "2026-11-06T04:12:00.000000Z",
+      "source": "lemonde.fr",
+      "categories": ["politics", "general"],
+      "relevance_score": null,
+      "locale": "fr"
+    },
+    {
+      "uuid": "0b7d93a4-1f25-4c8e-8e6a-55d2b0c9e302",
+      "title": "Réforme des retraites : les syndicats appellent à une nouvelle journée de mobilisation",
+      "description": "L'intersyndicale fixe une date de grève nationale pour la fin du mois.",
+      "keywords": "",
+      "snippet": "L'intersyndicale a annoncé jeudi une nouvelle journée de mobilisation…",
+      "url": "https://fr.euronews.com/2026/11/06/reforme-des-retraites-les-syndicats-appellent-a-une-nouvelle-journee",
+      "image_url": null,
+      "language": "fr",
+      "published_at": "2026-11-06T03:47:10.000000Z",
+      "source": "fr.euronews.com",
+      "categories": ["politics"],
+      "relevance_score": null,
+      "locale": "fr"
+    },
+    {
+      "uuid": "c4e0f6b1-77aa-4a3e-b5c2-9e1d2f3a4b03",
+      "title": "Article sans URL (doit être ignoré)",
+      "description": null,
+      "keywords": "",
+      "snippet": "",
+      "image_url": null,
+      "language": "fr",
+      "published_at": "2026-11-06T02:00:00.000000Z",
+      "source": "exemple.fr",
+      "categories": ["general"],
+      "relevance_score": null,
+      "locale": "fr"
+    }
+  ]
+}
