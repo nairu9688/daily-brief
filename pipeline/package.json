@@ -7,7 +7,9 @@
     "@daily-brief/maps": "*",
     "@daily-brief/render-pdf": "*",
     "@daily-brief/schema": "*",
+    "@mozilla/readability": "^0.6.0",
     "fast-xml-parser": "^5.12.0",
+    "linkedom": "^0.18.15",
     "zod": "^4.0.0"
   }
 }
