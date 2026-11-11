@@ -50,13 +50,15 @@ Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-2-cartes-photos-pdf.md`
 - Tests : chaque projection de la fixture produit un SVG non vide sans coordonnées décimales ; un test visuel compare les couverture FR, sujet fr-1 et vocabulaire ES avec des captures de référence (comparaison pixelmatch, seuil 1 %).
 - Point à trancher en début de lot : le prototype PDF utilise `#C08A00` pour l'accent ES, la spec `#C88E00`. Par défaut, on garde `#C08A00` dans le PDF, plus lisible à l'impression, parce que la maquette fait foi.
 
-### Lot 3 — Collecte
+### Lot 3 — Collecte ✅ plan détaillé
+
+Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-3-collecte.md`
 
 - Vérification §16 : le plan gratuit de TheNewsAPI renvoie-t-il bien du temps réel sur `/v1/news/top` ? Sinon, Exa devient la découverte principale.
 - `pipeline/collect/thenewsapi.ts` : requêtes `/v1/news/top` par langue et rubrique, puis `/v1/news/similar/{uuid}` pour regrouper. Un compteur de budget plafonne à 90 requêtes par jour.
 - `pipeline/collect/exa.ts` : `category: news` et `startPublishedDate` ; `contents` est demandé uniquement pour les domaines `full` (R1).
 - `pipeline/collect/webz.ts` sert de secours si TheNewsAPI échoue ou passe sous le seuil. `pipeline/collect/rss.ts` lit `pipeline/config/feeds.json`, qui ne contient que des domaines `full` ou `feed`.
-- `pipeline/collect/fulltext.ts` : extraction du texte (Readability + jsdom), appelée **uniquement** si `lookupDomain(url).status === 'full'`. C'est la garde R1, testée unitairement.
+- `pipeline/collect/fulltext.ts` : extraction du texte (Readability + linkedom), appelée **uniquement** si `lookupDomain(url).status === 'full'`. C'est la garde R1, testée unitairement.
 - `pipeline/collect/dedupe.ts` : normalisation d'URL (déjà écrite au lot 1 dans `pipeline/lib/url.ts`), puis similarité des titres (Jaccard sur trigrammes ≥ 0,6) pour attribuer un `groupId`.
 - `npm run brief:collect` écrit `out/<date>/raw.json`, au format `RawCollection` du lot 1.
 - `npm run brief:context` lit Supabase (Threads ouverts et sujets de la veille) et écrit `out/<date>/context.json` au format `Context` du lot 1. Il ferme aussi les Threads sans événement depuis 21 jours (R12). Il dépend du lot 4 pour la base ; en attendant, il écrit un contexte vide.
