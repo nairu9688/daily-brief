@@ -1,0 +1,18 @@
+{
+  "note": "Flux RSS/Atom lus par brief:collect. Uniquement des domaines au statut full ou feed de whitelist.json (test pipeline/test/collect/rss.test.ts). Le flux ne donne que des métadonnées ; le texte intégral passe par fulltext.ts, pour les domaines full seulement (R1). URL vérifiées le 06/11/2026 (thehill.com a répondu 429 ce jour-là).",
+  "feeds": [
+    { "url": "https://fr.euronews.com/rss", "outlet": "Euronews", "lang": "fr" },
+    { "url": "https://www.sudradio.fr/feed", "outlet": "Sud Radio", "lang": "fr" },
+    { "url": "https://www.euronews.com/rss", "outlet": "Euronews", "lang": "en" },
+    { "url": "https://www.aljazeera.com/xml/rss/all.xml", "outlet": "Al Jazeera", "lang": "en" },
+    { "url": "https://www.cbsnews.com/latest/rss/main", "outlet": "CBS News", "lang": "en" },
+    { "url": "https://www.pbs.org/newshour/feeds/rss/headlines", "outlet": "PBS NewsHour", "lang": "en" },
+    { "url": "https://feeds.npr.org/1001/rss.xml", "outlet": "NPR", "lang": "en" },
+    { "url": "https://thehill.com/feed/", "outlet": "The Hill", "lang": "en" },
+    { "url": "https://es.euronews.com/rss", "outlet": "Euronews", "lang": "es" },
+    { "url": "https://www.eldiario.es/rss/", "outlet": "elDiario.es", "lang": "es" },
+    { "url": "https://www.elsaltodiario.com/general/feed", "outlet": "El Salto", "lang": "es" },
+    { "url": "https://alicanteplaza.es/rss", "outlet": "Alicante Plaza", "lang": "es" },
+    { "url": "https://www.democrata.es/feed/", "outlet": "Demócrata", "lang": "es" }
+  ]
+}

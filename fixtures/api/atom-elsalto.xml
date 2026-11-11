@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>El Salto (ejemplo construido)</title>
+  <id>https://www.elsaltodiario.com/general/feed</id>
+  <updated>2026-11-06T04:00:00Z</updated>
+  <entry>
+    <title type="html">Vivienda: el Gobierno prepara un tope a los alquileres de temporada</title>
+    <link rel="alternate" type="text/html" href="https://www.elsaltodiario.com/vivienda/tope-alquileres-temporada"/>
+    <link rel="enclosure" type="image/jpeg" href="https://static.elsaltodiario.com/img/alquiler.jpg"/>
+    <id>tag:elsaltodiario.com,2026:vivienda-tope</id>
+    <published>2026-11-06T03:30:00Z</published>
+    <updated>2026-11-06T03:45:00Z</updated>
+    <summary type="html"><![CDATA[El Ministerio de Vivienda ultima una norma.<br/><a href='https://www.elsaltodiario.com/vivienda'>Vivienda</a>]]></summary>
+  </entry>
+  <entry>
+    <title>Entrada sin fecha</title>
+    <link href="https://www.elsaltodiario.com/opinion/entrada-sin-fecha"/>
+    <id>tag:elsaltodiario.com,2026:sin-fecha</id>
+    <summary>Sin fecha de publicación: se conserva.</summary>
+  </entry>
+</feed>
