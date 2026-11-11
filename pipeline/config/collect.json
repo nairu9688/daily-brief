@@ -1,0 +1,34 @@
+{
+  "note": "Réglages de brief:collect. primary : découverte principale (thenewsapi, ou exa si npm run check:thenewsapi montre que TheNewsAPI n'est pas en temps réel, spec §16).",
+  "primary": "thenewsapi",
+  "windowHours": 24,
+  "lightThreshold": 15,
+  "thenewsapi": {
+    "limit": 3,
+    "timeoutMs": 10000,
+    "locales": { "fr": "fr", "en": "us,gb", "es": "es" },
+    "budget": { "total": 90, "fr": 25, "en": 20, "es": 20, "similar": 25 }
+  },
+  "exa": {
+    "timeoutMs": 15000,
+    "numResults": 10,
+    "maxRequests": 60,
+    "fullDomains": {
+      "fr": ["fr.euronews.com", "sudradio.fr"],
+      "en": ["www.euronews.com", "aljazeera.com", "cbsnews.com", "pbs.org"],
+      "es": ["es.euronews.com", "eldiario.es", "elsaltodiario.com", "alicanteplaza.es", "democrata.es"]
+    }
+  },
+  "webz": {
+    "timeoutMs": 10000,
+    "fallbackBelow": 10,
+    "maxRequests": 3,
+    "queries": {
+      "fr": "language:french thread.country:FR",
+      "en": "language:english (thread.country:US OR thread.country:GB)",
+      "es": "language:spanish thread.country:ES"
+    }
+  },
+  "rss": { "timeoutMs": 10000, "maxBytes": 4000000, "maxItemsPerFeed": 30 },
+  "fulltext": { "timeoutMs": 15000, "maxBytes": 3000000, "minChars": 400, "concurrency": 4, "maxFetches": 180, "deadlineMs": 240000 }
+}

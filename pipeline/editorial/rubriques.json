@@ -1,0 +1,131 @@
+{
+  "note": "Correspondance rubriques → collecte (lot 3). categories : catégories TheNewsAPI ; searchKeywords : ajoute keywords au paramètre search de TheNewsAPI (OU logique) ; keywords : mots-clés par langue ; exaQuery : requête sémantique Exa par langue. Le lot 7 affine ces listes.",
+  "rubrics": {
+    "pol": {
+      "categories": ["politics"],
+      "searchKeywords": false,
+      "keywords": {
+        "fr": ["gouvernement", "Assemblée nationale", "Sénat", "Premier ministre", "réforme", "société"],
+        "en": ["Congress", "White House", "Parliament", "Downing Street", "election", "policy"],
+        "es": ["Gobierno", "Congreso", "Moncloa", "elecciones", "partido", "sociedad"]
+      },
+      "exaQuery": {
+        "fr": "actualité politique et société en France aujourd'hui",
+        "en": "US and UK politics and society news today",
+        "es": "actualidad política y sociedad en España hoy"
+      }
+    },
+    "int": {
+      "categories": ["general", "politics"],
+      "searchKeywords": true,
+      "keywords": {
+        "fr": ["diplomatie", "guerre", "sommet", "ONU", "Union européenne", "conflit"],
+        "en": ["diplomacy", "war", "summit", "United Nations", "foreign policy", "conflict"],
+        "es": ["diplomacia", "guerra", "cumbre", "ONU", "Unión Europea", "conflicto"]
+      },
+      "exaQuery": {
+        "fr": "actualité internationale et géopolitique",
+        "en": "world news and geopolitics",
+        "es": "actualidad internacional y geopolítica desde España"
+      }
+    },
+    "eco": {
+      "categories": ["business"],
+      "searchKeywords": true,
+      "keywords": {
+        "fr": ["inflation", "croissance", "chômage", "budget", "BCE", "dette"],
+        "en": ["inflation", "economy", "jobs", "Federal Reserve", "Bank of England", "budget"],
+        "es": ["inflación", "economía", "paro", "presupuestos", "BCE", "deuda"]
+      },
+      "exaQuery": {
+        "fr": "actualité économique en France et en Europe",
+        "en": "US and UK economy news",
+        "es": "actualidad económica en España"
+      }
+    },
+    "ent": {
+      "categories": ["business", "tech"],
+      "searchKeywords": true,
+      "keywords": {
+        "fr": ["entreprise", "PDG", "rachat", "résultats", "salariés", "start-up"],
+        "en": ["company", "CEO", "merger", "earnings", "workers", "startup"],
+        "es": ["empresa", "consejero delegado", "fusión", "resultados", "plantilla", "startup"]
+      },
+      "exaQuery": {
+        "fr": "actualité des entreprises et du management",
+        "en": "business and corporate management news",
+        "es": "actualidad de empresas y gestión en España"
+      }
+    },
+    "dro": {
+      "categories": ["general", "politics"],
+      "searchKeywords": true,
+      "keywords": {
+        "fr": ["justice", "tribunal", "procès", "Conseil constitutionnel", "loi", "Cour de cassation"],
+        "en": ["court", "judge", "trial", "Supreme Court", "lawsuit", "ruling"],
+        "es": ["justicia", "tribunal", "juicio", "Tribunal Supremo", "Tribunal Constitucional", "sentencia"]
+      },
+      "exaQuery": {
+        "fr": "actualité du droit et de la justice en France",
+        "en": "US and UK law and courts news",
+        "es": "actualidad judicial y del derecho en España"
+      }
+    },
+    "tec": {
+      "categories": ["tech"],
+      "searchKeywords": false,
+      "keywords": {
+        "fr": ["intelligence artificielle", "numérique", "cybersécurité", "données", "réseaux sociaux", "semi-conducteurs"],
+        "en": ["artificial intelligence", "AI", "cybersecurity", "data", "social media", "chips"],
+        "es": ["inteligencia artificial", "digital", "ciberseguridad", "datos", "redes sociales", "semiconductores"]
+      },
+      "exaQuery": {
+        "fr": "actualité tech et intelligence artificielle",
+        "en": "technology and artificial intelligence news",
+        "es": "actualidad de tecnología e inteligencia artificial"
+      }
+    },
+    "env": {
+      "categories": ["science"],
+      "searchKeywords": true,
+      "keywords": {
+        "fr": ["climat", "énergie", "nucléaire", "pollution", "sécheresse", "biodiversité"],
+        "en": ["climate", "energy", "emissions", "pollution", "drought", "renewables"],
+        "es": ["clima", "energía", "emisiones", "contaminación", "sequía", "renovables"]
+      },
+      "exaQuery": {
+        "fr": "actualité environnement, climat et énergie",
+        "en": "environment, climate and energy news",
+        "es": "actualidad de medio ambiente, clima y energía en España"
+      }
+    },
+    "cul": {
+      "categories": ["entertainment"],
+      "searchKeywords": false,
+      "keywords": {
+        "fr": ["cinéma", "musée", "livre", "exposition", "festival", "patrimoine"],
+        "en": ["film", "museum", "book", "exhibition", "festival", "heritage"],
+        "es": ["cine", "museo", "libro", "exposición", "festival", "patrimonio"]
+      },
+      "exaQuery": {
+        "fr": "actualité culturelle en France",
+        "en": "culture and arts news in the US and UK",
+        "es": "actualidad cultural en España"
+      }
+    },
+    "spo": {
+      "categories": ["sports"],
+      "searchKeywords": false,
+      "keywords": {
+        "fr": ["football", "rugby", "tennis", "Jeux olympiques", "cyclisme", "Ligue 1"],
+        "en": ["football", "NFL", "NBA", "Premier League", "tennis", "Olympics"],
+        "es": ["fútbol", "LaLiga", "baloncesto", "tenis", "ciclismo", "Juegos Olímpicos"]
+      },
+      "exaQuery": {
+        "fr": "actualité sportive",
+        "en": "sports news from the US and UK",
+        "es": "actualidad deportiva en España"
+      }
+    }
+  }
+}
