@@ -141,8 +141,14 @@ Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-3-collecte.md`
 ### Consignes issues du lot 3
 
 - **Lot 4 (Supabase)** : implémenter `ContextStore` (`pipeline/context/store.ts`) avec la clé service, sur le modèle de `MemoryContextStore`. Le dernier événement d'un Thread est `max(thread_events.date)`, sinon `updated_at` en date de Paris. Un Thread est fermé quand cette date est antérieure ou égale à `staleCutoff(date)` (`pipeline/context/stale.ts`). Brancher ce store dans `pipeline/context/select-store.ts`, à la place du store vide. `runContext` revalide déjà chaque ligne, borne chaque appel à 30 s et masque `SUPABASE_SERVICE_ROLE_KEY`.
+  - **Sans configuration.** Une fois le store Supabase en place, l'absence de `SUPABASE_URL` ou de `SUPABASE_SERVICE_ROLE_KEY` doit donner le code 2 et non un contexte vide ; un drapeau `--allow-empty` reste permis en développement local.
+  - **`updated_at`.** Il doit arriver en chaîne ISO avec un `T` et un décalage (supabase-js et PostgREST le font, un client `pg` brut non) : `OpenThreadSchema` refuse sinon le Thread, et `runContext` bloque alors le contexte.
+  - **Annulation.** Le store Supabase doit honorer l'`AbortSignal` reçu par chaque méthode, via `.abortSignal(signal)`.
+  - **Fermetures.** Les consigner dans `runs`, pour qu'une relance ne les perde pas : les Threads fermés ne reviennent plus de `openThreads()`, donc le rapport d'un second passage ne les liste plus.
+  - **Dates.** `thread_events.date` est de type `date` (pas `timestamptz`).
 - **Lot 6 (appli)** : le bandeau « édition allégée » se fonde sur `perLang.<lang>.light` de `collect-report.json` (moins de 15 textes lus), que la publication recopie dans `runs`.
 - **Lot 7 (routine)** :
   - **Mise en place.** Lancer `npm run check:thenewsapi` dès que la clé existe. Code 1 : passer `"primary": "exa"` dans `pipeline/config/collect.json` et commiter.
   - **Codes de sortie.** `brief:collect` code 2 : pas de `raw.json`, notifier « Brief incomplet ». `brief:context` code 2 : rédiger sans rattacher ni créer de Thread ce jour-là, et le signaler.
+  - **Registre d'usage.** Dans un clone cloud neuf, `out/thenewsapi-usage.json` ne protège que les relances dans le même conteneur ; le persister dans Supabase au lot 4 si nécessaire.
   - **Rubriques.** Affiner `pipeline/editorial/rubriques.json` (catégories, mots-clés et requêtes Exa par langue).
