@@ -136,3 +136,31 @@ describe('collectTheNewsApi', () => {
     expect(run.candidates.every((c) => c.article.text === null && c.article.origin === 'thenewsapi')).toBe(true);
   });
 });
+
+describe('réponses bornées', () => {
+  const big = (n: number) => ({ data: Array.from({ length: n }, (_, i) => ({ uuid: `u${i}`, title: `T${i}`, url: `https://lemonde.fr/${i}` })) });
+
+  it('coupe une réponse de 50 000 articles à limit', async () => {
+    expect(parseNews(big(50_000), 3)).toHaveLength(3);
+    const { fetch } = fakeHttp({ [`${THENEWSAPI_BASE}/top`]: { json: big(50_000) } });
+    const items = await topNews({ language: 'fr', limit: 3 }, { token: TOKEN, fetch, timeoutMs: 1000 });
+    expect(items).toHaveLength(3);
+  });
+
+  it('un corps trop lourd échoue sans être lu en entier', async () => {
+    const { fetch } = fakeHttp({ [`${THENEWSAPI_BASE}/top`]: { json: big(1), headers: { 'content-length': '99999999' } } });
+    await expect(topNews({ language: 'fr', limit: 3 }, { token: TOKEN, fetch, timeoutMs: 1000 })).rejects.toThrow(/corps trop lourd/);
+  });
+
+  it('la pagination se fonde sur le nombre brut d’articles, pas sur les valides', async () => {
+    const page = (url: string): Reply => {
+      const page = new URL(url).searchParams.get('page');
+      if (page) return { json: { data: [] } };
+      return { json: { data: [{ uuid: 'a', title: 'A', url: 'https://lemonde.fr/a' }, { nope: 1 }, { nope: 2 }] } };
+    };
+    const { fetch, calls } = fakeHttp({ [THENEWSAPI_BASE]: page });
+    await collectTheNewsApi(testContext(fetch), TOKEN, budgetOf(testContext(fetch).config));
+    // 3 articles bruts (dont 2 mal formés) : la page 1 est « pleine », la page 2 est donc demandée.
+    expect(calls.some((c) => new URL(c.url).searchParams.get('page') === '2')).toBe(true);
+  });
+});

@@ -7,6 +7,8 @@ import { fetchJson, type HttpFetch } from './http';
 import { emptyRun, type SourceContext, type SourceRun } from './types';
 
 export const EXA_SEARCH = 'https://api.exa.ai/search';
+/** Longueur maximale du texte demandé à Exa par résultat. */
+export const MAX_TEXT_CHARACTERS = 20000;
 
 /** Résultat Exa : analyse tolérante, `text` présent seulement si `contents.text` a été demandé. */
 const ResultSchema = z.object({
@@ -42,14 +44,15 @@ export async function exaSearch(
     numResults: p.numResults,
   };
   if (p.includeDomains?.length) body.includeDomains = p.includeDomains;
-  if (textRequested) body.contents = { text: true };
+  // Le texte n'est jamais demandé par défaut : `text: false` l'écarte explicitement, quel que soit le réglage de l'API.
+  body.contents = { text: textRequested ? { maxCharacters: MAX_TEXT_CHARACTERS } : false };
   const json = await fetchJson(c.fetch, EXA_SEARCH, {
     method: 'POST',
     headers: { 'x-api-key': c.apiKey, 'content-type': 'application/json' },
     body: JSON.stringify(body),
     timeoutMs: c.timeoutMs,
   });
-  const results = ResponseSchema.parse(json).results.flatMap((r) => {
+  const results = ResponseSchema.parse(json).results.slice(0, p.numResults).flatMap((r) => {
     const parsed = ResultSchema.safeParse(r);
     return parsed.success ? [parsed.data] : [];
   });

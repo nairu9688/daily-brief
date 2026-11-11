@@ -25,10 +25,20 @@ describe('R1 : texte Exa', () => {
     await exaSearch({ query: 'q', startPublishedDate: NOW, numResults: 5, includeDomains: ['sudradio.fr', 'lefigaro.fr'] }, c);
     await exaSearch({ query: 'q', startPublishedDate: NOW, numResults: 5 }, c);
     const bodies = calls.map((x) => JSON.parse(x.body!));
-    expect(bodies[0]).toEqual({ query: 'q', category: 'news', startPublishedDate: '2026-11-06T04:13:00.000Z', numResults: 5, includeDomains: ['sudradio.fr'], contents: { text: true } });
-    expect(bodies[1].contents).toBeUndefined();
-    expect(bodies[2]).toEqual({ query: 'q', category: 'news', startPublishedDate: '2026-11-06T04:13:00.000Z', numResults: 5 });
+    expect(bodies[0]).toEqual({ query: 'q', category: 'news', startPublishedDate: '2026-11-06T04:13:00.000Z', numResults: 5, includeDomains: ['sudradio.fr'], contents: { text: { maxCharacters: 20000 } } });
+    expect(bodies[1].contents).toEqual({ text: false });
+    expect(calls[1].body).toContain('"text":false');
+    expect(bodies[2]).toEqual({ query: 'q', category: 'news', startPublishedDate: '2026-11-06T04:13:00.000Z', numResults: 5, contents: { text: false } });
     expect(calls[0]).toMatchObject({ method: 'POST', headers: { 'x-api-key': KEY, 'content-type': 'application/json' } });
+  });
+});
+
+describe('réponses bornées', () => {
+  it('coupe une réponse de 50 000 résultats à numResults', async () => {
+    const results = Array.from({ length: 50_000 }, (_, i) => ({ url: `https://sudradio.fr/a${i}`, title: `T${i}` }));
+    const { fetch } = fakeHttp({ [EXA_SEARCH]: { json: { results } } });
+    const r = await exaSearch({ query: 'q', startPublishedDate: NOW, numResults: 5, includeDomains: ['sudradio.fr'] }, { apiKey: KEY, fetch, timeoutMs: 1000, whitelist: wl });
+    expect(r.results).toHaveLength(5);
   });
 });
 
@@ -53,7 +63,7 @@ describe('collectExa', () => {
     });
     const run = await collectExa(ctx, KEY, { broad: true });
     const fr = calls.slice(0, 9).map((x) => JSON.parse(x.body!));
-    expect(fr.every((b) => b.contents === undefined && b.includeDomains === undefined)).toBe(true);
+    expect(fr.every((b) => b.contents.text === false && b.includeDomains === undefined)).toBe(true);
     expect(run.candidates.filter((c) => c.article.lang === 'fr').every((c) => c.article.text === null)).toBe(true);
   });
 

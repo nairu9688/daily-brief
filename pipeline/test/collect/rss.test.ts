@@ -43,6 +43,16 @@ describe('parseFeed', () => {
     expect(items[1].published).toBeNull();
   });
 
+  it('tolère un canal vide, un item vide ou indigeste, un flux Atom vide', () => {
+    expect(parseFeed('<rss version="2.0"><channel></channel></rss>')).toEqual([]);
+    expect(parseFeed('<feed xmlns="http://www.w3.org/2005/Atom"></feed>')).toEqual([]);
+    const items = parseFeed(
+      '<rss><channel><item></item><item>junk</item><item><title>Bon</title><link>https://fr.euronews.com/a</link></item></channel></rss>',
+    );
+    expect(items.map((i) => i.title)).toContain('Bon');
+    expect(items.filter((i) => i.link === 'https://fr.euronews.com/a')).toHaveLength(1);
+  });
+
   it('lève sur un document qui n’est pas un flux, sans développer les entités en chaîne', () => {
     expect(() => parseFeed('<html><body>Erreur</body></html>')).toThrow('ni RSS 2.0 ni Atom');
     const bomb =

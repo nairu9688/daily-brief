@@ -6,6 +6,8 @@ import { fetchJson, type HttpFetch } from './http';
 import { emptyRun, type SourceContext, type SourceRun } from './types';
 
 export const WEBZ_LITE = 'https://api.webz.io/newsApiLite';
+/** Nombre maximal de posts lus par réponse. */
+const MAX_POSTS = 100;
 
 /** Article Webz.io News API Lite : analyse tolérante. */
 const PostSchema = z.object({
@@ -35,7 +37,7 @@ export function webzLang(language: string | null | undefined, fallback: Lang): s
 /** `GET /newsApiLite?token=…&q=…` ; le jeton est dans l'URL, d'où le masquage des messages d'erreur. */
 export async function webzSearch(q: string, c: { token: string; fetch: HttpFetch; timeoutMs: number }): Promise<WebzPost[]> {
   const url = `${WEBZ_LITE}?${new URLSearchParams({ token: c.token, q })}`;
-  return ResponseSchema.parse(await fetchJson(c.fetch, url, { timeoutMs: c.timeoutMs })).posts.flatMap((p) => {
+  return ResponseSchema.parse(await fetchJson(c.fetch, url, { timeoutMs: c.timeoutMs })).posts.slice(0, MAX_POSTS).flatMap((p) => {
     const r = PostSchema.safeParse(p);
     return r.success ? [r.data] : [];
   });

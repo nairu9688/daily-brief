@@ -28,33 +28,46 @@ export type NewsItem = z.infer<typeof ItemSchema>;
 /** `published_after` au format attendu par l'API (UTC, à la seconde). */
 export const publishedAfterParam = (d: Date): string => d.toISOString().slice(0, 19);
 
-/** Articles valides d'une réponse ; un article mal formé est ignoré, une réponse mal formée lève. */
-export function parseNews(json: unknown): NewsItem[] {
-  return ResponseSchema.parse(json).data.flatMap((d) => {
+/**
+ * Articles valides d'une réponse, au plus `limit` (le tableau est coupé avant l'analyse) ; un article
+ * mal formé est ignoré, une réponse mal formée lève. `rawCount` compte les articles reçus (coupés à `limit`),
+ * valides ou non : c'est lui qui dit si la page était pleine.
+ */
+export function parseNewsPage(json: unknown, limit = 100): { items: NewsItem[]; rawCount: number } {
+  const raw = ResponseSchema.parse(json).data.slice(0, limit);
+  const items = raw.flatMap((d) => {
     const r = ItemSchema.safeParse(d);
     return r.success ? [r.data] : [];
   });
+  return { items, rawCount: raw.length };
 }
+
+export const parseNews = (json: unknown, limit = 100): NewsItem[] => parseNewsPage(json, limit).items;
 
 type Common = { token: string; fetch: HttpFetch; timeoutMs: number };
 
 export type TopParams = { language: string; locale?: string; categories?: string; search?: string | null; publishedAfter?: Date; limit: number; page?: number };
 
-/** `GET /v1/news/top`. */
-export async function topNews(p: TopParams, c: Common): Promise<NewsItem[]> {
+/** `GET /v1/news/top`, avec le nombre brut d'articles reçus. */
+export async function topNewsPage(p: TopParams, c: Common): Promise<{ items: NewsItem[]; rawCount: number }> {
   const q = new URLSearchParams({ api_token: c.token, language: p.language, limit: String(p.limit) });
   if (p.locale) q.set('locale', p.locale);
   if (p.categories) q.set('categories', p.categories);
   if (p.search) q.set('search', p.search);
   if (p.publishedAfter) q.set('published_after', publishedAfterParam(p.publishedAfter));
   if (p.page && p.page > 1) q.set('page', String(p.page));
-  return parseNews(await fetchJson(c.fetch, `${THENEWSAPI_BASE}/top?${q}`, { timeoutMs: c.timeoutMs }));
+  return parseNewsPage(await fetchJson(c.fetch, `${THENEWSAPI_BASE}/top?${q}`, { timeoutMs: c.timeoutMs }), p.limit);
+}
+
+/** `GET /v1/news/top`. */
+export async function topNews(p: TopParams, c: Common): Promise<NewsItem[]> {
+  return (await topNewsPage(p, c)).items;
 }
 
 /** `GET /v1/news/similar/{uuid}` : articles d'autres médias sur la même information. */
 export async function similarNews(uuid: string, p: { language: string; publishedAfter: Date; limit: number }, c: Common): Promise<NewsItem[]> {
   const q = new URLSearchParams({ api_token: c.token, language: p.language, published_after: publishedAfterParam(p.publishedAfter), limit: String(p.limit) });
-  return parseNews(await fetchJson(c.fetch, `${THENEWSAPI_BASE}/similar/${encodeURIComponent(uuid)}?${q}`, { timeoutMs: c.timeoutMs }));
+  return parseNews(await fetchJson(c.fetch, `${THENEWSAPI_BASE}/similar/${encodeURIComponent(uuid)}?${q}`, { timeoutMs: c.timeoutMs }), p.limit);
 }
 
 /**
@@ -94,12 +107,12 @@ export async function collectTheNewsApi(ctx: SourceContext, token: string, budge
         run.requests++;
         const rubric = ctx.rubriques[key];
         try {
-          const items = await topNews(
+          const { items, rawCount } = await topNewsPage(
             { language: lang, locale: cfg.locales[lang], categories: rubric.categories.join(','), search: searchOf(rubric, lang), publishedAfter: ctx.windowStart, limit: cfg.limit, page },
             common,
           );
           add(items, lang);
-          if (items.length < cfg.limit) active.splice(active.indexOf(key), 1);
+          if (rawCount < cfg.limit) active.splice(active.indexOf(key), 1);
         } catch (e) {
           if (recordFailure(run, breaker, `top ${lang}/${key} p${page}`, e)) break;
           active.splice(active.indexOf(key), 1);

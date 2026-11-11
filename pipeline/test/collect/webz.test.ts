@@ -58,3 +58,12 @@ describe('collectWebz', () => {
     expect(run.stoppedBy).toBeNull();
   });
 });
+
+describe('réponses bornées', () => {
+  it('coupe une réponse de 50 000 posts à 100', async () => {
+    const posts = Array.from({ length: 50_000 }, (_, i) => ({ url: `https://eldiario.es/a${i}`, title: `T${i}`, published: '2026-11-06T04:00:00Z' }));
+    const { fetch } = fakeHttp({ [WEBZ_LITE]: { json: { posts } } });
+    const run = await collectWebz(testContext(fetch), TOKEN, ['es']);
+    expect(run.candidates).toHaveLength(100);
+  });
+});

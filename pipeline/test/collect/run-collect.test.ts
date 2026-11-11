@@ -71,8 +71,8 @@ describe('runCollect', () => {
       date: DAY,
       exitCode: 0,
       primary: 'thenewsapi',
-      sources: { thenewsapi: { used: true, requests: 29 }, exa: { used: true, requests: 27 }, rss: { used: true, requests: 13 }, webz: { used: true, requests: 3 } },
-      budget: { thenewsapi: { dailyCap: 90, usedBefore: 0, usedThisRun: 29, perBucket: { fr: 9, en: 9, es: 9, similar: 2 } }, exa: { requests: 27, max: 60 }, webz: { requests: 3, max: 3 } },
+      sources: { thenewsapi: { used: true, requests: 30 }, exa: { used: true, requests: 27 }, rss: { used: true, requests: 13 }, webz: { used: true, requests: 3 } },
+      budget: { thenewsapi: { dailyCap: 90, usedBefore: 0, usedThisRun: 30, perBucket: { fr: 10, en: 9, es: 9, similar: 2 } }, exa: { requests: 27, max: 60 }, webz: { requests: 3, max: 3 } },
     });
     expect(report.perLang.fr.light).toBe(true);
     expect(report.perLang.fr.fullTexts).toBe(raw.articles.filter((a) => a.lang === 'fr' && a.text).length);
@@ -123,13 +123,13 @@ describe('runCollect', () => {
     expect(net.calls.some((c) => c.url.startsWith(THENEWSAPI_BASE))).toBe(false);
     const bodies = net.calls.filter((c) => c.url === EXA_SEARCH).map((c) => JSON.parse(c.body!));
     expect(bodies).toHaveLength(54);
-    expect(bodies.filter((b) => b.includeDomains === undefined).every((b) => b.contents === undefined)).toBe(true);
+    expect(bodies.filter((b) => b.includeDomains === undefined).every((b) => (b.contents as { text: unknown }).text === false)).toBe(true);
   });
 
   it('le plafond de 90 requêtes TheNewsAPI vaut pour la journée : une relance reprend le compte', async () => {
     const { outDir, run } = setup();
     await run(network().fetch);
-    expect(read(join(outDir, 'thenewsapi-usage.json'))).toEqual({ day: '2026-11-06', used: 29 });
+    expect(read(join(outDir, 'thenewsapi-usage.json'))).toEqual({ day: '2026-11-06', used: 30 });
     writeFileSync(join(outDir, 'thenewsapi-usage.json'), JSON.stringify({ day: '2026-11-06', used: 90 }));
     const net = network();
     const r = await run(net.fetch);
@@ -149,7 +149,7 @@ describe('runCollect', () => {
     };
     const r = await run(fetch);
     const calls = base.calls.filter((c) => c.url.startsWith(THENEWSAPI_BASE)).length;
-    expect(calls).toBe(29);
+    expect(calls).toBe(30);
     // Au moment de chaque appel, la requête qu'il consomme est déjà comptée.
     expect(seen).toEqual(Array.from({ length: calls }, (_, i) => 11 + i));
     expect(read(ledger)).toEqual({ day: '2026-11-06', used: 10 + calls });
@@ -167,8 +167,8 @@ describe('runCollect', () => {
     const report = read(join(dayDir, 'collect-report.json'));
     expect(report.issues).toContainEqual(expect.objectContaining({ level: 'warning', source: 'thenewsapi', message: expect.stringContaining('compte remis à zéro') }));
     expect(report.issues.some((i: { level: string; source?: string }) => i.level === 'error' && i.source === 'thenewsapi')).toBe(false);
-    expect(report.budget.thenewsapi).toMatchObject({ usedBefore: 0, usedThisRun: 29 });
-    expect(read(ledger)).toEqual({ day: '2026-11-06', used: 29 });
+    expect(report.budget.thenewsapi).toMatchObject({ usedBefore: 0, usedThisRun: 30 });
+    expect(read(ledger)).toEqual({ day: '2026-11-06', used: 30 });
   });
 
   it('refuse une date invalide sans rien écrire, et une configuration invalide avec un rapport', async () => {

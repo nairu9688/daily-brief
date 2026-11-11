@@ -1,9 +1,9 @@
 import { readFileSync } from 'node:fs';
-import { XMLParser } from 'fast-xml-parser';
 import { z } from 'zod';
 import { LangSchema, UrlSchema } from '@daily-brief/schema';
 import { lookupDomain, type Whitelist } from '../lib/whitelist';
 import { makeArticle, toIso } from './article';
+import { parseFeed, type FeedItem } from './feed-parse';
 import { ACCEPT_FEED, decodeBody, deadline, HttpError, messageOf, readCapped, USER_AGENT, type HttpFetch } from './http';
 import { mapLimit } from './limit';
 import { emptyRun, type Candidate, type SourceContext, type SourceRun } from './types';
@@ -12,7 +12,7 @@ const FeedSchema = z.strictObject({ url: UrlSchema, outlet: z.string().min(1), l
 const FeedsSchema = z.strictObject({ note: z.string().optional(), feeds: z.array(FeedSchema) });
 
 export type Feed = z.infer<typeof FeedSchema>;
-export type FeedItem = { title: string; link: string | null; description: string; published: string | null };
+export { parseFeed, type FeedItem };
 
 export function loadFeeds(path: string): Feed[] {
   return FeedsSchema.parse(JSON.parse(readFileSync(path, 'utf8'))).feeds;
@@ -22,60 +22,6 @@ export function loadFeeds(path: string): Feed[] {
 export function isReadableFeedDomain(wl: Whitelist, url: string): boolean {
   const status = lookupDomain(wl, url)?.status;
   return status === 'full' || status === 'feed';
-}
-
-const parser = new XMLParser({
-  ignoreAttributes: false,
-  attributeNamePrefix: '@_',
-  processEntities: true,
-  htmlEntities: true,
-  isArray: (name) => name === 'item' || name === 'entry' || name === 'link',
-});
-
-/** Texte d'un nœud analysé (chaîne, nombre, `{ '#text' }` ou premier élément d'un tableau). */
-function textOf(v: unknown): string {
-  if (typeof v === 'string') return v;
-  if (typeof v === 'number') return String(v);
-  if (Array.isArray(v)) return textOf(v[0]);
-  if (v && typeof v === 'object' && '#text' in v) return textOf((v as Record<string, unknown>)['#text']);
-  return '';
-}
-
-/** Lien d'un article : texte (RSS) ou `href` du lien `alternate` ou sans `rel` (Atom). */
-function linkOf(v: unknown): string | null {
-  const links = Array.isArray(v) ? v : v === undefined ? [] : [v];
-  for (const l of links) if (typeof l === 'string' && l.trim()) return l.trim();
-  const atom = links.filter((l): l is Record<string, unknown> => !!l && typeof l === 'object');
-  const best = atom.find((l) => l['@_rel'] === undefined || l['@_rel'] === 'alternate') ?? atom[0];
-  const href = best?.['@_href'];
-  return typeof href === 'string' && href.trim() ? href.trim() : null;
-}
-
-const RssDoc = z.object({ rss: z.object({ channel: z.object({ item: z.array(z.record(z.string(), z.unknown())).optional() }) }) });
-const AtomDoc = z.object({ feed: z.object({ entry: z.array(z.record(z.string(), z.unknown())).optional() }) });
-
-/** Articles d'un flux RSS 2.0 ou Atom ; lève si le document n'est ni l'un ni l'autre. */
-export function parseFeed(xml: string): FeedItem[] {
-  const doc = parser.parse(xml);
-  const rss = RssDoc.safeParse(doc);
-  if (rss.success) {
-    return (rss.data.rss.channel.item ?? []).map((i) => ({
-      title: textOf(i.title),
-      link: linkOf(i.link) ?? (/^https?:/.test(textOf(i.guid)) ? textOf(i.guid) : null),
-      description: textOf(i.description),
-      published: textOf(i.pubDate) || textOf(i['dc:date']) || null,
-    }));
-  }
-  const atom = AtomDoc.safeParse(doc);
-  if (atom.success) {
-    return (atom.data.feed.entry ?? []).map((e) => ({
-      title: textOf(e.title),
-      link: linkOf(e.link),
-      description: textOf(e.summary),
-      published: textOf(e.published) || textOf(e.updated) || null,
-    }));
-  }
-  throw new Error('ni RSS 2.0 ni Atom');
 }
 
 /** Télécharge et analyse un flux (délai, taille bornée). */

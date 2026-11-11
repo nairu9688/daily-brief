@@ -75,16 +75,22 @@ export function deadline(timeoutMs: number, parent?: AbortSignal): AbortSignal {
   return parent ? AbortSignal.any([t, parent]) : t;
 }
 
-/** Appel JSON borné dans le temps : lève HttpError si le statut n'est pas 2xx. */
-export async function fetchJson(fetch: HttpFetch, url: string, init: HttpInit & { timeoutMs: number }): Promise<unknown> {
-  const { timeoutMs, ...rest } = init;
+/** Taille maximale par défaut d'une réponse JSON d'API (octets). */
+export const MAX_JSON_BYTES = 5_000_000;
+
+/**
+ * Appel JSON borné dans le temps et en taille : lève HttpError si le statut n'est pas 2xx, BodyError
+ * si le corps dépasse `maxBytes` (lecture par `readCapped`, jamais de `res.json()` non borné).
+ */
+export async function fetchJson(fetch: HttpFetch, url: string, init: HttpInit & { timeoutMs: number; maxBytes?: number }): Promise<unknown> {
+  const { timeoutMs, maxBytes = MAX_JSON_BYTES, ...rest } = init;
   const signal = deadline(timeoutMs, rest.signal);
   const res = await fetch(url, { ...rest, signal });
   if (!res.ok) {
     await res.body?.cancel().catch(() => {});
     throw new HttpError(res.status, url);
   }
-  return await res.json();
+  return JSON.parse((await readCapped(res, maxBytes)).toString('utf8'));
 }
 
 /**

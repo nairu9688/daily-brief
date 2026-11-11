@@ -61,4 +61,13 @@ describe('HTTP', () => {
     expect(decodeBody(Buffer.from([0x63, 0x61, 0x66, 0xe9]), 'text/html; charset=iso-8859-1')).toBe('café');
     expect(decodeBody(Buffer.from('café'), 'text/html; charset=inconnu')).toBe('café');
   });
+
+  it('fetchJson lit le corps par le lecteur borné', async () => {
+    const { fetch } = fakeHttp({ 'https://api.x/': { json: { a: 1 }, headers: { 'content-length': '99999999' } } });
+    await expect(fetchJson(fetch, 'https://api.x/y', { timeoutMs: 1000 })).rejects.toBeInstanceOf(BodyError);
+    const ok = fakeHttp({ 'https://api.x/': { json: { a: 1 } } });
+    expect(await fetchJson(ok.fetch, 'https://api.x/y', { timeoutMs: 1000, maxBytes: 100 })).toEqual({ a: 1 });
+    const small = fakeHttp({ 'https://api.x/': { json: { a: 'x'.repeat(500) } } });
+    await expect(fetchJson(small.fetch, 'https://api.x/y', { timeoutMs: 1000, maxBytes: 100 })).rejects.toBeInstanceOf(BodyError);
+  });
 });
