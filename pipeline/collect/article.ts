@@ -19,7 +19,7 @@ export type ArticleInput = {
 const ENTITIES: Record<string, string> = {
   amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ',
   rsquo: '’', lsquo: '‘', rdquo: '”', ldquo: '“', laquo: '«', raquo: '»', hellip: '…', ndash: '–', mdash: '—',
-  eacute: 'é', egrave: 'è', ecirc: 'ê', agrave: 'à', ccedil: 'ç', ocirc: 'ô', ucirc: 'û', icirc: 'î', iuml: 'ï', euml: 'ë',
+  eacute: 'é', egrave: 'è', ecirc: 'ê', Ccedil: 'Ç', Egrave: 'È', Ecirc: 'Ê', Euml: 'Ë', Iuml: 'Ï', Icirc: 'Î', Ocirc: 'Ô', OElig: 'Œ', Ucirc: 'Û', Uacute: 'Ú', Acirc: 'Â', Ntilde: 'Ñ', Aacute: 'Á', Oacute: 'Ó', Iacute: 'Í', agrave: 'à', ccedil: 'ç', ocirc: 'ô', ucirc: 'û', icirc: 'î', iuml: 'ï', euml: 'ë',
   oelig: 'œ', Eacute: 'É', Agrave: 'À', ntilde: 'ñ', aacute: 'á', iacute: 'í', oacute: 'ó', uacute: 'ú', iexcl: '¡', iquest: '¿',
   euro: '€', deg: '°',
 };
@@ -35,9 +35,9 @@ export function plainText(html: string | null | undefined): string {
         const code = e[1].toLowerCase() === 'x' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
         return Number.isFinite(code) && code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : ' ';
       }
-      return ENTITIES[e] ?? ENTITIES[e.toLowerCase()] ?? m;
+      return ENTITIES[e] ?? m;
     })
-    .replace(/<[^>]*>/g, ' ')
+    .replace(/<\/?[a-z!][^<>]*>/gi, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }

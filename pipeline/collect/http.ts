@@ -125,11 +125,16 @@ export async function readCapped(res: HttpResponse, maxBytes: number): Promise<B
 export function decodeBody(buf: Buffer, contentType: string | null): string {
   const bom = buf.length >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf;
   const head = buf.subarray(0, 1024).toString('latin1');
+  const sniffed = /<\?xml[^>]*?encoding=["']([\w-]+)["']/i.exec(head)?.[1] ?? /<meta[^>]*?charset=["']?([\w-]+)/i.exec(head)?.[1];
+  // Un « utf-16 » lu dans le contenu ne peut pas être vrai (le contenu est lu en octets ASCII) : WHATWG le lit comme utf-8.
+  const fromContent = sniffed && /^utf-?16/i.test(sniffed) ? 'utf-8' : sniffed;
   const charset = bom
     ? 'utf-8'
-    : /charset=["']?([\w-]+)/i.exec(contentType ?? '')?.[1] ??
-      /<\?xml[^>]*?encoding=["']([\w-]+)["']/i.exec(head)?.[1] ??
-      /<meta[^>]*?charset=["']?([\w-]+)/i.exec(head)?.[1];
+    : buf[0] === 0xff && buf[1] === 0xfe
+      ? 'utf-16le'
+      : buf[0] === 0xfe && buf[1] === 0xff
+        ? 'utf-16be'
+        : (/charset=["']?([\w-]+)/i.exec(contentType ?? '')?.[1] ?? fromContent);
   try {
     return new TextDecoder(charset ?? 'utf-8').decode(buf);
   } catch {

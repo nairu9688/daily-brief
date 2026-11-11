@@ -11,7 +11,13 @@ export function stripSecrets(text: string, secrets: (string | undefined)[]): str
   let out = text;
   for (const s of secrets) {
     if (!s || s.length < 4) continue;
-    for (const form of new Set([s, encodeURIComponent(s)])) out = out.split(form).join('***');
+    out = out.split(s).join('***');
+    // Forme encodée pour une URL : les %XX se lisent en majuscules comme en minuscules.
+    const encoded = encodeURIComponent(s);
+    if (encoded !== s) {
+      const pattern = encoded.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/%([0-9A-F]{2})/gi, (_, h: string) => `%${h.toUpperCase()}`.replace(/[A-F]/g, (c) => `[${c}${c.toLowerCase()}]`));
+      out = out.replace(new RegExp(pattern, 'g'), '***');
+    }
   }
   return out;
 }

@@ -26,13 +26,29 @@ describe('compteur quotidien : écriture atomique et fichier ancien', () => {
       utimesSync(p, yesterday, yesterday);
       const old = readDailyUsage(p, '2026-11-06', 90);
       expect(old.used).toBe(0);
-      expect(old.error).toMatch(/illisible/);
+      expect(old.error).toBeUndefined();
+      expect(old.warning).toMatch(/remis à zéro/);
       const today = new Date('2026-11-06T03:00:00Z');
       utimesSync(p, today, today);
       const cur = readDailyUsage(p, '2026-11-06', 90);
       expect(cur.used).toBe(90);
       expect(cur.error).toMatch(/illisible/);
+      expect(cur.warning).toBeUndefined();
     }
+  });
+
+  it('recordDailyUsage ne fait jamais baisser le compte du même jour', () => {
+    const p = tmp();
+    recordDailyUsage(p, '2026-11-06', 10);
+    recordDailyUsage(p, '2026-11-06', 4);
+    expect(readDailyUsage(p, '2026-11-06', 90)).toEqual({ used: 10 });
+    recordDailyUsage(p, '2026-11-06', 12);
+    expect(readDailyUsage(p, '2026-11-06', 90)).toEqual({ used: 12 });
+    recordDailyUsage(p, '2026-11-07', 1);
+    expect(readDailyUsage(p, '2026-11-07', 90)).toEqual({ used: 1 });
+    writeFileSync(p, '{');
+    recordDailyUsage(p, '2026-11-07', 3);
+    expect(readDailyUsage(p, '2026-11-07', 90)).toEqual({ used: 3 });
   });
 });
 
@@ -44,6 +60,13 @@ describe('budget : rappel et refus', () => {
     b.take('fr');
     b.take('fr');
     expect(seen).toEqual([1, 2]);
+  });
+
+  it('remaining vaut 0 (pas NaN) si la limite ou le total n’est pas fini', () => {
+    expect(new RequestBudget({ fr: Number.NaN }, 5).remaining('fr')).toBe(0);
+    expect(new RequestBudget({ fr: 2 }, Number.NaN).remaining('fr')).toBe(0);
+    expect(new RequestBudget({ fr: 2 }, 5).remaining('xx' as 'fr')).toBe(0);
+    expect(new RequestBudget({ fr: 2 }, 5).remaining('fr')).toBe(2);
   });
 
   it('refuse un poste inconnu et une limite non finie', () => {

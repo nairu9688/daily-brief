@@ -24,7 +24,8 @@ export class RequestBudget<K extends string> {
   }
 
   remaining(bucket: K): number {
-    return Math.max(0, Math.min(this.limits[bucket] - (this.used.get(bucket) ?? 0), this.total - this.spent));
+    const left = Math.min(this.limits[bucket] - (this.used.get(bucket) ?? 0), this.total - this.spent);
+    return Number.isFinite(left) ? Math.max(0, left) : 0;
   }
 
   get spentTotal(): number {

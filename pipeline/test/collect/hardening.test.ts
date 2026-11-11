@@ -3,7 +3,7 @@ import { articleId, makeArticle, plainText, toIso } from '../../collect/article'
 import { Breaker, recordFailure } from '../../collect/breaker';
 import { BodyError, decodeBody, HttpError, messageOf, readCapped, fetchJson } from '../../collect/http';
 import { mapLimit } from '../../collect/limit';
-import { redactUrl } from '../../collect/redact';
+import { redactUrl, stripSecrets } from '../../collect/redact';
 import { emptyRun } from '../../collect/types';
 import { addDays } from '../../lib/date';
 import { loadWhitelist, WhitelistSchema } from '../../lib/whitelist';
@@ -131,5 +131,33 @@ describe('date, liste blanche, masquage', () => {
     expect(redactUrl('https://a/x?API_TOKEN=S3')).toBe('https://a/x?API_TOKEN=***');
     expect(redactUrl('https://a/x?apiKey=S4&key=S5')).toBe('https://a/x?apiKey=***&key=***');
     expect(redactUrl('https://a/x?token=ab%2fcd%2Fef&n=1')).toBe('https://a/x?token=***&n=1');
+  });
+});
+
+describe('relecture : balises, secrets, entités, charset', () => {
+  it('garde « < » et « > » isolés mais retire les balises, même encodées', () => {
+    expect(plainText('Inflation &lt; 2 % et chômage &gt; 7 %')).toBe('Inflation < 2 % et chômage > 7 %');
+    expect(plainText('&lt;script&gt;alert(1)&lt;/script&gt;ok')).toBe('alert(1) ok');
+    expect(plainText('&lt;b&gt;gras&lt;/b&gt; <i>x</i> <!-- c -->')).not.toMatch(/[<>]/);
+  });
+
+  it('stripSecrets masque la forme encodée en minuscules', () => {
+    expect(stripSecrets('k%2f%2bsec', ['k/+sec'])).toBe('***');
+    expect(stripSecrets('k%2F%2Bsec', ['k/+sec'])).toBe('***');
+  });
+
+  it('décode les majuscules accentuées, laisse intact ce qui est inconnu', () => {
+    expect(plainText('&Ccedil;a &Egrave;re &Ecirc;tre &OElig;uvre &Euml; &Iuml; &Icirc; &Ocirc; &Ucirc; &Uacute; &Ntilde; &Aacute; &Oacute; &Iacute; &Agrave; &Acirc;')).toBe(
+      'Ça Ère Être Œuvre Ë Ï Î Ô Û Ú Ñ Á Ó Í À Â',
+    );
+    expect(plainText('&Zzzz; &EACUTE;')).toBe('&Zzzz; &EACUTE;');
+  });
+
+  it('charset : utf-16 annoncé donne utf-8, BOM utf-16 reconnus', () => {
+    expect(decodeBody(Buffer.from('<?xml version="1.0" encoding="utf-16"?><t>café</t>'), 'application/xml')).toContain('café');
+    expect(decodeBody(Buffer.from('<meta charset="utf-16">café'), 'text/html')).toContain('café');
+    expect(decodeBody(Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from('café', 'utf16le')]), null)).toBe('café');
+    const be = Buffer.from('café', 'utf16le').swap16();
+    expect(decodeBody(Buffer.concat([Buffer.from([0xfe, 0xff]), be]), 'text/html; charset=utf-8')).toBe('café');
   });
 });
