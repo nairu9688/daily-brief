@@ -25,6 +25,7 @@ describe('runCollect : exception inattendue dans une source', () => {
     });
     expect(r.exitCode).toBe(0);
     expect(r.report.issues).toContainEqual({ level: 'error', source: 'exa', message: 'exa : erreur inattendue : bogue interne' });
+    expect(r.report.degraded).toBe(true);
     expect(r.report.sources.exa.used).toBe(true);
     expect(r.report.sources.rss.candidates).toBeGreaterThan(0);
   });

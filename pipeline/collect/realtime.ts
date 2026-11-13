@@ -62,21 +62,33 @@ export async function checkRealtime(opts: {
   if (opts.ledgerPath) {
     const before = readDailyUsage(opts.ledgerPath, day, THENEWSAPI_HARD_CAP);
     usedBefore = before.used;
-    if (before.used + LANGS.length > THENEWSAPI_HARD_CAP) {
-      const refused = `marge quotidienne épuisée (${before.used} requêtes déjà utilisées sur ${THENEWSAPI_HARD_CAP})`;
+    if (before.error || before.used + LANGS.length > THENEWSAPI_HARD_CAP) {
+      const refused = before.error
+        ? `registre illisible : ${before.error}`
+        : `marge quotidienne épuisée (${before.used} requêtes déjà utilisées sur ${THENEWSAPI_HARD_CAP})`;
       for (const lang of LANGS) perLang[lang] = { newest: null, ageMinutes: null, articles: 0, error: `non vérifié (${refused})` };
       return { checkedAt: now.toISOString(), maxAgeMinutes: maxAge, perLang, requests: 0, refused, verdict: 'unknown' };
     }
   }
   const stale = new Set<Lang>();
+  let ledgerFailure: string | null = null;
   for (const lang of LANGS) {
-    if (breaker.open) {
-      perLang[lang] = { newest: null, ageMinutes: null, articles: 0, error: `non vérifié (${breaker.reason})` };
+    if (breaker.open || ledgerFailure !== null) {
+      perLang[lang] = { newest: null, ageMinutes: null, articles: 0, error: `non vérifié (${ledgerFailure ?? breaker.reason})` };
       continue;
     }
-    requests++;
     try {
-      if (opts.ledgerPath) recordDailyUsage(opts.ledgerPath, day, usedBefore + requests);
+      if (opts.ledgerPath) {
+        // Le compte est inscrit avant l'appel ; si l'inscription échoue, rien n'est envoyé ni compté.
+        try {
+          recordDailyUsage(opts.ledgerPath, day, usedBefore + requests + 1);
+        } catch (e) {
+          ledgerFailure = `registre d’usage non écrit : ${messageOf(e)}`;
+          perLang[lang] = { newest: null, ageMinutes: null, articles: 0, error: `non vérifié (${ledgerFailure})` };
+          continue;
+        }
+      }
+      requests++;
       const items = await topNews({ language: lang, limit: 3 }, { token: opts.token, fetch: opts.fetch, timeoutMs: opts.timeoutMs ?? 10_000 });
       const dates = items
         .map((i) => toIso(i.published_at))
@@ -116,6 +128,6 @@ export function describeRealtime(r: RealtimeReport, currentPrimary: 'thenewsapi'
     lines.push('Verdict : vérification impossible, configuration inchangée. Relance plus tard.');
   }
   if (r.refused) lines.push(`Refusé : ${r.refused}.`);
-  lines.push(`Requêtes TheNewsAPI utilisées : ${r.requests} (hors budget quotidien de 90 de brief:collect).`);
+  lines.push(`Requêtes TheNewsAPI utilisées : ${r.requests} (comptées dans le quota du jour, que brief:collect lit dans out/thenewsapi-usage.json).`);
   return lines;
 }

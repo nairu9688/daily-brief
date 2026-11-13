@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -44,7 +44,7 @@ describe('vérification §16 : TheNewsAPI en temps réel', () => {
       'EN : article le plus récent publié il y a 3 min (2026-11-06T09:57:00.000Z)',
       'ES : article le plus récent publié il y a 120 min (2026-11-06T08:00:00.000Z)',
       'Verdict : TheNewsAPI est en temps réel (au plus 120 min dans les trois langues).',
-      'Requêtes TheNewsAPI utilisées : 3 (hors budget quotidien de 90 de brief:collect).',
+      'Requêtes TheNewsAPI utilisées : 3 (comptées dans le quota du jour, que brief:collect lit dans out/thenewsapi-usage.json).',
     ]);
   });
 
@@ -124,6 +124,27 @@ describe('vérification §16 : dates, millisecondes et registre', () => {
     expect(describeRealtime(r2, 'thenewsapi').join('\n')).toContain('marge quotidienne');
     expect(JSON.parse(readFileSync(ledgerPath, 'utf8')).used).toBe(98);
   });
+  it('un registre impossible à écrire : aucune requête envoyée ni comptée', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'rt-'));
+    const ledgerPath = join(dir, 'thenewsapi-usage.json');
+    mkdirSync(`${ledgerPath}.tmp`);
+    const net = fakeHttp({ [`${THENEWSAPI_BASE}/top`]: top({ fr: 1, en: 1, es: 1 }) });
+    const r = await checkRealtime({ token: TOKEN, fetch: net.fetch, now: NOW, ledgerPath });
+    expect(net.calls).toHaveLength(0);
+    expect(r).toMatchObject({ requests: 0, verdict: 'unknown' });
+    expect(r.perLang.fr.error).toContain('registre d’usage non écrit');
+    expect(r.perLang.es.error).toContain('registre d’usage non écrit');
+  });
+
+  it('un registre illisible du jour : le refus le dit, au lieu d’un compte inventé', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'rt-'));
+    const ledgerPath = join(dir, 'thenewsapi-usage.json');
+    writeFileSync(ledgerPath, '{tronqué');
+    const r = await checkRealtime({ token: TOKEN, fetch: fakeHttp({}).fetch, now: NOW, ledgerPath });
+    expect(r.verdict).toBe('unknown');
+    expect(r.refused).toMatch(/^registre illisible : /);
+    expect(r.refused).not.toContain('déjà utilisées');
+  });
 });
 
 describe('CLI check:thenewsapi', () => {
@@ -131,5 +152,12 @@ describe('CLI check:thenewsapi', () => {
     const r = runCli('pipeline/collect/check-thenewsapi.ts', []);
     expect(r.status).toBe(2);
     expect(r.stdout).toBe('check:thenewsapi (découverte principale actuelle : thenewsapi)\nTHENEWSAPI_KEY absente (environnement ou .env) : vérification impossible.\n');
+  }, 30_000);
+
+  it('--out : le registre est celui de brief:collect (out/thenewsapi-usage.json) et reçoit les 3 requêtes', () => {
+    const r = runCli('pipeline/collect/check-thenewsapi.ts', ['--out', 'sortie'], { THENEWSAPI_KEY: 'tna-SECRET-123' }, { preload: 'pipeline/test/fake-fetch-preload.ts' });
+    expect(r.status, r.stdout + r.stderr).toBe(1);
+    expect(JSON.parse(readFileSync(join(r.cwd, 'sortie', 'thenewsapi-usage.json'), 'utf8')).used).toBe(3);
+    expect(r.stdout).not.toContain('tna-SECRET-123');
   }, 30_000);
 });

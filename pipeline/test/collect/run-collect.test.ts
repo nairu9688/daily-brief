@@ -181,6 +181,7 @@ describe('runCollect', () => {
     expect(net.calls.some((c) => c.url === EXA_SEARCH)).toBe(true);
     expect(net.calls.some((c) => c.url.startsWith('https://fr.euronews.com/rss'))).toBe(true);
     expect(r.report.sources.rss.used).toBe(true);
+    expect(r.report.degraded).toBe(true);
     expect(r.report.issues).toContainEqual(expect.objectContaining({ level: 'error', source: 'thenewsapi', message: expect.stringContaining('registre d’usage non écrit') }));
     expect(read(join(dayDir, 'collect-report.json')).exitCode).toBe(0);
   });
@@ -206,14 +207,20 @@ describe('runCollect', () => {
     const text = readFileSync(join(dayDir, 'collect-report.json'), 'utf8');
     expect(() => JSON.parse(text)).not.toThrow();
     noSecret(text);
-    const body = network({ [WEBZ_LITE]: { body: '&key=1"', type: 'text/plain' } });
-    await setup().run(body.fetch);
+    const body = setup();
+    await body.run(network({ [WEBZ_LITE]: { body: '&key=1"', type: 'text/plain' } }).fetch);
+    const bodyText = readFileSync(join(body.dayDir, 'collect-report.json'), 'utf8');
+    expect(() => JSON.parse(bodyText)).not.toThrow();
+    noSecret(bodyText);
   });
 
   it('--date : une date autre que celle de Paris donne un avertissement sur la fenêtre, sans refuser la collecte', async () => {
     const other = await setup().run(network().fetch, KEYS, '2026-11-07');
     expect(other.exitCode).toBe(0);
-    expect(other.report.issues).toContainEqual({ level: 'warning', message: 'fenêtre de collecte = 24 h avant maintenant, pas la date demandée' });
+    expect(other.report.issues).toContainEqual({
+      level: 'warning',
+      message: 'date demandée 2026-11-07 ≠ aujourd’hui 2026-11-06 à Paris : fenêtre de collecte = 24 h avant maintenant, pas la date demandée',
+    });
     const same = await setup().run(network().fetch);
     expect(same.report.issues.some((i) => /fenêtre de collecte/.test(i.message))).toBe(false);
   });
@@ -277,6 +284,23 @@ describe('runCollect', () => {
     const shortTexts = read(join(short.dayDir, 'raw.json')).articles.filter((x: { lang: string; text: string | null }) => x.lang === 'fr' && x.text !== null);
     expect(shortTexts.length).toBeGreaterThan(0);
     expect(raw.report.perLang.fr.light).toBe(true);
+  });
+
+  it('un registre illisible du jour (quota réputé épuisé) rend le rapport dégradé', async () => {
+    const { outDir, run } = setup();
+    writeFileSync(join(outDir, 'thenewsapi-usage.json'), '{tronqué');
+    const r = await run(network().fetch);
+    expect(r.exitCode).toBe(0);
+    expect(r.report.degraded).toBe(true);
+  });
+
+  it('raw.json écrit mais rapport impossible à écrire : code 2', async () => {
+    const { dayDir, run } = setup();
+    mkdirSync(join(dayDir, 'collect-report.json.tmp'), { recursive: true });
+    writeFileSync(join(dayDir, 'collect-report.json.tmp', 'x'), 'x');
+    const r = await run(network().fetch);
+    expect(r.reportWritten).toBe(false);
+    expect(r.exitCode).toBe(2);
   });
 
   it('refuse une date invalide sans rien écrire, et une configuration invalide avec un rapport', async () => {

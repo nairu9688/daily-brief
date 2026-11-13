@@ -118,7 +118,8 @@ export async function runCollect(opts: RunCollectOptions): Promise<RunCollectRes
     issue('error', `date incorrecte : « ${opts.date} »`);
     return { exitCode: 2, report, reportWritten: false };
   }
-  if (opts.date !== parisToday(now)) issue('warning', 'fenêtre de collecte = 24 h avant maintenant, pas la date demandée');
+  const today = parisToday(now);
+  if (opts.date !== today) issue('warning', `date demandée ${opts.date} ≠ aujourd’hui ${today} à Paris : fenêtre de collecte = 24 h avant maintenant, pas la date demandée`);
   const dayDir = join(opts.outDir, opts.date);
   const rawPath = join(dayDir, 'raw.json');
   const reportPath = join(dayDir, 'collect-report.json');
@@ -156,6 +157,8 @@ export async function runCollect(opts: RunCollectOptions): Promise<RunCollectRes
     } catch {
       reportWritten = false;
     }
+    // Sans rapport, l'édition ne sait pas si elle est allégée (`light`) : la collecte échoue.
+    if (!reportWritten && report.exitCode === 0) report.exitCode = 2;
     return { exitCode: report.exitCode, report, reportWritten };
   };
 
@@ -217,6 +220,7 @@ export async function runCollect(opts: RunCollectOptions): Promise<RunCollectRes
         record(name, await fn());
       } catch (e) {
         report.sources[name].used = true;
+        report.degraded = true;
         issue('error', `${name} : erreur inattendue : ${messageOf(e)}`, name);
       }
     };
@@ -229,7 +233,10 @@ export async function runCollect(opts: RunCollectOptions): Promise<RunCollectRes
         const ledgerPath = join(opts.outDir, 'thenewsapi-usage.json');
         const day = utcDay(now);
         const before = readDailyUsage(ledgerPath, day, THENEWSAPI_DAILY_CAP);
-        if (before.error) issue('error', before.error, 'thenewsapi');
+        if (before.error) {
+          issue('error', before.error, 'thenewsapi');
+          report.degraded = true;
+        }
         if (before.warning) issue('warning', before.warning, 'thenewsapi');
         const { total, ...limits } = config.thenewsapi.budget;
         // Chaque requête réservée est inscrite aussitôt au registre : un passage interrompu ne perd pas son compte.
@@ -259,6 +266,7 @@ export async function runCollect(opts: RunCollectOptions): Promise<RunCollectRes
               ledgerFailure ??= messageOf(e);
             }
           }
+          if (ledgerFailure !== null) report.degraded = true;
           if (ledgerFailure !== null) issue('error', `registre d’usage non écrit : ${ledgerFailure}`, 'thenewsapi');
         }
       } else missing('thenewsapi', 'TheNewsAPI ignorée');
