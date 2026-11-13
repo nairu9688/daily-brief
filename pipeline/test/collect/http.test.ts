@@ -70,4 +70,9 @@ describe('HTTP', () => {
     const small = fakeHttp({ 'https://api.x/': { json: { a: 'x'.repeat(500) } } });
     await expect(fetchJson(small.fetch, 'https://api.x/y', { timeoutMs: 1000, maxBytes: 100 })).rejects.toBeInstanceOf(BodyError);
   });
+
+  it('fetchJson accepte un BOM UTF-8', async () => {
+    const { fetch } = fakeHttp({ 'https://api.x/': { body: '\uFEFF{"data":[]}', type: 'application/json' } });
+    expect(await fetchJson(fetch, 'https://api.x/y', { timeoutMs: 1000 })).toEqual({ data: [] });
+  });
 });

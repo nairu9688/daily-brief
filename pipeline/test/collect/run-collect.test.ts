@@ -71,7 +71,7 @@ describe('runCollect', () => {
       date: DAY,
       exitCode: 0,
       primary: 'thenewsapi',
-      sources: { thenewsapi: { used: true, requests: 30 }, exa: { used: true, requests: 27 }, rss: { used: true, requests: 13 }, webz: { used: true, requests: 3 } },
+      sources: { thenewsapi: { used: true, requests: 30 }, exa: { used: true, requests: 27 }, rss: { used: true, requests: 12 }, webz: { used: true, requests: 3 } },
       budget: { thenewsapi: { dailyCap: 90, usedBefore: 0, usedThisRun: 30, perBucket: { fr: 10, en: 9, es: 9, similar: 2 } }, exa: { requests: 27, max: 60 }, webz: { requests: 3, max: 3 } },
     });
     expect(report.perLang.fr.light).toBe(true);

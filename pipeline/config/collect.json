@@ -16,7 +16,7 @@
     "fullDomains": {
       "fr": ["fr.euronews.com", "sudradio.fr"],
       "en": ["www.euronews.com", "aljazeera.com", "cbsnews.com", "pbs.org"],
-      "es": ["es.euronews.com", "eldiario.es", "elsaltodiario.com", "alicanteplaza.es", "democrata.es"]
+      "es": ["eldiario.es", "elsaltodiario.com", "alicanteplaza.es", "democrata.es"]
     }
   },
   "webz": {

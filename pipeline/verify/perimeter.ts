@@ -1,16 +1,9 @@
 import type { Lang, SourceRef } from '@daily-brief/schema';
-import { hostOf, tryNormalizeUrl } from '../lib/url';
-import { lookupDomain, type Whitelist } from '../lib/whitelist';
+import { countryOf } from '../lib/country';
+import { tryNormalizeUrl } from '../lib/url';
+import type { Whitelist } from '../lib/whitelist';
 
 export type PerimeterResult = { remove: string } | null;
-
-/** Pays du média : liste blanche, sinon domaine national à 2 lettres (« .uk » donne « UK », sans effet : seul ES compte ici). */
-function countryOf(url: string, wl: Whitelist): string | undefined {
-  const known = lookupDomain(wl, url)?.country;
-  if (known) return known;
-  const tld = hostOf(url).split('.').pop() ?? '';
-  return tld.length === 2 ? tld.toUpperCase() : undefined;
-}
 
 /**
  * R2 : l'édition FR accepte toute source ; EN exige des sources en anglais ;

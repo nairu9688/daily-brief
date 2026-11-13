@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { LANGS, RUBRIC_KEYS } from '@daily-brief/schema';
 import { lookupDomain, type Whitelist } from '../lib/whitelist';
-import { makeArticle, toIso, windowVerdict } from './article';
+import { makeArticle, windowVerdict } from './article';
 import { Breaker, recordFailure } from './breaker';
 import { fetchJson, type HttpFetch } from './http';
 import { emptyRun, type SourceContext, type SourceRun } from './types';

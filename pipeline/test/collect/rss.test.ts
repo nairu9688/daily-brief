@@ -57,18 +57,23 @@ describe('parseFeed', () => {
     expect(() => parseFeed('<html><body>Erreur</body></html>')).toThrow('ni RSS 2.0 ni Atom');
   });
 
-  it('borne l’expansion quadratique des entités : erreur ou titre plafonné', () => {
-    const big = 'a'.repeat(900);
-    const refs = '&big;'.repeat(2000);
+  it('borne l’expansion quadratique des entités : l’analyse échoue', () => {
+    const big = 'a'.repeat(1000);
+    const refs = '&big;'.repeat(200_000);
     const xml = `<?xml version="1.0"?><!DOCTYPE x [<!ENTITY big "${big}">]><rss><channel><item><title>${refs}</title><link>https://fr.euronews.com/x</link></item></channel></rss>`;
-    let length = 0;
-    try {
-      length = parseFeed(xml)[0]?.title.length ?? 0;
-    } catch {
-      length = 0;
-    }
-    expect(length).toBeLessThan(200_000);
-    expect(length).toBeLessThan(900 * 2000);
+    expect(() => parseFeed(xml)).toThrow();
+  });
+
+  it('lit un flux réaliste de 25 articles aux entités ordinaires (&amp;, &#8217;, &lt;p&gt;)', () => {
+    const item = (i: number) =>
+      `<item><title>Titre &amp; suite &#8217;${i}&#8217; &amp; fin &amp; plus${" &amp;".repeat(8)}</title><link>https://fr.euronews.com/2026/11/06/a${i}</link>` +
+      `<description>&lt;p&gt;Chapô &amp; détails &#8211; l&#8217;essentiel&lt;/p&gt;</description><pubDate>Fri, 06 Nov 2026 03:00:00 +0100</pubDate></item>`;
+    const xml = `<?xml version="1.0"?><rss version="2.0"><channel>${Array.from({ length: 25 }, (_, i) => item(i)).join('')}</channel></rss>`;
+    expect((xml.match(/&/g) ?? []).length).toBeGreaterThanOrEqual(500);
+    const items = parseFeed(xml);
+    expect(items).toHaveLength(25);
+    expect(items[0].title).toBe('Titre & suite ’0’ & fin & plus' + ' &'.repeat(8));
+    expect(items[24].description).toBe('<p>Chapô & détails – l’essentiel</p>');
   });
 
   it('garde les valeurs en texte : « 1e3 » et « 007 » ne deviennent pas des nombres', () => {

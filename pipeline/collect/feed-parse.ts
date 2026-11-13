@@ -8,8 +8,8 @@ const parser = new XMLParser({
   attributeNamePrefix: '@_',
   // Les valeurs restent du texte : « 1e3 » ou « 007 » ne deviennent pas des nombres.
   parseTagValue: false,
-  // Entités bornées : taille d'une définition, nombre de définitions, expansions et longueur développée.
-  processEntities: { enabled: true, maxEntitySize: 1000, maxEntityCount: 20, maxTotalExpansions: 100, maxExpandedLength: 100_000 },
+  // Entités bornées : taille d'une définition, nombre de définitions et longueur développée (pas de plafond sur le nombre d'expansions : les &amp; ordinaires comptent).
+  processEntities: { enabled: true, maxEntitySize: 1000, maxEntityCount: 20, maxExpandedLength: 100_000 },
   htmlEntities: true,
   isArray: (name) => name === 'item' || name === 'entry' || name === 'link',
 });

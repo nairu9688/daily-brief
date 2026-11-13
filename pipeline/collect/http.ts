@@ -90,7 +90,7 @@ export async function fetchJson(fetch: HttpFetch, url: string, init: HttpInit & 
     await res.body?.cancel().catch(() => {});
     throw new HttpError(res.status, url);
   }
-  return JSON.parse((await readCapped(res, maxBytes)).toString('utf8'));
+  return JSON.parse(new TextDecoder().decode(await readCapped(res, maxBytes)));
 }
 
 /**

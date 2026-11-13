@@ -9,7 +9,6 @@
     { "url": "https://www.pbs.org/newshour/feeds/rss/headlines", "outlet": "PBS NewsHour", "lang": "en" },
     { "url": "https://feeds.npr.org/1001/rss.xml", "outlet": "NPR", "lang": "en" },
     { "url": "https://thehill.com/feed/", "outlet": "The Hill", "lang": "en" },
-    { "url": "https://es.euronews.com/rss", "outlet": "Euronews", "lang": "es" },
     { "url": "https://www.eldiario.es/rss/", "outlet": "elDiario.es", "lang": "es" },
     { "url": "https://www.elsaltodiario.com/general/feed", "outlet": "El Salto", "lang": "es" },
     { "url": "https://alicanteplaza.es/rss", "outlet": "Alicante Plaza", "lang": "es" },
