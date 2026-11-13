@@ -28,46 +28,125 @@ export type FullTextOptions = {
 
 const BLOCKS = 'h1,h2,h3,h4,h5,h6,p,li,blockquote,pre,figcaption';
 const HTML_TYPES = new Set(['text/html', 'application/xhtml+xml']);
+/** Bornes d'une page analysée : au-delà, la page est hostile ou cassée et n'est pas lue. */
+const MAX_DEPTH = 300;
+const MAX_ELEMENTS = 30_000;
+/** Requêtes simultanées au plus vers un même hôte (politesse envers les médias). */
+const HOST_CONCURRENCY = 2;
 
-/** Texte principal d'une page (Readability), un bloc par paragraphe, séparés par une ligne vide. */
-export function extractText(html: string): string {
-  const { document } = parseHTML(html);
-  const article = new Readability(document as unknown as ConstructorParameters<typeof Readability>[0]).parse();
-  if (!article?.content) return '';
-  const { document: doc } = parseHTML(`<!doctype html><html><body>${article.content}</body></html>`);
-  const blocks = [...doc.querySelectorAll(BLOCKS)]
-    .filter((el) => !el.querySelector(BLOCKS))
-    .map((el) => (el.textContent ?? '').replace(/\s+/g, ' ').trim())
-    .filter(Boolean);
-  return blocks.length > 0 ? blocks.join('\n\n') : (article.textContent ?? '').replace(/\s+/g, ' ').trim();
+type DomNode = { nodeType: number; firstChild: DomNode | null; nextSibling: DomNode | null; parentNode: DomNode | null };
+
+/** Parcours itératif (sans récursion, donc sans dépassement de pile) : profondeur et nombre d'éléments bornés. */
+function assertBoundedDom(root: DomNode): void {
+  let count = 0;
+  let depth = 1;
+  let node: DomNode | null = root.firstChild;
+  while (node) {
+    if (node.nodeType === 1) {
+      if (++count > MAX_ELEMENTS || depth > MAX_DEPTH) throw new BodyError('page trop imbriquée');
+      if (node.firstChild) {
+        node = node.firstChild;
+        depth++;
+        continue;
+      }
+    }
+    while (node && node !== root && !node.nextSibling) {
+      node = node.parentNode;
+      depth--;
+    }
+    node = node && node !== root ? node.nextSibling : null;
+  }
 }
 
 /**
+ * Texte principal d'une page (Readability), un bloc par paragraphe, séparés par une ligne vide.
+ * Seuls les éléments de bloc (BLOCKS) sont gardés : un texte posé hors de ces éléments est perdu, et
+ * les espaces d'un `<pre>` ne sont pas conservés (tout espace est réduit à un seul).
+ * Une page trop profonde ou trop grosse (300 niveaux, 30 000 éléments) est refusée : BodyError.
+ */
+export function extractText(html: string): string {
+  const { document } = parseHTML(html);
+  assertBoundedDom(document as unknown as DomNode);
+  try {
+    const article = new Readability(document as unknown as ConstructorParameters<typeof Readability>[0], { maxElemsToParse: MAX_ELEMENTS }).parse();
+    if (!article?.content) return '';
+    const { document: doc } = parseHTML(`<!doctype html><html><body>${article.content}</body></html>`);
+    const blocks = [...doc.querySelectorAll(BLOCKS)]
+      .filter((el) => !el.querySelector(BLOCKS))
+      .map((el) => (el.textContent ?? '').replace(/\s+/g, ' ').trim())
+      .filter(Boolean);
+    return blocks.length > 0 ? blocks.join('\n\n') : (article.textContent ?? '').replace(/\s+/g, ' ').trim();
+  } catch (e) {
+    if (e instanceof RangeError) throw new BodyError('page trop imbriquée');
+    throw e;
+  }
+}
+
+/** Seuls les ports par défaut (80, 443) sont suivis : `URL.port` est vide pour eux. */
+const hasDefaultPort = (u: URL): boolean => u.port === '';
+
+/**
  * Texte intégral d'un article. **Garde R1** : l'URL et chaque redirection doivent être sur un
- * domaine `full`, sinon NotFullError avant toute requête vers elles. http(s) seulement, délai,
+ * domaine `full`, sinon NotFullError avant toute requête vers elles. http(s) seulement, ports par défaut
+ * seulement, pas de repli de https vers http, un seul délai pour toute la chaîne de redirections,
  * taille et nombre de redirections bornés, HTML seulement, texte d'au moins `minChars` caractères.
+ * Les refus portant sur la page (NotFullError, BodyError) ne disent rien de l'état de l'hôte.
  */
 export async function fetchFullText(url: string, o: FullTextOptions): Promise<string> {
+  const signal = deadline(o.timeoutMs, o.signal);
+  const secure = url.toLowerCase().startsWith('https:');
   let current = url;
   for (let hop = 0; hop <= (o.maxRedirects ?? 3); hop++) {
     if (!canReadFull(o.whitelist, current)) throw new NotFullError(current);
+    const u = new URL(current);
+    if (!hasDefaultPort(u) || (secure && u.protocol !== 'https:')) throw new NotFullError(current);
     const res = await o.fetch(current, {
       redirect: 'manual',
-      signal: deadline(o.timeoutMs, o.signal),
+      signal,
       headers: { accept: ACCEPT_HTML, 'user-agent': USER_AGENT },
     });
-    const location = res.headers.get('location');
-    if (res.status >= 300 && res.status < 400 && location) {
+    const refuse = async (err: Error): Promise<never> => {
+      await res.body?.cancel().catch(() => {});
+      throw err;
+    };
+    if (res.status >= 300 && res.status < 400) {
+      const location = res.headers.get('location');
+      if (!location) return refuse(new BodyError(`redirection ${res.status} sans location`));
+      await res.body?.cancel().catch(() => {});
       current = new URL(location, current).toString();
       continue;
     }
-    if (!res.ok) throw new HttpError(res.status, current);
-    if (!HTML_TYPES.has(mimeOf(res))) throw new BodyError(`type ${mimeOf(res) || 'absent'} refusé`);
+    if (!res.ok) return refuse(new HttpError(res.status, current));
+    if (!HTML_TYPES.has(mimeOf(res))) return refuse(new BodyError(`type ${mimeOf(res) || 'absent'} refusé`));
     const text = extractText(decodeBody(await readCapped(res, o.maxBytes), res.headers.get('content-type')));
     if (text.length < o.minChars) throw new BodyError(`texte trop court (${text.length} caractères)`);
     return text;
   }
-  throw new Error('trop de redirections');
+  throw new BodyError('trop de redirections');
+}
+
+/** Erreur qui ne concerne que la page : elle ne compte pas pour le disjoncteur de l'hôte. */
+const isPageError = (e: unknown): boolean => e instanceof BodyError || e instanceof NotFullError;
+
+/** Sémaphore par hôte : au plus `HOST_CONCURRENCY` pages en cours vers le même hôte. */
+function hostGate() {
+  const state = new Map<string, { active: number; waiting: (() => void)[] }>();
+  return {
+    async acquire(host: string): Promise<void> {
+      const s = state.get(host) ?? state.set(host, { active: 0, waiting: [] }).get(host)!;
+      if (s.active < HOST_CONCURRENCY) {
+        s.active++;
+        return;
+      }
+      await new Promise<void>((resolve) => s.waiting.push(resolve));
+    },
+    release(host: string): void {
+      const s = state.get(host)!;
+      const next = s.waiting.shift();
+      if (next) next();
+      else s.active--;
+    },
+  };
 }
 
 export type FullTextStats = { attempted: number; extracted: number; failed: number; skipped: number; errors: string[] };
@@ -91,8 +170,8 @@ export function fullTextTargets(articles: RawArticle[], wl: Whitelist): number[]
 
 /**
  * Complète `text` des articles sans texte dont le domaine est `full` (et eux seuls), au plus
- * `concurrency` à la fois et `maxFetches` en tout, langues en alternance. Un hôte qui répond 401/402/403/429 ou ne
- * répond pas est abandonné ; après `deadlineMs`, les articles restants sont laissés sans texte.
+ * `concurrency` à la fois (dont 2 par hôte) et `maxFetches` pages lues en tout (les pages ignorées ne comptent pas),
+ * langues en alternance. Un hôte qui répond 401/402/403/429, ne répond pas ou échoue 3 fois de suite est abandonné ; après `deadlineMs`, les articles restants sont laissés sans texte.
  */
 export async function fillFullTexts(
   articles: RawArticle[],
@@ -100,26 +179,33 @@ export async function fillFullTexts(
 ): Promise<{ articles: RawArticle[]; stats: FullTextStats }> {
   const stats: FullTextStats = { attempted: 0, extracted: 0, failed: 0, skipped: 0, errors: [] };
   const targets = fullTextTargets(articles, o.whitelist);
-  stats.skipped = Math.max(0, targets.length - o.maxFetches);
   const phase = AbortSignal.timeout(o.deadlineMs);
   const breakers = new Map<string, Breaker>();
+  const gate = hostGate();
   const out = articles.map((a) => ({ ...a }));
   const errors: string[] = [];
-  await mapLimit(targets.slice(0, o.maxFetches), o.concurrency, async (i) => {
+  // Toutes les cibles sont parcourues : une page ignorée (hôte coupé, échéance) ne consomme pas le plafond.
+  await mapLimit(targets, o.concurrency, async (i) => {
     const host = hostOf(out[i].url);
     const breaker = breakers.get(host) ?? breakers.set(host, new Breaker()).get(host)!;
-    if (phase.aborted || breaker.open) {
-      stats.skipped++;
-      return;
-    }
-    stats.attempted++;
+    await gate.acquire(host);
     try {
-      out[i].text = await fetchFullText(out[i].url, { ...o, signal: phase });
-      stats.extracted++;
-    } catch (e) {
-      stats.failed++;
-      breaker.trip(e);
-      errors.push(`${out[i].url} : ${messageOf(e)}`);
+      if (phase.aborted || breaker.open || stats.attempted >= o.maxFetches) {
+        stats.skipped++;
+        return;
+      }
+      stats.attempted++;
+      try {
+        out[i].text = await fetchFullText(out[i].url, { ...o, signal: phase });
+        stats.extracted++;
+        breaker.success();
+      } catch (e) {
+        stats.failed++;
+        if (!isPageError(e)) breaker.trip(e);
+        errors.push(`${out[i].url} : ${messageOf(e)}`);
+      }
+    } finally {
+      gate.release(host);
     }
   });
   stats.errors = errors.sort().slice(0, 20);
