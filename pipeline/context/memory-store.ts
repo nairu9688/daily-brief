@@ -1,7 +1,7 @@
 import type { Lang, OpenThread } from '@daily-brief/schema';
 import { addDays, daysBetween, parisToday } from '../lib/date';
 import { isStale, STALE_DAYS } from './stale';
-import type { ContextStore, Topic } from './store';
+import type { ContextStore, StoreAnomaly, Topic } from './store';
 
 /**
  * Thread tel que stocké : statut et dates de ses événements. Ces dates sont des dates calendaires
@@ -52,13 +52,13 @@ export class MemoryContextStore implements ContextStore {
     return stale.map((t) => t.id).sort();
   }
 
-  async anomalies(date: string, signal?: AbortSignal): Promise<string[]> {
+  async anomalies(date: string, signal?: AbortSignal): Promise<StoreAnomaly[]> {
     throwIfAborted(signal);
-    const out: string[] = [];
+    const out: StoreAnomaly[] = [];
     for (const t of this.threads) {
       if (t.status !== 'open') continue;
       const far = t.events.filter((e) => daysBetween(date, e) > FUTURE_EVENT_DAYS).sort();
-      if (far.length) out.push(`Thread ${t.id} : événement daté du ${far.at(-1)}, à plus de ${FUTURE_EVENT_DAYS} jours dans le futur`);
+      if (far.length) out.push({ threadId: t.id, kind: 'future-event', detail: `événement daté du ${far.at(-1)}, à plus de ${FUTURE_EVENT_DAYS} jours dans le futur` });
     }
     return out;
   }

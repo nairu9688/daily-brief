@@ -34,7 +34,10 @@ export type RunContextOptions = {
 };
 
 const TopicSchema = z.object({ lang: LangSchema, title: z.string().trim().min(1) });
+const AnomalySchema = z.object({ threadId: z.string().min(1), kind: z.literal('future-event'), detail: z.string().min(1) });
 const ClosedSchema = z.array(z.string().min(1));
+
+class StoreTimeoutError extends Error {}
 
 /** Appel au store borné dans le temps : une base muette ne bloque jamais la routine. */
 async function withTimeout<T>(label: string, ms: number, fn: (signal: AbortSignal) => Promise<T>): Promise<T> {
@@ -43,7 +46,7 @@ async function withTimeout<T>(label: string, ms: number, fn: (signal: AbortSigna
   const timeout = new Promise<never>((_, reject) => {
     timer = setTimeout(() => {
       controller.abort(); // le store doit cesser et ne plus écrire
-      reject(new Error(`${label} : délai dépassé (${ms} ms)`));
+      reject(new StoreTimeoutError(`${label} : délai dépassé (${ms} ms)`));
     }, ms);
   });
   try {
@@ -98,13 +101,35 @@ export async function runContext(opts: RunContextOptions): Promise<{ exitCode: 0
   };
 
   try {
-    const closed = ClosedSchema.safeParse(await withTimeout('fermeture des Threads', ms, (s) => opts.store.closeStaleThreads(opts.date, STALE_DAYS, s)));
+    let closedRaw: unknown;
+    try {
+      closedRaw = await withTimeout('fermeture des Threads', ms, (s) => opts.store.closeStaleThreads(opts.date, STALE_DAYS, s));
+    } catch (e) {
+      // Une écriture lancée a pu aboutir : ne pas laisser croire qu'aucun Thread n'a été fermé.
+      if (e instanceof StoreTimeoutError) throw new Error('résultat de la fermeture inconnu (délai dépassé)');
+      throw e;
+    }
+    const closed = ClosedSchema.safeParse(closedRaw);
     if (!closed.success) throw new Error('résultat de fermeture invalide');
     report.closedThreads = [...new Set(closed.data)].sort();
     const rawThreads: unknown[] = await withTimeout('Threads ouverts', ms, (s) => opts.store.openThreads(s));
     const rawTopics: unknown[] = await withTimeout('sujets de la veille', ms, (s) => opts.store.yesterdayTopics(opts.date, s));
-    const anomalies = opts.store.anomalies ? await withTimeout('anomalies', ms, (s) => opts.store.anomalies!(opts.date, s)) : [];
-    for (const a of anomalies) issue('warning', a);
+    if (opts.store.anomalies) {
+      // Diagnostic seulement : jamais bloquant, ni par une erreur, ni par un délai, ni par un résultat invalide.
+      try {
+        const raw: unknown = await withTimeout('anomalies', ms, (s) => opts.store.anomalies!(opts.date, s));
+        if (!Array.isArray(raw)) throw new Error('résultat invalide');
+        let dropped = 0;
+        for (const item of raw) {
+          const a = AnomalySchema.safeParse(item);
+          if (a.success) issue('warning', `Thread ${a.data.threadId} : ${a.data.detail}`);
+          else dropped++;
+        }
+        if (dropped) issue('warning', `anomalies : ${dropped} entrée(s) invalide(s) ignorée(s)`);
+      } catch (e) {
+        issue('warning', `anomalies indisponibles : ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
 
     const threads = new Map<string, OpenThread>();
     const invalidThreads: string[] = [];

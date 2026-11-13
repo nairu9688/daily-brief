@@ -175,7 +175,7 @@ describe('runContext', () => {
     const store = new Slow({ threads: [thread('vieux', 'fr', '2026-10-01T10:00:00Z', ['2026-10-01'])] });
     const r = await runContext({ outDir, date: DAY, store, timeoutMs: 30, now: NOW });
     expect(r.exitCode).toBe(2);
-    expect(r.report.issues).toEqual([{ level: 'error', message: 'store mémoire : fermeture des Threads : délai dépassé (30 ms)' }]);
+    expect(r.report.issues).toEqual([{ level: 'error', message: 'store mémoire : résultat de la fermeture inconnu (délai dépassé)' }]);
     await new Promise((res) => setTimeout(res, 250));
     expect(store.threads[0].status).toBe('open');
     expect(existsSync(join(dayDir, 'context.json'))).toBe(false);
@@ -229,5 +229,22 @@ describe('runContext', () => {
     const r = await runContext({ outDir, date: DAY, store, secrets: ['sk-123'], now: NOW });
     expect(r.exitCode).toBe(2);
     expect(readFileSync(join(dayDir, 'context-report.json'), 'utf8')).not.toContain('sk-123');
+  });
+
+  it('anomalies() ne bloque jamais le contexte : erreur, blocage, null ou entrées invalides', async () => {
+    const base = { name: 'test', closeStaleThreads: async () => [], openThreads: async () => [], yesterdayTopics: async () => [] };
+    const cases: [string, ContextStore, string][] = [
+      ['throw', { ...base, anomalies: async () => { throw new Error('boum'); } }, 'anomalies indisponibles : boum'],
+      ['blocage', { ...base, anomalies: () => new Promise<never>(() => {}) }, 'anomalies indisponibles : anomalies : délai dépassé (30 ms)'],
+      ['null', { ...base, anomalies: async () => null as never }, 'anomalies indisponibles : résultat invalide'],
+      ['invalide', { ...base, anomalies: async () => [{ a: 1 }, 42] as never }, 'anomalies : 2 entrée(s) invalide(s) ignorée(s)'],
+    ];
+    for (const [, store, message] of cases) {
+      const { outDir, dayDir } = setup();
+      const r = await runContext({ outDir, date: DAY, store, timeoutMs: 30, now: NOW });
+      expect(r.exitCode).toBe(0);
+      expect(existsSync(join(dayDir, 'context.json'))).toBe(true);
+      expect(r.report.issues).toEqual([{ level: 'warning', message }]);
+    }
   });
 });

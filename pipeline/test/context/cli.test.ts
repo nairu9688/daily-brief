@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { readSupabaseEnv } from '../../context/supabase-env';
 import { runCli } from '../run-cli';
 
 describe('CLI brief:context', () => {
@@ -28,4 +29,10 @@ describe('CLI brief:context', () => {
     expect(padded.stdout).toContain('store Supabase pas encore disponible (lot 4)');
     expect(padded.stdout).not.toContain('clé-secrète');
   }, 30_000);
+
+  it('readSupabaseEnv rogne les valeurs et traite une valeur blanche comme absente', () => {
+    expect(readSupabaseEnv({ SUPABASE_URL: ' https://x.supabase.co ', SUPABASE_SERVICE_ROLE_KEY: '  clé  ' })).toEqual({ url: 'https://x.supabase.co', serviceKey: 'clé' });
+    expect(readSupabaseEnv({ SUPABASE_URL: 'https://x', SUPABASE_SERVICE_ROLE_KEY: '   ' })).toEqual({ url: 'https://x', serviceKey: undefined });
+    expect(readSupabaseEnv({})).toEqual({ url: undefined, serviceKey: undefined });
+  });
 });

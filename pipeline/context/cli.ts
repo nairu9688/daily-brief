@@ -2,6 +2,7 @@ import { parseArgs } from 'node:util';
 import { parisToday } from '../lib/date';
 import { runContext } from './run-context';
 import { selectStore } from './select-store';
+import { readSupabaseEnv } from './supabase-env';
 
 try {
   try {
@@ -12,8 +13,8 @@ try {
   }
   const { values } = parseArgs({ options: { date: { type: 'string' }, out: { type: 'string', default: 'out' } } });
   const date = values.date ?? parisToday();
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-  const { store, warning } = selectStore({ ...process.env, SUPABASE_SERVICE_ROLE_KEY: serviceKey });
+  const { url, serviceKey } = readSupabaseEnv(process.env);
+  const { store, warning } = selectStore({ SUPABASE_URL: url, SUPABASE_SERVICE_ROLE_KEY: serviceKey });
   const { exitCode, report } = await runContext({
     outDir: values.out!,
     date,
