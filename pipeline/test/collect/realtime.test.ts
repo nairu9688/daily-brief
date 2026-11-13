@@ -1,3 +1,6 @@
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { checkRealtime, describeRealtime } from '../../collect/realtime';
 import { THENEWSAPI_BASE } from '../../collect/thenewsapi';
@@ -83,6 +86,43 @@ describe('vérification §16 : TheNewsAPI en temps réel', () => {
     expect(r.perLang.fr.error).toContain('api_token=***');
     expect(r.requests).toBe(3);
     expect(r.verdict).toBe('exa');
+  });
+});
+
+describe('vérification §16 : dates, millisecondes et registre', () => {
+  const at = (ms: number) => new Date(NOW.getTime() + ms).toISOString();
+  const withDates = (dates: (string | null)[]) => (url: string): Reply => ({
+    json: { meta: { found: 1, returned: 1, limit: 3, page: 1 }, data: dates.filter(Boolean).map((d, i) => ({ uuid: `u${i}-${url.length}`, title: 'T', url: `https://ex.com/${i}${url.length}`, language: 'fr', published_at: d, source: 'ex.com' })) },
+  });
+
+  it('ignore une date de plus de 5 min dans le futur, garde celle de moins de 5 min (âge 0)', async () => {
+    const r = await checkRealtime({ token: TOKEN, fetch: fakeHttp({ [`${THENEWSAPI_BASE}/top`]: withDates([at(-3_600_000), at(60 * 60_000)]) }).fetch, now: NOW });
+    expect(r.perLang.fr.newest).toBe(at(-3_600_000));
+    const near = await checkRealtime({ token: TOKEN, fetch: fakeHttp({ [`${THENEWSAPI_BASE}/top`]: withDates([at(-3_600_000), at(4 * 60_000)]) }).fetch, now: NOW });
+    expect(near.perLang.fr.ageMinutes).toBe(0);
+  });
+
+  it('120 min 54 s est en retard (comparaison en millisecondes)', async () => {
+    const r = await checkRealtime({ token: TOKEN, fetch: fakeHttp({ [`${THENEWSAPI_BASE}/top`]: withDates([at(-(120 * 60_000 + 54_000))]) }).fetch, now: NOW });
+    expect(r.perLang.fr.ageMinutes).toBe(120);
+    expect(r.verdict).toBe('exa');
+  });
+
+  it('inscrit ses requêtes au registre quotidien et refuse au-delà de 100', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'rt-'));
+    const ledgerPath = join(dir, 'thenewsapi-usage.json');
+    writeFileSync(ledgerPath, JSON.stringify({ day: '2026-11-06', used: 40 }));
+    const ok = fakeHttp({ [`${THENEWSAPI_BASE}/top`]: top({ fr: 1, en: 1, es: 1 }) });
+    const r = await checkRealtime({ token: TOKEN, fetch: ok.fetch, now: NOW, ledgerPath });
+    expect(r.verdict).toBe('thenewsapi');
+    expect(JSON.parse(readFileSync(ledgerPath, 'utf8'))).toEqual({ day: '2026-11-06', used: 43 });
+    writeFileSync(ledgerPath, JSON.stringify({ day: '2026-11-06', used: 98 }));
+    const refused = fakeHttp({ [`${THENEWSAPI_BASE}/top`]: top({ fr: 1, en: 1, es: 1 }) });
+    const r2 = await checkRealtime({ token: TOKEN, fetch: refused.fetch, now: NOW, ledgerPath });
+    expect(refused.calls).toHaveLength(0);
+    expect(r2).toMatchObject({ verdict: 'unknown', requests: 0 });
+    expect(describeRealtime(r2, 'thenewsapi').join('\n')).toContain('marge quotidienne');
+    expect(JSON.parse(readFileSync(ledgerPath, 'utf8')).used).toBe(98);
   });
 });
 

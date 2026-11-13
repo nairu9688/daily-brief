@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { RawCollectionSchema } from '@daily-brief/schema';
 import { EXA_SEARCH } from '../../collect/exa';
 import type { HttpFetch } from '../../collect/http';
-import { runCollect, type CollectKeys } from '../../collect/run-collect';
+import { runCollect, type CollectKeys, type RunCollectOptions } from '../../collect/run-collect';
 import { THENEWSAPI_BASE } from '../../collect/thenewsapi';
 import { WEBZ_LITE } from '../../collect/webz';
 import { canReadFull, loadWhitelist } from '../../lib/whitelist';
@@ -44,8 +44,8 @@ function setup(configPatch?: (c: any) => void) {
     configPath = join(outDir, 'collect.json');
     writeFileSync(configPath, JSON.stringify(c));
   }
-  const run = (fetch: HttpFetch, keys: CollectKeys = KEYS, date = DAY) =>
-    runCollect({ outDir, date, keys, fetch, now: NOW, configPath, rubriquesPath: RUBRIQUES_PATH, feedsPath: FEEDS_PATH, whitelistPath: WHITELIST_PATH });
+  const run = (fetch: HttpFetch, keys: CollectKeys = KEYS, date = DAY, extra: Partial<RunCollectOptions> = {}) =>
+    runCollect({ ...extra, outDir, date, keys, fetch, now: NOW, configPath, rubriquesPath: RUBRIQUES_PATH, feedsPath: FEEDS_PATH, whitelistPath: WHITELIST_PATH });
   return { outDir, dayDir: join(outDir, DAY), run };
 }
 
@@ -208,6 +208,75 @@ describe('runCollect', () => {
     noSecret(text);
     const body = network({ [WEBZ_LITE]: { body: '&key=1"', type: 'text/plain' } });
     await setup().run(body.fetch);
+  });
+
+  it('--date : une date autre que celle de Paris donne un avertissement sur la fenêtre, sans refuser la collecte', async () => {
+    const other = await setup().run(network().fetch, KEYS, '2026-11-07');
+    expect(other.exitCode).toBe(0);
+    expect(other.report.issues).toContainEqual({ level: 'warning', message: 'fenêtre de collecte = 24 h avant maintenant, pas la date demandée' });
+    const same = await setup().run(network().fetch);
+    expect(same.report.issues.some((i) => /fenêtre de collecte/.test(i.message))).toBe(false);
+  });
+
+  it('un raw.json qui est un dossier : code 2 et rapport écrit ; un dossier du jour impossible à créer : code 2 sans rapport', async () => {
+    const { dayDir, run } = setup();
+    mkdirSync(join(dayDir, 'raw.json'), { recursive: true });
+    const r = await run(network().fetch);
+    expect(r.exitCode).toBe(2);
+    expect(read(join(dayDir, 'collect-report.json'))).toMatchObject({ exitCode: 2 });
+    expect(r.report.issues.some((i) => i.level === 'error')).toBe(true);
+    const blocked = setup();
+    writeFileSync(blocked.outDir + '/2026-11-06', 'fichier');
+    const b = await blocked.run(network().fetch);
+    expect(b.exitCode).toBe(2);
+    expect(b.reportWritten).toBe(false);
+    expect(b.report.issues[0].message).toMatch(/^dossier de sortie impossible à créer/);
+  });
+
+  it('écrit raw.json et le rapport par fichier temporaire renommé : aucun .tmp ne reste', async () => {
+    const { dayDir, run } = setup();
+    await run(network().fetch);
+    expect(existsSync(join(dayDir, 'raw.json.tmp'))).toBe(false);
+    expect(existsSync(join(dayDir, 'collect-report.json.tmp'))).toBe(false);
+  });
+
+  it('clé refusée (401) : erreur et rapport dégradé, code 0 si des articles sont collectés', async () => {
+    const { run } = setup();
+    const r = await run(network({ [`${THENEWSAPI_BASE}/top`]: { status: 401, json: {} } }).fetch);
+    expect(r.exitCode).toBe(0);
+    expect(r.report.degraded).toBe(true);
+    expect(r.report.sources.thenewsapi.stoppedBy).toBe('HTTP 401');
+    expect(r.report.issues.some((i) => i.level === 'error' && i.source === 'thenewsapi' && /HTTP 401/.test(i.message))).toBe(true);
+    expect((await setup().run(network().fetch)).report.degraded).toBe(false);
+  });
+
+  it('échéance globale : les appels restants s’arrêtent et le rapport le dit', async () => {
+    const { run } = setup();
+    const net = network({ [`${THENEWSAPI_BASE}/top`]: { hang: true } });
+    const t0 = Date.now();
+    const r = await run(net.fetch, KEYS, DAY, { deadlineMs: 50 });
+    expect(Date.now() - t0).toBeLessThan(5000);
+    expect(r.report.issues).toContainEqual(expect.objectContaining({ level: 'error', message: expect.stringContaining('délai global dépassé') }));
+    expect(r.report.degraded).toBe(true);
+    expect(net.calls.filter((c) => c.url === EXA_SEARCH)).toHaveLength(0);
+  });
+
+  it('édition allégée : seuls les textes d’au moins minChars caractères comptent', async () => {
+    const long = setup((c) => {
+      c.lightThreshold = 1;
+      c.fulltext.minChars = 20;
+    });
+    const a = await long.run(network().fetch);
+    expect(a.report.perLang.fr.fullTexts).toBeGreaterThan(0);
+    expect(a.report.perLang.fr.light).toBe(false);
+    const short = setup((c) => {
+      c.lightThreshold = 1;
+      c.fulltext.minChars = 100_000;
+    });
+    const raw = await short.run(network().fetch);
+    const shortTexts = read(join(short.dayDir, 'raw.json')).articles.filter((x: { lang: string; text: string | null }) => x.lang === 'fr' && x.text !== null);
+    expect(shortTexts.length).toBeGreaterThan(0);
+    expect(raw.report.perLang.fr.light).toBe(true);
   });
 
   it('refuse une date invalide sans rien écrire, et une configuration invalide avec un rapport', async () => {

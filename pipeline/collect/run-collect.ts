@@ -1,6 +1,7 @@
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { IsoDateSchema, LANGS, RawCollectionSchema, type Lang, type RawArticle } from '@daily-brief/schema';
+import { parisToday } from '../lib/date';
 import { canReadFull, loadWhitelist } from '../lib/whitelist';
 import { RequestBudget } from './budget';
 import { loadCollectConfig, THENEWSAPI_DAILY_CAP, type BudgetBucket, type CollectConfig } from './config';
@@ -30,6 +31,8 @@ export type RunCollectOptions = {
   whitelistPath: string;
   /** Heure de la collecte (maintenant par défaut) : la fenêtre est `[now - windowHours, now]`. */
   now?: Date;
+  /** Échéance globale de la collecte, en ms (20 min par défaut) : au-delà, tout appel restant est interrompu. */
+  deadlineMs?: number;
 };
 
 export type CollectIssue = { level: 'error' | 'warning'; source?: SourceName; message: string };
@@ -40,6 +43,8 @@ export type CollectReport = {
   date: string;
   generatedAt: string;
   exitCode: 0 | 2;
+  /** Vrai si une source a été coupée (clé refusée, quota) ou si l'échéance globale est dépassée. */
+  degraded: boolean;
   primary: CollectConfig['primary'] | null;
   articles: number;
   groups: number;
@@ -56,9 +61,21 @@ export type CollectReport = {
   issues: CollectIssue[];
 };
 
-export type RunCollectResult = { exitCode: 0 | 2; report: CollectReport };
+export type RunCollectResult = { exitCode: 0 | 2; report: CollectReport; /** Faux si collect-report.json n'a pas pu être écrit. */ reportWritten: boolean };
 
 const SOURCES: SourceName[] = ['thenewsapi', 'exa', 'rss', 'webz'];
+/** Écriture atomique : fichier temporaire puis renommage. */
+function writeAtomic(path: string, text: string): void {
+  const tmp = `${path}.tmp`;
+  try {
+    writeFileSync(tmp, text);
+    renameSync(tmp, path);
+  } catch (e) {
+    rmSync(tmp, { force: true, recursive: true });
+    throw e;
+  }
+}
+
 const KEY_NAMES: Record<keyof CollectKeys, string> = { thenewsapi: 'THENEWSAPI_KEY', exa: 'EXA_API_KEY', webz: 'WEBZ_TOKEN' };
 
 function emptyReport(date: string, now: Date): CollectReport {
@@ -66,6 +83,7 @@ function emptyReport(date: string, now: Date): CollectReport {
     date,
     generatedAt: now.toISOString(),
     exitCode: 2,
+    degraded: false,
     primary: null,
     articles: 0,
     groups: 0,
@@ -98,16 +116,21 @@ export async function runCollect(opts: RunCollectOptions): Promise<RunCollectRes
 
   if (!IsoDateSchema.safeParse(opts.date).success) {
     issue('error', `date incorrecte : « ${opts.date} »`);
-    return { exitCode: 2, report };
+    return { exitCode: 2, report, reportWritten: false };
   }
+  if (opts.date !== parisToday(now)) issue('warning', 'fenêtre de collecte = 24 h avant maintenant, pas la date demandée');
   const dayDir = join(opts.outDir, opts.date);
   const rawPath = join(dayDir, 'raw.json');
   const reportPath = join(dayDir, 'collect-report.json');
-  mkdirSync(dayDir, { recursive: true });
-  rmSync(rawPath, { force: true });
-  rmSync(reportPath, { force: true });
+  try {
+    mkdirSync(dayDir, { recursive: true });
+  } catch (e) {
+    issue('error', `dossier de sortie impossible à créer : ${messageOf(e)}`);
+    return { exitCode: 2, report, reportWritten: false };
+  }
 
   let lightThreshold = 15;
+  let minChars = 0;
   const finish = (articles: RawArticle[] | null): RunCollectResult => {
     const list = articles ?? [];
     report.articles = list.length;
@@ -115,16 +138,43 @@ export async function runCollect(opts: RunCollectOptions): Promise<RunCollectRes
     for (const lang of LANGS) {
       const mine = list.filter((a) => a.lang === lang);
       const fullTexts = mine.filter((a) => a.text !== null).length;
-      report.perLang[lang] = { articles: mine.length, fullTexts, light: fullTexts < lightThreshold };
+      const long = mine.filter((a) => a.text !== null && a.text.length >= minChars).length;
+      report.perLang[lang] = { articles: mine.length, fullTexts, light: long < lightThreshold };
     }
     report.exitCode = list.length > 0 ? 0 : 2;
-    if (report.exitCode === 2) rmSync(rawPath, { force: true });
-    // Les messages sont déjà masqués à l'ajout : ne retirer ici que les secrets connus garde le JSON valide.
-    writeFileSync(reportPath, stripSecrets(JSON.stringify(report, null, 2), secrets) + '\n');
-    return { exitCode: report.exitCode, report };
+    if (report.exitCode === 2) {
+      try {
+        rmSync(rawPath, { force: true });
+      } catch {
+        /* raw.json n'est pas un fichier : rien à retirer */
+      }
+    }
+    let reportWritten = true;
+    try {
+      // Les messages sont déjà masqués à l'ajout : ne retirer ici que les secrets connus garde le JSON valide.
+      writeAtomic(reportPath, stripSecrets(JSON.stringify(report, null, 2), secrets) + '\n');
+    } catch {
+      reportWritten = false;
+    }
+    return { exitCode: report.exitCode, report, reportWritten };
+  };
+
+  // Échéance globale : tout appel lancé après l'échéance échoue aussitôt (délai dépassé : la source est coupée),
+  // et tout appel en cours est interrompu par le signal. Les sources n'ont pas besoin de le connaître.
+  const global = AbortSignal.timeout(opts.deadlineMs ?? 20 * 60_000);
+  const guardedFetch: HttpFetch = async (url, init) => {
+    if (global.aborted) throw Object.assign(new Error('délai global dépassé'), { name: 'TimeoutError' });
+    return opts.fetch(url, { ...init, signal: init?.signal ? AbortSignal.any([init.signal, global]) : global });
   };
 
   try {
+    try {
+      rmSync(rawPath, { force: true });
+      rmSync(reportPath, { force: true });
+    } catch (e) {
+      issue('error', `anciens fichiers impossibles à supprimer : ${messageOf(e)}`);
+      return finish(null);
+    }
     let config: CollectConfig;
     let ctx: SourceContext;
     let feeds: ReturnType<typeof loadFeeds>;
@@ -132,7 +182,7 @@ export async function runCollect(opts: RunCollectOptions): Promise<RunCollectRes
       config = loadCollectConfig(opts.configPath);
       const whitelist = loadWhitelist(opts.whitelistPath);
       ctx = {
-        fetch: opts.fetch,
+        fetch: guardedFetch,
         whitelist,
         config,
         rubriques: loadRubriques(opts.rubriquesPath),
@@ -146,6 +196,7 @@ export async function runCollect(opts: RunCollectOptions): Promise<RunCollectRes
     }
     report.primary = config.primary;
     lightThreshold = config.lightThreshold;
+    minChars = config.fulltext.minChars;
     report.budget.exa.max = config.exa.maxRequests;
     report.budget.webz.max = config.webz.maxRequests;
 
@@ -154,7 +205,10 @@ export async function runCollect(opts: RunCollectOptions): Promise<RunCollectRes
       runs[name] = run;
       report.sources[name] = { used: true, requests: run.requests, candidates: run.candidates.length, stoppedBy: run.stoppedBy, errors: run.errors.map(clean) };
       report.discardedTexts += run.discardedTexts;
-      for (const m of run.errors) issue('warning', m, name);
+      const authCut = run.stoppedBy !== null && /^HTTP (401|402|403)$/.test(run.stoppedBy);
+      if (authCut) report.degraded = true;
+      // La coupure par clé refusée ou quota épuisé est une erreur, pas un simple avertissement.
+      for (const m of run.errors) issue(authCut && m.endsWith('source coupée') ? 'error' : 'warning', m, name);
       if (run.undated > 0) issue('warning', `${run.undated} article(s) sans date écarté(s)`, name);
     };
     /** Lance une source ; une exception inattendue est consignée sans arrêter les autres. */
@@ -239,7 +293,7 @@ export async function runCollect(opts: RunCollectOptions): Promise<RunCollectRes
     if (dropped > 0) issue('warning', `R2 : ${dropped} article(s) en espagnol d'un média non espagnol (ou de pays inconnu) écarté(s)`);
     let articles = dedupe(candidates, ctx.whitelist);
     const ft = config.fulltext;
-    const filled = await fillFullTexts(articles, { whitelist: ctx.whitelist, fetch: opts.fetch, ...ft });
+    const filled = await fillFullTexts(articles, { whitelist: ctx.whitelist, fetch: guardedFetch, ...ft });
     articles = filled.articles;
     const { errors: ftErrors, ...ftStats } = filled.stats;
     report.fulltext = ftStats;
@@ -250,6 +304,10 @@ export async function runCollect(opts: RunCollectOptions): Promise<RunCollectRes
       return { ...a, text: null };
     });
 
+    if (global.aborted) {
+      report.degraded = true;
+      issue('error', 'délai global dépassé : appels restants interrompus');
+    }
     if (articles.length === 0) {
       issue('error', 'aucun article collecté : raw.json non écrit');
       return finish(null);

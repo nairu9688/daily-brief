@@ -1,11 +1,15 @@
+import { mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { loadCollectConfig } from './config';
 import type { HttpFetch } from './http';
 import { checkRealtime, describeRealtime } from './realtime';
+import { redactText } from './redact';
 
 const CODES = { thenewsapi: 0, exa: 1, unknown: 2 } as const;
 
 try {
+  // Une variable définie mais vide empêcherait `.env` de la remplir (loadEnvFile ne remplace rien).
+  if (process.env.THENEWSAPI_KEY !== undefined && process.env.THENEWSAPI_KEY.trim() === '') delete process.env.THENEWSAPI_KEY;
   try {
     process.loadEnvFile('.env');
   } catch (e) {
@@ -19,10 +23,11 @@ try {
     console.log('THENEWSAPI_KEY absente (environnement ou .env) : vérification impossible.');
     process.exit(2);
   }
-  const report = await checkRealtime({ token, fetch: fetch as HttpFetch });
+  mkdirSync('out', { recursive: true });
+  const report = await checkRealtime({ token, fetch: fetch as HttpFetch, ledgerPath: 'out/thenewsapi-usage.json' });
   for (const line of describeRealtime(report, primary)) console.log(line);
   process.exit(CODES[report.verdict]);
 } catch (e) {
-  console.error(`check:thenewsapi : ${e instanceof Error ? e.message : String(e)}`);
+  console.error(`check:thenewsapi : ${redactText(e instanceof Error ? e.message : String(e), [process.env.THENEWSAPI_KEY])}`);
   process.exit(2);
 }
