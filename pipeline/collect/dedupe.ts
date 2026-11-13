@@ -8,8 +8,8 @@ import type { Candidate } from './types';
 export const SIMILARITY_THRESHOLD = 0.6;
 /** Titres trop courts (« Direct », « Live ») : jamais regroupés sur le seul titre. */
 const MIN_TITLE_CHARS = 20;
-/** Taille maximale d'un groupe formé par les seuls titres (sans lien `/similar`). */
-const MAX_TITLE_GROUP = 8;
+/** Membres au plus rattachés à un groupe par leur titre (hors liens `/similar`) : garde-fou, la vérification du premier membre suffit en pratique. */
+const MAX_TITLE_MEMBERS = 25;
 /** Origine dont on garde les métadonnées en cas de doublon : l'éditeur (RSS) d'abord. */
 const ORIGIN_RANK: Record<RawArticle['origin'], number> = { rss: 0, thenewsapi: 1, exa: 2, webz: 3, newsletter: 4 };
 
@@ -90,8 +90,9 @@ function merge(url: string, group: RawArticle[], wl: Whitelist): RawArticle {
  * articles liés par `/similar` ou dont les titres se ressemblent (Jaccard ≥ 0,6). Déterministe :
  * la même entrée donne toujours la même sortie, triée par langue, taille de groupe, groupe, id.
  * Un lien par titre seul ne rattache un article à un groupe que si son titre ressemble aussi (≥ 0,6) au
- * premier membre du groupe (le plus petit id), et un groupe formé des seuls titres ne dépasse pas 8 articles :
- * cela évite le chaînage de titres qui dérivent peu à peu. Les liens `/similar` regroupent sans ces limites.
+ * premier membre du groupe (le plus petit id), et au plus 25 membres
+ * rejoignent un groupe par leur titre (le surplus reste isolé) : cela évite le chaînage de titres qui
+ * dérivent peu à peu. Les liens `/similar` regroupent sans ces limites.
  * **R1** : un texte n'est conservé que si l'URL est sur un domaine `full`.
  */
 export function dedupe(candidates: Candidate[], wl: Whitelist): RawArticle[] {
@@ -112,7 +113,10 @@ export function dedupe(candidates: Candidate[], wl: Whitelist): RawArticle[] {
     return r;
   };
   const size = new Map(ids.map((id) => [id, 1]));
-  const seeded = new Set<string>();
+  /** Groupes pleins : un titre refusé par la limite reste isolé et ne fonde pas de groupe en double. */
+  const blocked = new Set<string>();
+  /** Membres d'un groupe réunis par `/similar` ; les autres le sont par leur titre. */
+  const seedSize = new Map(ids.map((id) => [id, 0]));
   /** Réunit deux groupes ; la racine est toujours le plus petit id. */
   const union = (a: string, b: string, bySeed: boolean) => {
     const [ra, rb] = [find(a), find(b)];
@@ -120,7 +124,8 @@ export function dedupe(candidates: Candidate[], wl: Whitelist): RawArticle[] {
     const [root, other] = ra < rb ? [ra, rb] : [rb, ra];
     parent.set(other, root);
     size.set(root, size.get(root)! + size.get(other)!);
-    if (bySeed || seeded.has(other)) seeded.add(root);
+    if (blocked.has(other)) blocked.add(root);
+    seedSize.set(root, bySeed ? size.get(root)! : seedSize.get(root)! + seedSize.get(other)!);
   };
 
   for (const c of candidates) {
@@ -138,10 +143,16 @@ export function dedupe(candidates: Candidate[], wl: Whitelist): RawArticle[] {
       if (!gj || Math.min(gi.size, gj.size) / Math.max(gi.size, gj.size) < SIMILARITY_THRESHOLD) continue;
       if (jaccard(gi, gj) < SIMILARITY_THRESHOLD) continue;
       const [ra, rb] = [find(order[i]), find(order[j])];
-      if (ra === rb) continue;
+      if (ra === rb || blocked.has(ra) || blocked.has(rb)) continue;
       const [fa, fb] = [grams.get(ra), grams.get(rb)];
       if (!fa || !fb || jaccard(fa, fb) < SIMILARITY_THRESHOLD) continue;
-      if (!seeded.has(ra) && !seeded.has(rb) && size.get(ra)! + size.get(rb)! > MAX_TITLE_GROUP) continue;
+      const titleMembers = size.get(ra)! + size.get(rb)! - seedSize.get(ra)! - seedSize.get(rb)!;
+      if (titleMembers > MAX_TITLE_MEMBERS) {
+        // Le plus petit des deux groupes (à taille égale, le plus grand id) est écarté pour de bon.
+        const small = size.get(ra)! < size.get(rb)! || (size.get(ra)! === size.get(rb)! && ra > rb) ? ra : rb;
+        blocked.add(small);
+        continue;
+      }
       union(ra, rb, false);
     }
   }

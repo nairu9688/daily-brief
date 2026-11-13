@@ -29,12 +29,56 @@ export type FullTextOptions = {
 const BLOCKS = 'h1,h2,h3,h4,h5,h6,p,li,blockquote,pre,figcaption';
 const HTML_TYPES = new Set(['text/html', 'application/xhtml+xml']);
 /** Bornes d'une page analysée : au-delà, la page est hostile ou cassée et n'est pas lue. */
-const MAX_DEPTH = 300;
+const MAX_DEPTH = 150;
 const MAX_ELEMENTS = 30_000;
 /** Requêtes simultanées au plus vers un même hôte (politesse envers les médias). */
 const HOST_CONCURRENCY = 2;
 
 type DomNode = { nodeType: number; firstChild: DomNode | null; nextSibling: DomNode | null; parentNode: DomNode | null };
+
+/** Balises sans fermeture obligatoire ou vides : elles n'ajoutent pas de profondeur au pré-contrôle. */
+const FLAT_TAGS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr', 'p', 'li', 'dt', 'dd', 'tr', 'td', 'th', 'option', 'thead', 'tbody', 'tfoot', 'colgroup', 'head', 'body', 'html']);
+const isLetter = (c: number): boolean => (c >= 97 && c <= 122) || (c >= 65 && c <= 90);
+
+/**
+ * Pré-contrôle linéaire du HTML brut, **avant** l'analyse : le temps de `parseHTML` croît à peu près
+ * comme le carré de l'imbrication (50 000 `<div>` imbriqués : 2,6 s ; 3 Mo de `<div>` : plus d'une minute).
+ * Compte les balises ouvrantes (au plus 2 × MAX_ELEMENTS : la marge couvre les `<x` des scripts et des
+ * commentaires) et suit une profondeur approchée (script, style et commentaires ignorés ; balises vides
+ * ou à fermeture facultative sans effet). Chaque caractère est lu une fois au plus par `indexOf`.
+ */
+function precheckHtml(html: string): void {
+  const lower = html.toLowerCase();
+  let tags = 0;
+  let depth = 0;
+  let i = 0;
+  while ((i = lower.indexOf('<', i)) !== -1) {
+    const c = lower.charCodeAt(i + 1);
+    if (lower.startsWith('<!--', i)) {
+      const end = lower.indexOf('-->', i + 4);
+      if (end === -1) return;
+      i = end + 3;
+    } else if (c === 47 /* / */ && isLetter(lower.charCodeAt(i + 2))) {
+      depth = Math.max(0, depth - 1);
+      i += 2;
+    } else if (isLetter(c)) {
+      if (++tags > 2 * MAX_ELEMENTS) throw new BodyError('page trop imbriquée');
+      let n = i + 2;
+      while (n < lower.length && /[a-z0-9:-]/.test(lower[n])) n++;
+      const name = lower.slice(i + 1, n);
+      const gt = lower.indexOf('>', n);
+      if (gt === -1) return;
+      if (name === 'script' || name === 'style') {
+        const close = lower.indexOf(`</${name}`, gt);
+        if (close === -1) return;
+        i = close + 2;
+        continue;
+      }
+      if (lower[gt - 1] !== '/' && !FLAT_TAGS.has(name) && ++depth > MAX_DEPTH) throw new BodyError('page trop imbriquée');
+      i = gt + 1;
+    } else i++;
+  }
+}
 
 /** Parcours itératif (sans récursion, donc sans dépassement de pile) : profondeur et nombre d'éléments bornés. */
 function assertBoundedDom(root: DomNode): void {
@@ -62,9 +106,10 @@ function assertBoundedDom(root: DomNode): void {
  * Texte principal d'une page (Readability), un bloc par paragraphe, séparés par une ligne vide.
  * Seuls les éléments de bloc (BLOCKS) sont gardés : un texte posé hors de ces éléments est perdu, et
  * les espaces d'un `<pre>` ne sont pas conservés (tout espace est réduit à un seul).
- * Une page trop profonde ou trop grosse (300 niveaux, 30 000 éléments) est refusée : BodyError.
+ * Une page trop profonde ou trop grosse (150 niveaux, 30 000 éléments) est refusée : BodyError.
  */
 export function extractText(html: string): string {
+  precheckHtml(html);
   const { document } = parseHTML(html);
   assertBoundedDom(document as unknown as DomNode);
   try {
@@ -88,17 +133,18 @@ const hasDefaultPort = (u: URL): boolean => u.port === '';
 /**
  * Texte intégral d'un article. **Garde R1** : l'URL et chaque redirection doivent être sur un
  * domaine `full`, sinon NotFullError avant toute requête vers elles. http(s) seulement, ports par défaut
- * seulement, pas de repli de https vers http, un seul délai pour toute la chaîne de redirections,
+ * seulement, pas de repli vers http après un passage par https, un seul délai pour toute la chaîne de redirections,
  * taille et nombre de redirections bornés, HTML seulement, texte d'au moins `minChars` caractères.
  * Les refus portant sur la page (NotFullError, BodyError) ne disent rien de l'état de l'hôte.
  */
 export async function fetchFullText(url: string, o: FullTextOptions): Promise<string> {
   const signal = deadline(o.timeoutMs, o.signal);
-  const secure = url.toLowerCase().startsWith('https:');
+  let secure = false;
   let current = url;
   for (let hop = 0; hop <= (o.maxRedirects ?? 3); hop++) {
     if (!canReadFull(o.whitelist, current)) throw new NotFullError(current);
     const u = new URL(current);
+    if (u.protocol === 'https:') secure = true;
     if (!hasDefaultPort(u) || (secure && u.protocol !== 'https:')) throw new NotFullError(current);
     const res = await o.fetch(current, {
       redirect: 'manual',
@@ -128,7 +174,12 @@ export async function fetchFullText(url: string, o: FullTextOptions): Promise<st
 /** Erreur qui ne concerne que la page : elle ne compte pas pour le disjoncteur de l'hôte. */
 const isPageError = (e: unknown): boolean => e instanceof BodyError || e instanceof NotFullError;
 
-/** Sémaphore par hôte : au plus `HOST_CONCURRENCY` pages en cours vers le même hôte. */
+/**
+ * Sémaphore par hôte : au plus `HOST_CONCURRENCY` pages en cours vers le même hôte. Un travailleur dont
+ * l'hôte est saturé attend en gardant sa place dans la concurrence globale : acceptable ici (les pages
+ * d'un hôte sont lues en 15 s au plus), et passer à la cible suivante dont l'hôte est libre rendrait
+ * l'ordre de lecture dépendant des durées de réponse, donc non déterministe.
+ */
 function hostGate() {
   const state = new Map<string, { active: number; waiting: (() => void)[] }>();
   return {

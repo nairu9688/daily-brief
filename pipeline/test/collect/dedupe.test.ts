@@ -113,13 +113,20 @@ describe('dedupe', () => {
     expect(Math.max(...sizes.values())).toBeLessThanOrEqual(3);
   });
 
-  it('plafonne à 8 articles un groupe formé par les seuls titres', () => {
+  it('regroupe en un seul groupe douze titres quasi identiques', () => {
     const mots = ['alpha', 'bravo', 'delta', 'echo', 'golf', 'hotel', 'india', 'kilo', 'lima', 'mike', 'oscar', 'papa'];
     const out = dedupe(mots.map((m) => art(`https://lemonde.fr/retraites-${m}`, `Réforme des retraites : les syndicats appellent à la mobilisation ${m}`)), wl);
+    expect(out).toHaveLength(12);
+    expect(new Set(out.map((a) => a.groupId)).size).toBe(1);
+  });
+
+  it('limite à 25 les membres rattachés par le titre ; le surplus reste isolé, sans groupe en double', () => {
+    const out = dedupe(Array.from({ length: 30 }, (_, i) => art(`https://lemonde.fr/retraites-${i}`, `Réforme des retraites : les syndicats appellent à la mobilisation n${String(i).padStart(3, '0')}`)), wl);
     const sizes = new Map<string, number>();
     for (const a of out) sizes.set(a.groupId!, (sizes.get(a.groupId!) ?? 0) + 1);
-    expect(Math.max(...sizes.values())).toBe(8);
-    expect(out).toHaveLength(12);
+    expect(Math.max(...sizes.values())).toBeLessThanOrEqual(25);
+    expect(Math.max(...sizes.values())).toBeGreaterThan(10);
+    expect([...sizes.values()].filter((n) => n > 1).length).toBeLessThanOrEqual(1);
   });
 
   it('fusionne sans dépendre de l’ordre d’entrée quand URL et origine sont identiques', () => {

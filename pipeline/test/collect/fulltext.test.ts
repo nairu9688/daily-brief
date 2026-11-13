@@ -47,6 +47,19 @@ describe('extractText', () => {
     expect(Date.now() - t0).toBeLessThan(2000);
     expect(() => extractText('<p>a</p>'.repeat(31_000))).toThrow('page trop imbriquée');
   });
+
+  it('refuse avant l’analyse HTML : pré-contrôle linéaire du nombre de balises et de la profondeur', () => {
+    const t0 = Date.now();
+    expect(() => extractText('<div>'.repeat(300_000))).toThrow('page trop imbriquée');
+    expect(() => extractText('<div>'.repeat(200) + 'x' + '</div>'.repeat(200))).toThrow('page trop imbriquée');
+    expect(() => extractText('<div x="a>b">'.repeat(100_000))).toThrow('page trop imbriquée');
+    expect(Date.now() - t0).toBeLessThan(2000);
+  });
+
+  it('le pré-contrôle ne refuse pas une page normale : balises à fermeture facultative, vides, scripts, commentaires', () => {
+    const p = '<ul>' + '<li>un'.repeat(400) + '</ul>' + '<p>texte'.repeat(300) + '<br>'.repeat(300) + '<script>' + '<div>'.repeat(500) + '</script><!-- ' + '<div>'.repeat(500) + ' -->';
+    expect(() => extractText(`<html><body><article>${p}</article></body></html>`)).not.toThrow();
+  });
 });
 
 describe('fetchFullText : garde R1', () => {
@@ -100,6 +113,16 @@ describe('fetchFullText : redirections, corps et signal', () => {
     }
     await expect(fetchFullText('https://fr.euronews.com:8443/a', { ...base, fetch })).rejects.toBeInstanceOf(NotFullError);
     expect(calls.map((c) => c.url)).toEqual(['repli', 'port', 'rel', 'local'].map((p) => `https://fr.euronews.com/${p}`));
+  });
+
+  it('refuse un repli vers http même après un détour par https', async () => {
+    const { fetch, calls } = fakeHttp({
+      'http://fr.euronews.com/a': redirect('https://fr.euronews.com/b'),
+      'https://fr.euronews.com/b': redirect('http://fr.euronews.com/c'),
+      'http://fr.euronews.com/c': { body: PAGE },
+    });
+    await expect(fetchFullText('http://fr.euronews.com/a', { ...base, fetch })).rejects.toBeInstanceOf(NotFullError);
+    expect(calls.map((c) => c.url)).toEqual(['http://fr.euronews.com/a', 'https://fr.euronews.com/b']);
   });
 
   it('une redirection 3xx sans Location est une erreur de page, pas de réseau', async () => {
