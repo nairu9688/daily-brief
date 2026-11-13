@@ -96,4 +96,43 @@ describe('dedupe', () => {
   it('ignore une URL illisible sans lever', () => {
     expect(dedupe([art('https://lemonde.fr/ok', 'Titre valide pour le test'), { article: { ...art('https://x.fr', 'T').article, url: 'mailto:x@y.fr' } }], wl)).toHaveLength(1);
   });
+  it('ne chaîne pas des titres qui dérivent : un lien par titre doit aussi valoir pour le premier du groupe', () => {
+    const titles = [
+      'Ukraine : nouvelles frappes russes sur Kharkiv ce lundi matin',
+      'Ukraine : nouvelles frappes russes sur Odessa ce lundi soir',
+      'Ukraine : nouvelles frappes sur Odessa et Soudan ce mardi soir',
+      'Soudan : nouvelles frappes sur Odessa et Khartoum ce mardi soir',
+      'Soudan : nouvelles frappes sur Khartoum et Odessa ce mardi matin',
+    ];
+    const sim = (a: string, b: string) => jaccard(trigrams(a), trigrams(b));
+    for (let i = 0; i < 4; i++) expect(sim(titles[i], titles[i + 1])).toBeGreaterThanOrEqual(0.6);
+    const out = dedupe(titles.map((t, i) => art(`https://lemonde.fr/guerre-${i}`, t)), wl);
+    expect(new Set(out.map((a) => a.groupId)).size).toBeGreaterThan(1);
+    const sizes = new Map<string, number>();
+    for (const a of out) sizes.set(a.groupId!, (sizes.get(a.groupId!) ?? 0) + 1);
+    expect(Math.max(...sizes.values())).toBeLessThanOrEqual(3);
+  });
+
+  it('plafonne à 8 articles un groupe formé par les seuls titres', () => {
+    const mots = ['alpha', 'bravo', 'delta', 'echo', 'golf', 'hotel', 'india', 'kilo', 'lima', 'mike', 'oscar', 'papa'];
+    const out = dedupe(mots.map((m) => art(`https://lemonde.fr/retraites-${m}`, `Réforme des retraites : les syndicats appellent à la mobilisation ${m}`)), wl);
+    const sizes = new Map<string, number>();
+    for (const a of out) sizes.set(a.groupId!, (sizes.get(a.groupId!) ?? 0) + 1);
+    expect(Math.max(...sizes.values())).toBe(8);
+    expect(out).toHaveLength(12);
+  });
+
+  it('fusionne sans dépendre de l’ordre d’entrée quand URL et origine sont identiques', () => {
+    const url = 'https://fr.euronews.com/2026/11/06/cop31';
+    const input = [
+      art(url, 'B titre', { origin: 'exa', text: 'court', description: 'z' }),
+      art(url, 'A titre', { origin: 'exa', text: 'un texte nettement plus long', description: 'y' }),
+      art(url, 'A titre', { origin: 'exa', text: 'court', description: 'a' }),
+      art(url, 'C titre', { origin: 'exa', text: null, description: 'b' }),
+    ];
+    const forward = dedupe(input, wl);
+    expect(dedupe([...input].reverse(), wl)).toEqual(forward);
+    expect(dedupe([input[2], input[0], input[3], input[1]], wl)).toEqual(forward);
+    expect(forward[0]).toMatchObject({ title: 'A titre', text: 'un texte nettement plus long', description: 'y' });
+  });
 });
