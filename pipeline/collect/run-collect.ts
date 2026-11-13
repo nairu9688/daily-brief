@@ -14,7 +14,7 @@ import { collectRss, loadFeeds } from './rss';
 import { loadRubriques } from './rubriques';
 import { collectTheNewsApi } from './thenewsapi';
 import type { SourceContext, SourceName, SourceRun } from './types';
-import { readDailyUsage, recordDailyUsage, utcDay, writeDailyUsage } from './usage-ledger';
+import { readDailyUsage, recordDailyUsage, utcDay } from './usage-ledger';
 import { collectWebz } from './webz';
 
 export type CollectKeys = { thenewsapi?: string; exa?: string; webz?: string };
@@ -119,7 +119,8 @@ export async function runCollect(opts: RunCollectOptions): Promise<RunCollectRes
     }
     report.exitCode = list.length > 0 ? 0 : 2;
     if (report.exitCode === 2) rmSync(rawPath, { force: true });
-    writeFileSync(reportPath, clean(JSON.stringify(report, null, 2)) + '\n');
+    // Les messages sont déjà masqués à l'ajout : ne retirer ici que les secrets connus garde le JSON valide.
+    writeFileSync(reportPath, stripSecrets(JSON.stringify(report, null, 2), secrets) + '\n');
     return { exitCode: report.exitCode, report };
   };
 
@@ -178,7 +179,17 @@ export async function runCollect(opts: RunCollectOptions): Promise<RunCollectRes
         if (before.warning) issue('warning', before.warning, 'thenewsapi');
         const { total, ...limits } = config.thenewsapi.budget;
         // Chaque requête réservée est inscrite aussitôt au registre : un passage interrompu ne perd pas son compte.
-        const onTake = before.error ? undefined : (spent: number) => recordDailyUsage(ledgerPath, day, before.used + spent);
+        let ledgerFailure: string | null = null;
+        const onTake = before.error
+          ? undefined
+          : (spent: number) => {
+              try {
+                recordDailyUsage(ledgerPath, day, before.used + spent);
+              } catch (e) {
+                ledgerFailure ??= messageOf(e);
+                throw e;
+              }
+            };
         const budget = new RequestBudget<BudgetBucket>(limits, Math.max(0, Math.min(total, THENEWSAPI_DAILY_CAP - before.used)), onTake);
         report.budget.thenewsapi.usedBefore = before.used;
         try {
@@ -186,7 +197,15 @@ export async function runCollect(opts: RunCollectOptions): Promise<RunCollectRes
         } finally {
           report.budget.thenewsapi.usedThisRun = budget.spentTotal;
           report.budget.thenewsapi.perBucket = budget.usage();
-          if (!before.error) writeDailyUsage(ledgerPath, day, before.used + budget.spentTotal);
+          // Filet de sécurité : `recordDailyUsage` ne fait jamais reculer le compte.
+          if (!before.error) {
+            try {
+              recordDailyUsage(ledgerPath, day, before.used + budget.spentTotal);
+            } catch (e) {
+              ledgerFailure ??= messageOf(e);
+            }
+          }
+          if (ledgerFailure !== null) issue('error', `registre d’usage non écrit : ${ledgerFailure}`, 'thenewsapi');
         }
       } else missing('thenewsapi', 'TheNewsAPI ignorée');
     }

@@ -171,6 +171,45 @@ describe('runCollect', () => {
     expect(read(ledger)).toEqual({ day: '2026-11-06', used: 30 });
   });
 
+  it('un registre impossible à écrire refuse la requête TheNewsAPI sans arrêter les autres sources', async () => {
+    const { outDir, dayDir, run } = setup();
+    mkdirSync(join(outDir, 'thenewsapi-usage.json.tmp'));
+    const net = network();
+    const r = await run(net.fetch);
+    expect(r.exitCode).toBe(0);
+    expect(net.calls.some((c) => c.url.startsWith(THENEWSAPI_BASE))).toBe(false);
+    expect(net.calls.some((c) => c.url === EXA_SEARCH)).toBe(true);
+    expect(net.calls.some((c) => c.url.startsWith('https://fr.euronews.com/rss'))).toBe(true);
+    expect(r.report.sources.rss.used).toBe(true);
+    expect(r.report.issues).toContainEqual(expect.objectContaining({ level: 'error', source: 'thenewsapi', message: expect.stringContaining('registre d’usage non écrit') }));
+    expect(read(join(dayDir, 'collect-report.json')).exitCode).toBe(0);
+  });
+
+  it('le registre ne recule jamais : un compte porté à 80 pendant le passage reste au moins à 80', async () => {
+    const { outDir, run } = setup();
+    const ledger = join(outDir, 'thenewsapi-usage.json');
+    const base = network();
+    const fetch: HttpFetch = async (url, init) => {
+      if (url.startsWith(THENEWSAPI_BASE)) writeFileSync(ledger, JSON.stringify({ day: '2026-11-06', used: 80 }));
+      return base.fetch(url, init);
+    };
+    await run(fetch);
+    expect(read(ledger).used).toBeGreaterThanOrEqual(80);
+  });
+
+  it('le rapport reste un JSON valide et sans secret même si un message cite une URL avec un guillemet', async () => {
+    const { dayDir, run } = setup();
+    const net = network({
+      [WEBZ_LITE]: (url) => ({ error: new Error(`refus ${url} &key=1" fin ?token=${KEYS.webz}"`) }),
+    });
+    await run(net.fetch);
+    const text = readFileSync(join(dayDir, 'collect-report.json'), 'utf8');
+    expect(() => JSON.parse(text)).not.toThrow();
+    noSecret(text);
+    const body = network({ [WEBZ_LITE]: { body: '&key=1"', type: 'text/plain' } });
+    await setup().run(body.fetch);
+  });
+
   it('refuse une date invalide sans rien écrire, et une configuration invalide avec un rapport', async () => {
     const { outDir, run } = setup();
     const bad = await run(fakeHttp({}).fetch, KEYS, '../2026-13-45');

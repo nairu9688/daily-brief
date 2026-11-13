@@ -77,3 +77,17 @@ describe('budget : rappel et refus', () => {
     expect(b.spentTotal).toBe(0);
   });
 });
+
+describe('RequestBudget : rappel en échec', () => {
+  it('refuse la requête dont le compte n’a pas pu être enregistré, puis toutes les suivantes', () => {
+    let n = 0;
+    const b = new RequestBudget({ fr: 5 }, 5, () => {
+      if (++n === 2) throw new Error('disque plein');
+    });
+    expect(b.take('fr')).toBe(true);
+    expect(b.take('fr')).toBe(false);
+    expect(b.take('fr')).toBe(false);
+    expect(b.spentTotal).toBe(1);
+    expect(b.remaining('fr')).toBe(0);
+  });
+});
