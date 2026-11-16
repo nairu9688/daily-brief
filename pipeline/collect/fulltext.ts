@@ -9,8 +9,8 @@ import { mapLimit } from './limit';
 
 /** Refus R1 : l'URL (ou une redirection) ne mène pas à un domaine `full`. Aucune requête n'est envoyée vers elle. */
 export class NotFullError extends Error {
-  constructor(url: string) {
-    super(`R1 : ${url} n'est pas un domaine full`);
+  constructor(url: string, reason?: string) {
+    super(reason ? `${reason} (${url})` : `R1 : ${url} n'est pas un domaine full`);
     this.name = 'NotFullError';
   }
 }
@@ -41,7 +41,7 @@ const FLAT_TAGS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'i
 const isLetter = (c: number): boolean => (c >= 97 && c <= 122) || (c >= 65 && c <= 90);
 
 /**
- * Pré-contrôle linéaire du HTML brut, **avant** l'analyse : le temps de `parseHTML` croît à peu près
+ * Pré-contrôle du HTML brut, d'un coût à peu près proportionnel à sa taille, **avant** l'analyse : le temps de `parseHTML` croît à peu près
  * comme le carré de l'imbrication (50 000 `<div>` imbriqués : 2,6 s ; 3 Mo de `<div>` : plus d'une minute).
  * Compte les balises ouvrantes (au plus 2 × MAX_ELEMENTS : la marge couvre les `<x` des scripts et des
  * commentaires) et suit une profondeur approchée (script, style et commentaires ignorés ; balises vides
@@ -59,8 +59,11 @@ function precheckHtml(html: string): void {
       if (end === -1) return;
       i = end + 3;
     } else if (c === 47 /* / */ && isLetter(lower.charCodeAt(i + 2))) {
-      depth = Math.max(0, depth - 1);
-      i += 2;
+      let n = i + 3;
+      while (n < lower.length && /[a-z0-9:-]/.test(lower[n])) n++;
+      // La fermeture d'une balise à fermeture facultative n'a jamais compté à l'ouverture : elle ne retire rien.
+      if (!FLAT_TAGS.has(lower.slice(i + 2, n))) depth = Math.max(0, depth - 1);
+      i = n;
     } else if (isLetter(c)) {
       if (++tags > 2 * MAX_ELEMENTS) throw new BodyError('page trop imbriquée');
       let n = i + 2;
@@ -145,7 +148,7 @@ export async function fetchFullText(url: string, o: FullTextOptions): Promise<st
     if (!canReadFull(o.whitelist, current)) throw new NotFullError(current);
     const u = new URL(current);
     if (u.protocol === 'https:') secure = true;
-    if (!hasDefaultPort(u) || (secure && u.protocol !== 'https:')) throw new NotFullError(current);
+    if (!hasDefaultPort(u) || (secure && u.protocol !== 'https:')) throw new NotFullError(current, hop > 0 ? 'redirection refusée : protocole ou port' : 'URL refusée : protocole ou port');
     const res = await o.fetch(current, {
       redirect: 'manual',
       signal,

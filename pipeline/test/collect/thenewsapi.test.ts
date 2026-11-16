@@ -183,4 +183,16 @@ describe('réponses illisibles', () => {
     const run = await collectTheNewsApi(testContext(fetch), TOKEN, budgetOf(testContext(fetch).config));
     expect(run.errors[0]).toMatch(/: réponse inattendue \(1 champs invalides\)$/);
   });
+
+  it('applique la fenêtre de collecte : articles sans date ou trop anciens écartés (sans date comptés)', async () => {
+    const item = (i: number, published_at: string | null) => ({ uuid: `u${i}`, title: `Titre ${i}`, url: `https://fr.euronews.com/2026/11/06/a${i}`, language: 'fr', published_at, source: 'x' });
+    const page = { meta: { found: 3, returned: 3, limit: 3, page: 1 }, data: [item(1, '2026-11-06T03:00:00Z'), item(2, null), item(3, '2026-11-01T03:00:00Z')] };
+    const { fetch } = fakeHttp({ [`${THENEWSAPI_BASE}/top`]: { json: page }, [`${THENEWSAPI_BASE}/similar/`]: { json: { meta: { found: 0, returned: 0, limit: 3, page: 1 }, data: [] } } });
+    const ctx = testContext(fetch);
+    const run = await collectTheNewsApi(ctx, TOKEN, budgetOf(ctx.config));
+    const urls = run.candidates.map((c) => c.article.url);
+    expect(urls.length).toBeGreaterThan(0);
+    expect(urls.every((u) => u.endsWith('/a1'))).toBe(true);
+    expect(run.undated).toBeGreaterThan(0);
+  });
 });

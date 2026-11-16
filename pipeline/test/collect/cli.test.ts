@@ -16,6 +16,8 @@ describe('CLI brief:collect', () => {
     const r = runCli('pipeline/collect/cli.ts', ['--date', '2026-02-30', '--out', out]);
     expect(r.status).toBe(2);
     expect(r.stdout).toContain('[error] date incorrecte : « 2026-02-30 »');
+    expect(r.stdout).not.toContain('édition allégée');
+    expect(r.stderr).not.toContain('collect-report.json');
     expect(existsSync(join(out, '2026-02-30'))).toBe(false);
   }, 30_000);
 
@@ -26,6 +28,8 @@ describe('CLI brief:collect', () => {
     expect(r.status, r.stdout + r.stderr).toBe(0);
     expect(r.stdout).toMatch(/raw\.json : \d+ articles/);
     expect(r.stdout).toContain('THENEWSAPI_KEY absente');
+    expect(r.stdout).not.toMatch(/rss rss/);
+    expect(r.stdout).toMatch(/\[warning\] rss https:\/\//);
     const days = readdirSync(join(r.cwd, 'sortie'));
     expect(days).toHaveLength(1);
     expect(existsSync(join(r.cwd, 'sortie', days[0], 'raw.json'))).toBe(true);
@@ -39,5 +43,14 @@ describe('CLI brief:collect', () => {
     expect(readFileSync(log, 'utf8')).toContain('api_token=tna-depuis-dotenv');
     expect(r.stdout).not.toContain('THENEWSAPI_KEY absente');
     expect(r.stdout + r.stderr).not.toContain('tna-depuis-dotenv');
+  }, 30_000);
+
+  it('un dossier de sortie impossible à créer : seulement l’erreur, sans lignes d’édition ni message de rapport', () => {
+    const r = runCli('pipeline/collect/cli.ts', ['--out', 'fichier/sortie'], {}, { files: { fichier: 'x' } });
+    expect(r.status).toBe(2);
+    expect(r.stdout).toContain('[error] dossier de sortie impossible à créer');
+    expect(r.stdout).not.toContain('édition allégée');
+    expect(r.stdout).not.toMatch(/^[A-Z]{2} : /m);
+    expect(r.stderr).not.toContain('collect-report.json');
   }, 30_000);
 });

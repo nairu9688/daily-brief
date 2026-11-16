@@ -25,6 +25,14 @@ const art = (url: string, text: string | null = null, lang = 'fr'): RawArticle =
   text,
 });
 
+describe('extractText : pré-contrôle', () => {
+  it('59 000 ouvertures suivies de fermetures de balises à fermeture facultative : refusé vite, sans analyse', () => {
+    const t0 = Date.now();
+    expect(() => extractText('<a></p>'.repeat(59_000))).toThrow(BodyError);
+    expect(Date.now() - t0).toBeLessThan(2000);
+  });
+});
+
 describe('extractText', () => {
   it('garde le corps de l’article, un paragraphe par ligne, sans menu, script ni pied de page', () => {
     const text = extractText(PAGE);
@@ -113,6 +121,17 @@ describe('fetchFullText : redirections, corps et signal', () => {
     }
     await expect(fetchFullText('https://fr.euronews.com:8443/a', { ...base, fetch })).rejects.toBeInstanceOf(NotFullError);
     expect(calls.map((c) => c.url)).toEqual(['repli', 'port', 'rel', 'local'].map((p) => `https://fr.euronews.com/${p}`));
+  });
+
+  it('un repli https → http ou un port non standard a son propre message, distinct de R1', async () => {
+    const { fetch } = fakeHttp({
+      'https://fr.euronews.com/repli': redirect('http://fr.euronews.com/x'),
+      'https://fr.euronews.com/port': redirect('https://fr.euronews.com:6379/x'),
+      'https://fr.euronews.com/local': redirect('http://127.0.0.1/'),
+    });
+    await expect(fetchFullText('https://fr.euronews.com/repli', { ...base, fetch })).rejects.toThrow('redirection refusée : protocole ou port');
+    await expect(fetchFullText('https://fr.euronews.com/port', { ...base, fetch })).rejects.toThrow('redirection refusée : protocole ou port');
+    await expect(fetchFullText('https://fr.euronews.com/local', { ...base, fetch })).rejects.toThrow('R1 :');
   });
 
   it('refuse un repli vers http même après un détour par https', async () => {

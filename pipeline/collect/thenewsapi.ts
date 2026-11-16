@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { LANGS, RUBRIC_KEYS, type Lang, type RubricKey } from '@daily-brief/schema';
 import { canReadFull } from '../lib/whitelist';
-import { makeArticle } from './article';
+import { makeArticle, windowVerdict } from './article';
 import { Breaker, recordFailure } from './breaker';
 import type { RequestBudget } from './budget';
 import type { BudgetBucket } from './config';
@@ -92,6 +92,10 @@ export async function collectTheNewsApi(ctx: SourceContext, token: string, budge
         ctx.whitelist,
       );
       if (!article) continue;
+      // Même fenêtre que les autres sources : sans date ou trop ancien, l'article est écarté.
+      const verdict = windowVerdict(article.publishedAt, ctx.windowStart.toISOString());
+      if (verdict === 'undated') run.undated++;
+      if (verdict !== 'ok') continue;
       if (!uuids.has(article.id)) uuids.set(article.id, it.uuid);
       const c: Candidate = seed ? { article, seed } : { article };
       run.candidates.push(c);

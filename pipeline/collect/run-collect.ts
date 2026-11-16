@@ -43,7 +43,11 @@ export type CollectReport = {
   date: string;
   generatedAt: string;
   exitCode: 0 | 2;
-  /** Vrai si une source a été coupée (clé refusée, quota) ou si l'échéance globale est dépassée. */
+  /**
+   * Vrai si la collecte est moins complète que prévu : une source a été coupée (`stoppedBy` : clé refusée, quota,
+   * 429, délai, échecs répétés), une exception inattendue, l'échéance globale dépassée, le registre d'usage
+   * illisible ou impossible à écrire, la clé de la découverte principale absente ou cette source sans aucun candidat.
+   * La routine continue, mais le signale dans sa notification finale. */
   degraded: boolean;
   primary: CollectConfig['primary'] | null;
   articles: number;
@@ -61,7 +65,14 @@ export type CollectReport = {
   issues: CollectIssue[];
 };
 
-export type RunCollectResult = { exitCode: 0 | 2; report: CollectReport; /** Faux si collect-report.json n'a pas pu être écrit. */ reportWritten: boolean };
+export type RunCollectResult = {
+  exitCode: 0 | 2;
+  report: CollectReport;
+  /** Faux si collect-report.json n'a pas pu être écrit. */
+  reportWritten: boolean;
+  /** Faux si la collecte n'a pas démarré (date incorrecte, dossier de sortie impossible à créer) : il n'y a alors ni rapport ni résultat par langue. */
+  started: boolean;
+};
 
 const SOURCES: SourceName[] = ['thenewsapi', 'exa', 'rss', 'webz'];
 /** Écriture atomique : fichier temporaire puis renommage. */
@@ -116,7 +127,7 @@ export async function runCollect(opts: RunCollectOptions): Promise<RunCollectRes
 
   if (!IsoDateSchema.safeParse(opts.date).success) {
     issue('error', `date incorrecte : « ${opts.date} »`);
-    return { exitCode: 2, report, reportWritten: false };
+    return { exitCode: 2, report, reportWritten: false, started: false };
   }
   const today = parisToday(now);
   if (opts.date !== today) issue('warning', `date demandée ${opts.date} ≠ aujourd’hui ${today} à Paris : fenêtre de collecte = 24 h avant maintenant, pas la date demandée`);
@@ -127,7 +138,7 @@ export async function runCollect(opts: RunCollectOptions): Promise<RunCollectRes
     mkdirSync(dayDir, { recursive: true });
   } catch (e) {
     issue('error', `dossier de sortie impossible à créer : ${messageOf(e)}`);
-    return { exitCode: 2, report, reportWritten: false };
+    return { exitCode: 2, report, reportWritten: false, started: false };
   }
 
   let lightThreshold = 15;
@@ -143,13 +154,6 @@ export async function runCollect(opts: RunCollectOptions): Promise<RunCollectRes
       report.perLang[lang] = { articles: mine.length, fullTexts, light: long < lightThreshold };
     }
     report.exitCode = list.length > 0 ? 0 : 2;
-    if (report.exitCode === 2) {
-      try {
-        rmSync(rawPath, { force: true });
-      } catch {
-        /* raw.json n'est pas un fichier : rien à retirer */
-      }
-    }
     let reportWritten = true;
     try {
       // Les messages sont déjà masqués à l'ajout : ne retirer ici que les secrets connus garde le JSON valide.
@@ -159,7 +163,15 @@ export async function runCollect(opts: RunCollectOptions): Promise<RunCollectRes
     }
     // Sans rapport, l'édition ne sait pas si elle est allégée (`light`) : la collecte échoue.
     if (!reportWritten && report.exitCode === 0) report.exitCode = 2;
-    return { exitCode: report.exitCode, report, reportWritten };
+    // Code 2 = pas de raw.json.
+    if (report.exitCode === 2) {
+      try {
+        rmSync(rawPath, { force: true });
+      } catch {
+        /* raw.json n'est pas un fichier : rien à retirer */
+      }
+    }
+    return { exitCode: report.exitCode, report, reportWritten, started: true };
   };
 
   // Échéance globale : tout appel lancé après l'échéance échoue aussitôt (délai dépassé : la source est coupée),
@@ -206,6 +218,7 @@ export async function runCollect(opts: RunCollectOptions): Promise<RunCollectRes
     const runs: Partial<Record<SourceName, SourceRun>> = {};
     const record = (name: SourceName, run: SourceRun) => {
       runs[name] = run;
+      if (run.stoppedBy !== null) report.degraded = true;
       report.sources[name] = { used: true, requests: run.requests, candidates: run.candidates.length, stoppedBy: run.stoppedBy, errors: run.errors.map(clean) };
       report.discardedTexts += run.discardedTexts;
       const authCut = run.stoppedBy !== null && /^HTTP (401|402|403)$/.test(run.stoppedBy);
@@ -284,6 +297,8 @@ export async function runCollect(opts: RunCollectOptions): Promise<RunCollectRes
 
     // 4. Webz en secours, pour les langues où la découverte principale est sous le seuil.
     const primaryRun = runs[config.primary];
+    // Sans clé, sans réponse ou sans aucun candidat, la découverte principale manque : édition moins riche.
+    if (primaryRun === undefined || primaryRun.candidates.length === 0) report.degraded = true;
     const below = LANGS.filter((l) => (primaryRun?.candidates.filter((c) => c.article.lang === l).length ?? 0) < config.webz.fallbackBelow);
     if (below.length > 0) {
       if (opts.keys.webz) {
@@ -326,7 +341,7 @@ export async function runCollect(opts: RunCollectOptions): Promise<RunCollectRes
       articles,
       errors: report.issues.filter((i) => i.source).map((i) => ({ source: i.source!, message: i.message })),
     });
-    writeFileSync(rawPath, stripSecrets(JSON.stringify(collection, null, 2), secrets) + '\n');
+    writeAtomic(rawPath, stripSecrets(JSON.stringify(collection, null, 2), secrets) + '\n');
     return finish(collection.articles);
   } catch (e) {
     // Quoi qu'il arrive, le rapport est écrit et aucun raw.json partiel ne reste.

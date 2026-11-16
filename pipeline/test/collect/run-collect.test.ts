@@ -301,6 +301,39 @@ describe('runCollect', () => {
     const r = await run(network().fetch);
     expect(r.reportWritten).toBe(false);
     expect(r.exitCode).toBe(2);
+    expect(r.started).toBe(true);
+  });
+
+  it('rapport dégradé : une source coupée (429), le réseau en panne, ou aucune clé', async () => {
+    const limited = await setup().run(network({ [`${THENEWSAPI_BASE}/top`]: { status: 429, json: {} } }).fetch);
+    expect(limited.report.sources.thenewsapi.stoppedBy).toBe('HTTP 429');
+    expect(limited.report.degraded).toBe(true);
+    const down = await setup().run((async () => {
+      throw new Error('réseau coupé');
+    }) as HttpFetch);
+    expect(down.exitCode).toBe(2);
+    expect(down.report.degraded).toBe(true);
+    const noKeys = await setup().run(network().fetch, {});
+    expect(noKeys.exitCode).toBe(0);
+    expect(noKeys.report.degraded).toBe(true);
+    expect((await setup().run(network().fetch)).report.degraded).toBe(false);
+  });
+
+  it('rapport dégradé : la découverte principale ne donne aucun candidat', async () => {
+    const r = await setup().run(network({ [`${THENEWSAPI_BASE}/top`]: { json: { data: [] } } }).fetch);
+    expect(r.exitCode).toBe(0);
+    expect(r.report.sources.thenewsapi.candidates).toBe(0);
+    expect(r.report.degraded).toBe(true);
+  });
+
+  it('code 2 = pas de raw.json : un rapport impossible à écrire retire aussi raw.json', async () => {
+    const { dayDir, run } = setup();
+    mkdirSync(join(dayDir, 'collect-report.json.tmp'), { recursive: true });
+    writeFileSync(join(dayDir, 'collect-report.json.tmp', 'x'), 'x');
+    const r = await run(network().fetch);
+    expect(r.exitCode).toBe(2);
+    expect(existsSync(join(dayDir, 'raw.json'))).toBe(false);
+    expect(existsSync(join(dayDir, 'raw.json.tmp'))).toBe(false);
   });
 
   it('refuse une date invalide sans rien écrire, et une configuration invalide avec un rapport', async () => {

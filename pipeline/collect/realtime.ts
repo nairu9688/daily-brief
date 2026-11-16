@@ -32,6 +32,8 @@ export type RealtimeReport = {
   requests: number;
   /** Raison du refus de lancer la vérification (marge quotidienne épuisée), le cas échéant. */
   refused?: string;
+  /** Registre quotidien où les requêtes ont été inscrites, le cas échéant. */
+  ledgerPath?: string;
   /** thenewsapi : temps réel ; exa : Exa doit devenir la découverte principale ; unknown : vérification impossible. */
   verdict: RealtimeVerdict;
 };
@@ -67,7 +69,7 @@ export async function checkRealtime(opts: {
         ? `registre illisible : ${before.error}`
         : `marge quotidienne épuisée (${before.used} requêtes déjà utilisées sur ${THENEWSAPI_HARD_CAP})`;
       for (const lang of LANGS) perLang[lang] = { newest: null, ageMinutes: null, articles: 0, error: `non vérifié (${refused})` };
-      return { checkedAt: now.toISOString(), maxAgeMinutes: maxAge, perLang, requests: 0, refused, verdict: 'unknown' };
+      return { checkedAt: now.toISOString(), maxAgeMinutes: maxAge, perLang, requests: 0, refused, ledgerPath: opts.ledgerPath, verdict: 'unknown' };
     }
   }
   const stale = new Set<Lang>();
@@ -107,7 +109,7 @@ export async function checkRealtime(opts: {
   const checked = LANGS.map((l) => perLang[l]).filter((f) => f.error === null);
   const late = LANGS.some((l) => perLang[l].error === null && (perLang[l].ageMinutes === null || stale.has(l)));
   const verdict: RealtimeVerdict = late ? 'exa' : checked.length === LANGS.length ? 'thenewsapi' : 'unknown';
-  return { checkedAt: now.toISOString(), maxAgeMinutes: maxAge, perLang, requests, verdict };
+  return { checkedAt: now.toISOString(), maxAgeMinutes: maxAge, perLang, requests, ledgerPath: opts.ledgerPath, verdict };
 }
 
 /** Lignes affichées par `npm run check:thenewsapi`, avec la consigne pour `collect.json`. */
@@ -128,6 +130,6 @@ export function describeRealtime(r: RealtimeReport, currentPrimary: 'thenewsapi'
     lines.push('Verdict : vérification impossible, configuration inchangée. Relance plus tard.');
   }
   if (r.refused) lines.push(`Refusé : ${r.refused}.`);
-  lines.push(`Requêtes TheNewsAPI utilisées : ${r.requests} (comptées dans le quota du jour, que brief:collect lit dans out/thenewsapi-usage.json).`);
+  lines.push(`Requêtes TheNewsAPI utilisées : ${r.requests} ${r.ledgerPath ? `(comptées dans le quota du jour, que brief:collect lit dans ${r.ledgerPath})` : '(aucun registre : non comptées dans le quota du jour)'}.`);
   return lines;
 }

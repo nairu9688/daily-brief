@@ -44,7 +44,7 @@ describe('vérification §16 : TheNewsAPI en temps réel', () => {
       'EN : article le plus récent publié il y a 3 min (2026-11-06T09:57:00.000Z)',
       'ES : article le plus récent publié il y a 120 min (2026-11-06T08:00:00.000Z)',
       'Verdict : TheNewsAPI est en temps réel (au plus 120 min dans les trois langues).',
-      'Requêtes TheNewsAPI utilisées : 3 (comptées dans le quota du jour, que brief:collect lit dans out/thenewsapi-usage.json).',
+      'Requêtes TheNewsAPI utilisées : 3 (aucun registre : non comptées dans le quota du jour).',
     ]);
   });
 
@@ -116,6 +116,7 @@ describe('vérification §16 : dates, millisecondes et registre', () => {
     const r = await checkRealtime({ token: TOKEN, fetch: ok.fetch, now: NOW, ledgerPath });
     expect(r.verdict).toBe('thenewsapi');
     expect(JSON.parse(readFileSync(ledgerPath, 'utf8'))).toEqual({ day: '2026-11-06', used: 43 });
+    expect(describeRealtime(r, 'thenewsapi').at(-1)).toBe(`Requêtes TheNewsAPI utilisées : 3 (comptées dans le quota du jour, que brief:collect lit dans ${ledgerPath}).`);
     writeFileSync(ledgerPath, JSON.stringify({ day: '2026-11-06', used: 98 }));
     const refused = fakeHttp({ [`${THENEWSAPI_BASE}/top`]: top({ fr: 1, en: 1, es: 1 }) });
     const r2 = await checkRealtime({ token: TOKEN, fetch: refused.fetch, now: NOW, ledgerPath });
@@ -159,5 +160,6 @@ describe('CLI check:thenewsapi', () => {
     expect(r.status, r.stdout + r.stderr).toBe(1);
     expect(JSON.parse(readFileSync(join(r.cwd, 'sortie', 'thenewsapi-usage.json'), 'utf8')).used).toBe(3);
     expect(r.stdout).not.toContain('tna-SECRET-123');
+    expect(r.stdout).toContain(`dans ${join('sortie', 'thenewsapi-usage.json')})`);
   }, 30_000);
 });
