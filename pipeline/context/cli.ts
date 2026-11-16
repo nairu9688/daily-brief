@@ -1,16 +1,15 @@
 import { parseArgs } from 'node:util';
 import { parisToday } from '../lib/date';
+import { loadEnv } from '../lib/env';
+import { redactText } from '../lib/redact';
 import { runContext } from './run-context';
 import { selectStore } from './select-store';
 import { readSupabaseEnv } from './supabase-env';
 
+const SECRET_ENV = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
+
 try {
-  try {
-    process.loadEnvFile('.env');
-  } catch (e) {
-    // Pas de .env : variables d'environnement du processus seulement. Toute autre erreur est remontée.
-    if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e;
-  }
+  loadEnv(SECRET_ENV);
   const { values } = parseArgs({ options: { date: { type: 'string' }, out: { type: 'string', default: 'out' } } });
   const date = values.date ?? parisToday();
   const { url, serviceKey } = readSupabaseEnv(process.env);
@@ -29,6 +28,6 @@ try {
   } else console.log('Erreur : context.json non écrit.');
   process.exit(exitCode);
 } catch (e) {
-  console.error(`brief:context : ${e instanceof Error ? e.message : String(e)}`);
+  console.error(`brief:context : ${redactText(e instanceof Error ? e.message : String(e), [readSupabaseEnv(process.env).serviceKey])}`);
   process.exit(2);
 }

@@ -1,7 +1,8 @@
-import { mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { IsoDateSchema, LANGS, RawCollectionSchema, type Lang, type RawArticle } from '@daily-brief/schema';
 import { parisToday } from '../lib/date';
+import { writeAtomic } from '../lib/fs';
 import { canReadFull, loadWhitelist } from '../lib/whitelist';
 import { RequestBudget } from './budget';
 import { loadCollectConfig, THENEWSAPI_DAILY_CAP, type BudgetBucket, type CollectConfig } from './config';
@@ -10,7 +11,7 @@ import { applyEditionPerimeter } from './perimeter';
 import { collectExa } from './exa';
 import { fillFullTexts, type FullTextStats } from './fulltext';
 import { messageOf, type HttpFetch } from './http';
-import { redactText, stripSecrets } from './redact';
+import { redactText, stripSecrets } from '../lib/redact';
 import { collectRss, loadFeeds } from './rss';
 import { loadRubriques } from './rubriques';
 import { collectTheNewsApi } from './thenewsapi';
@@ -75,18 +76,6 @@ export type RunCollectResult = {
 };
 
 const SOURCES: SourceName[] = ['thenewsapi', 'exa', 'rss', 'webz'];
-/** Écriture atomique : fichier temporaire puis renommage. */
-function writeAtomic(path: string, text: string): void {
-  const tmp = `${path}.tmp`;
-  try {
-    writeFileSync(tmp, text);
-    renameSync(tmp, path);
-  } catch (e) {
-    rmSync(tmp, { force: true, recursive: true });
-    throw e;
-  }
-}
-
 const KEY_NAMES: Record<keyof CollectKeys, string> = { thenewsapi: 'THENEWSAPI_KEY', exa: 'EXA_API_KEY', webz: 'WEBZ_TOKEN' };
 
 function emptyReport(date: string, now: Date): CollectReport {

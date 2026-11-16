@@ -1,4 +1,5 @@
-import { LANGS, type RawArticle } from '@daily-brief/schema';
+import { type RawArticle } from '@daily-brief/schema';
+import { cmp, langRank } from '../lib/sort';
 import { tryNormalizeUrl } from '../lib/url';
 import { canReadFull, type Whitelist } from '../lib/whitelist';
 import { articleId } from './article';
@@ -12,15 +13,6 @@ const MIN_TITLE_CHARS = 20;
 const MAX_TITLE_MEMBERS = 25;
 /** Origine dont on garde les métadonnées en cas de doublon : l'éditeur (RSS) d'abord. */
 const ORIGIN_RANK: Record<RawArticle['origin'], number> = { rss: 0, thenewsapi: 1, exa: 2, webz: 3, newsletter: 4 };
-
-/** Comparaison binaire de chaînes, indépendante de la locale. */
-const cmp = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
-
-/** Rang d'une langue : FR, EN, ES, puis les autres. */
-const langRank = (l: string): number => {
-  const i = (LANGS as readonly string[]).indexOf(l);
-  return i === -1 ? LANGS.length : i;
-};
 
 /** Titre sans accents, en minuscules, ponctuation remplacée par des espaces. */
 export function normalizeTitle(title: string): string {

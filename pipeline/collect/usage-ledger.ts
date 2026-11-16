@@ -1,5 +1,6 @@
-import { existsSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { z } from 'zod';
+import { writeAtomic } from '../lib/fs';
 
 const LedgerSchema = z.strictObject({ day: z.iso.date(), used: z.number().int().min(0) });
 
@@ -30,9 +31,7 @@ export function readDailyUsage(path: string, day: string, cap: number): { used: 
 
 /** Écriture atomique : fichier temporaire puis renommage, pour qu'une coupure ne laisse jamais un fichier tronqué. */
 export function writeDailyUsage(path: string, day: string, used: number): void {
-  const tmp = `${path}.tmp`;
-  writeFileSync(tmp, JSON.stringify({ day, used }, null, 2) + '\n');
-  renameSync(tmp, path);
+  writeAtomic(path, JSON.stringify({ day, used }, null, 2) + '\n');
 }
 
 /** À appeler après chaque requête réservée (voir `RequestBudget.onTake`) : le compte survit à un plantage. */

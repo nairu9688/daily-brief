@@ -1,8 +1,10 @@
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
 import { ContextSchema, IsoDateSchema, LANGS, LangSchema, OpenThreadSchema, type Context, type OpenThread } from '@daily-brief/schema';
-import { stripSecrets } from '../collect/redact';
+import { writeAtomic } from '../lib/fs';
+import { stripSecrets } from '../lib/redact';
+import { cmp, langRank } from '../lib/sort';
 import { STALE_DAYS } from './stale';
 import type { ContextStore, Topic } from './store';
 
@@ -56,9 +58,6 @@ async function withTimeout<T>(label: string, ms: number, fn: (signal: AbortSigna
   }
 }
 
-const langRank = (l: string) => (LANGS as readonly string[]).indexOf(l);
-const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
-
 /**
  * `brief:context` : ferme les Threads périmés (R12, 21 jours), lit les Threads ouverts et les sujets
  * de la veille, puis écrit `out/<date>/context.json` (ContextSchema) et `context-report.json`.
@@ -89,16 +88,47 @@ export async function runContext(opts: RunContextOptions): Promise<{ exitCode: 0
   const dayDir = join(opts.outDir, opts.date);
   const contextPath = join(dayDir, 'context.json');
   const reportPath = join(dayDir, 'context-report.json');
-  mkdirSync(dayDir, { recursive: true });
-  rmSync(contextPath, { force: true });
-  rmSync(reportPath, { force: true });
+  try {
+    mkdirSync(dayDir, { recursive: true });
+  } catch (e) {
+    // Sans dossier du jour, aucun rapport n'est possible : code 2, l'erreur est affichée par la commande.
+    issue('error', `dossier de sortie impossible à créer : ${e instanceof Error ? e.message : String(e)}`);
+    return { exitCode: 2, report };
+  }
 
   const finish = (context: Context | null) => {
     report.exitCode = context ? 0 : 2;
-    if (context) writeFileSync(contextPath, JSON.stringify(context, null, 2) + '\n');
-    writeFileSync(reportPath, clean(JSON.stringify(report, null, 2)) + '\n');
+    try {
+      if (context) writeAtomic(contextPath, JSON.stringify(context, null, 2) + '\n');
+      else rmSync(contextPath, { force: true });
+    } catch (e) {
+      issue('error', `context.json non écrit : ${e instanceof Error ? e.message : String(e)}`);
+      report.exitCode = 2;
+    }
+    try {
+      writeAtomic(reportPath, clean(JSON.stringify(report, null, 2)) + '\n');
+    } catch (e) {
+      // Pas de rapport : la routine ne doit pas croire le contexte valide.
+      issue('error', `context-report.json non écrit : ${e instanceof Error ? e.message : String(e)}`);
+      report.exitCode = 2;
+    }
+    if (report.exitCode === 2) {
+      try {
+        rmSync(contextPath, { force: true });
+      } catch {
+        /* context.json n'est pas un fichier : rien à retirer */
+      }
+    }
     return { exitCode: report.exitCode, report };
   };
+
+  try {
+    rmSync(contextPath, { force: true });
+    rmSync(reportPath, { force: true });
+  } catch (e) {
+    issue('error', `anciens fichiers impossibles à supprimer : ${e instanceof Error ? e.message : String(e)}`);
+    return finish(null);
+  }
 
   try {
     let closedRaw: unknown;

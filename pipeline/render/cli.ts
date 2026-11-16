@@ -1,15 +1,11 @@
 import { parseArgs } from 'node:util';
 import { parisToday } from '../lib/date';
+import { loadEnv } from '../lib/env';
 import type { FetchLike } from './http';
 import { runRender } from './run-render';
 
 try {
-  try {
-    process.loadEnvFile('.env');
-  } catch (e) {
-    // Pas de .env : variables d'environnement du processus seulement. Toute autre erreur est remontée.
-    if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e;
-  }
+  loadEnv(['PEXELS_API_KEY']);
   const { values } = parseArgs({ options: { date: { type: 'string' }, out: { type: 'string', default: 'out' } } });
   const date = values.date ?? parisToday();
   const r = await runRender({ outDir: values.out!, date, pexelsApiKey: process.env.PEXELS_API_KEY, fetch: fetch as FetchLike });

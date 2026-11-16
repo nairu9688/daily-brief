@@ -247,4 +247,21 @@ describe('runContext', () => {
       expect(r.report.issues).toEqual([{ level: 'warning', message }]);
     }
   });
+
+  it('un dossier du jour impossible à créer : code 2, erreur claire, sans exception', async () => {
+    const { outDir } = setup();
+    writeFileSync(join(outDir, DAY), 'fichier');
+    const r = await runContext({ outDir, date: DAY, store: new EmptyContextStore(), now: NOW });
+    expect(r.exitCode).toBe(2);
+    expect(r.report.issues).toContainEqual(expect.objectContaining({ level: 'error', message: expect.stringMatching(/^dossier de sortie impossible à créer/) }));
+  });
+
+  it('un ancien fichier impossible à supprimer : code 2 mais le rapport est écrit', async () => {
+    const { outDir, dayDir } = setup();
+    mkdirSync(join(dayDir, 'context.json'), { recursive: true });
+    const r = await runContext({ outDir, date: DAY, store: new EmptyContextStore(), now: NOW });
+    expect(r.exitCode).toBe(2);
+    expect(read(join(dayDir, 'context-report.json'))).toMatchObject({ exitCode: 2 });
+    expect(r.report.issues.some((i) => i.level === 'error' && /impossibles? à supprimer/.test(i.message))).toBe(true);
+  });
 });

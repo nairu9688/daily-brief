@@ -2,7 +2,7 @@ import { LANGS, type Lang } from '@daily-brief/schema';
 import { toIso } from './article';
 import { Breaker } from './breaker';
 import { messageOf, type HttpFetch } from './http';
-import { stripSecrets } from './redact';
+import { stripSecrets } from '../lib/redact';
 import { topNews } from './thenewsapi';
 import { readDailyUsage, recordDailyUsage, utcDay } from './usage-ledger';
 

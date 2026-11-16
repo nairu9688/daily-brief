@@ -3,7 +3,8 @@ import { parseArgs } from 'node:util';
 import { LANGS } from '@daily-brief/schema';
 import { parisToday } from '../lib/date';
 import type { HttpFetch } from './http';
-import { redactText } from './redact';
+import { loadEnv } from '../lib/env';
+import { redactText } from '../lib/redact';
 import { runCollect } from './run-collect';
 
 const path = (p: string) => fileURLToPath(new URL(p, import.meta.url));
@@ -12,14 +13,7 @@ const key = (name: string) => process.env[name]?.trim() || undefined;
 const SECRET_ENV = ['THENEWSAPI_KEY', 'EXA_API_KEY', 'WEBZ_TOKEN'];
 
 try {
-  // Une variable définie mais vide empêcherait `.env` de la remplir (loadEnvFile ne remplace rien).
-  for (const name of SECRET_ENV) if (process.env[name] !== undefined && process.env[name]!.trim() === '') delete process.env[name];
-  try {
-    process.loadEnvFile('.env');
-  } catch (e) {
-    // Pas de .env : variables d'environnement du processus seulement. Toute autre erreur est remontée.
-    if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e;
-  }
+  loadEnv(SECRET_ENV);
   const { values } = parseArgs({ options: { date: { type: 'string' }, out: { type: 'string', default: 'out' } } });
   const date = values.date ?? parisToday();
   const { exitCode, report, reportWritten, started } = await runCollect({

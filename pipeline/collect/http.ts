@@ -1,4 +1,4 @@
-import { redactUrl } from './redact';
+import { redactUrl } from '../lib/redact';
 
 export type HttpResponse = {
   ok: boolean;

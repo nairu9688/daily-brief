@@ -30,6 +30,13 @@ describe('CLI brief:context', () => {
     expect(padded.stdout).not.toContain('clé-secrète');
   }, 30_000);
 
+  it('un message d’erreur de haut niveau ne cite jamais la clé de service', () => {
+    const r = runCli('pipeline/context/cli.ts', ['--clé-secrète-9876'], { SUPABASE_URL: 'https://x.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'clé-secrète-9876' });
+    expect(r.status).toBe(2);
+    expect(r.stderr).toContain('brief:context :');
+    expect(r.stderr).not.toContain('clé-secrète-9876');
+  }, 30_000);
+
   it('readSupabaseEnv rogne les valeurs et traite une valeur blanche comme absente', () => {
     expect(readSupabaseEnv({ SUPABASE_URL: ' https://x.supabase.co ', SUPABASE_SERVICE_ROLE_KEY: '  clé  ' })).toEqual({ url: 'https://x.supabase.co', serviceKey: 'clé' });
     expect(readSupabaseEnv({ SUPABASE_URL: 'https://x', SUPABASE_SERVICE_ROLE_KEY: '   ' })).toEqual({ url: 'https://x', serviceKey: undefined });

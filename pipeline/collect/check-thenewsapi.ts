@@ -5,19 +5,13 @@ import { join } from 'node:path';
 import { loadCollectConfig } from './config';
 import type { HttpFetch } from './http';
 import { checkRealtime, describeRealtime } from './realtime';
-import { redactText } from './redact';
+import { loadEnv } from '../lib/env';
+import { redactText } from '../lib/redact';
 
 const CODES = { thenewsapi: 0, exa: 1, unknown: 2 } as const;
 
 try {
-  // Une variable définie mais vide empêcherait `.env` de la remplir (loadEnvFile ne remplace rien).
-  if (process.env.THENEWSAPI_KEY !== undefined && process.env.THENEWSAPI_KEY.trim() === '') delete process.env.THENEWSAPI_KEY;
-  try {
-    process.loadEnvFile('.env');
-  } catch (e) {
-    // Pas de .env : variables d'environnement du processus seulement. Toute autre erreur est remontée.
-    if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e;
-  }
+  loadEnv(['THENEWSAPI_KEY']);
   const { values } = parseArgs({ options: { out: { type: 'string', default: 'out' } } });
   const outDir = values.out!;
   const { primary } = loadCollectConfig(fileURLToPath(new URL('../config/collect.json', import.meta.url)));
