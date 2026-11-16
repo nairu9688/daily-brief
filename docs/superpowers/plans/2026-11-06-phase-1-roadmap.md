@@ -50,7 +50,7 @@ Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-2-cartes-photos-pdf.md`
 - Tests : chaque projection de la fixture produit un SVG non vide sans coordonnées décimales ; un test visuel compare les couverture FR, sujet fr-1 et vocabulaire ES avec des captures de référence (comparaison pixelmatch, seuil 1 %).
 - Point à trancher en début de lot : le prototype PDF utilise `#C08A00` pour l'accent ES, la spec `#C88E00`. Par défaut, on garde `#C08A00` dans le PDF, plus lisible à l'impression, parce que la maquette fait foi.
 
-### Lot 3 — Collecte ✅ plan détaillé
+### Lot 3 — Collecte ✅ terminé
 
 Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-3-collecte.md`
 
@@ -153,3 +153,7 @@ Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-3-collecte.md`
   - **Codes de sortie.** `brief:collect` code 2 : pas de `raw.json`, notifier « Brief incomplet ». `brief:context` code 2 : rédiger sans rattacher ni créer de Thread ce jour-là, et le signaler.
   - **Registre d'usage.** Dans un clone cloud neuf, `out/thenewsapi-usage.json` ne protège que les relances dans le même conteneur ; le persister dans Supabase au lot 4 si nécessaire.
   - **Rubriques.** Affiner `pipeline/editorial/rubriques.json` (catégories, mots-clés et requêtes Exa par langue).
+  - **Collecte dégradée.** Quand `collect-report.json` porte `degraded: true` (source coupée, échéance globale, registre d'usage défaillant, découverte principale absente ou vide), la routine continue avec les articles collectés, mais le mentionne dans la notification finale (« collecte dégradée » et les `issues` de niveau `error`).
+  - **`SUPABASE_URL`.** Elle n'est pas dans la liste des secrets du Vault de la spec : il faut la fournir explicitement à la routine, avec `SUPABASE_SERVICE_ROLE_KEY`.
+  - **Premier passage réel.** Vérifier la redirection apex vers `www` sur les 10 domaines `full` : la lecture du texte intégral utilise l'URL normalisée, sans `www.`. Une redirection refusée (protocole, port ou domaine hors `full`) laisse l'article sans texte.
+  - **Groupes de titres.** Au-delà de 25 membres, le regroupement par titre ne rattache plus d'article au groupe : les suivants forment des groupes d'un seul article. Le prompt de rédaction doit savoir qu'un même événement peut alors apparaître sous plusieurs `groupId`.
