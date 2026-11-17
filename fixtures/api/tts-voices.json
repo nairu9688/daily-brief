@@ -1,0 +1,12 @@
+{
+  "voices": [
+    { "languageCodes": ["fr-FR"], "name": "fr-FR-Chirp3-HD-Charon", "ssmlGender": "MALE", "naturalSampleRateHertz": 24000 },
+    { "languageCodes": ["fr-FR"], "name": "fr-FR-Chirp3-HD-Aoede", "ssmlGender": "FEMALE", "naturalSampleRateHertz": 24000 },
+    { "languageCodes": ["fr-FR"], "name": "fr-FR-Chirp3-HD-Kore", "ssmlGender": "FEMALE", "naturalSampleRateHertz": 24000 },
+    { "languageCodes": ["fr-FR"], "name": "fr-FR-Chirp3-HD-Puck", "ssmlGender": "MALE", "naturalSampleRateHertz": 24000 },
+    { "languageCodes": ["fr-FR"], "name": "fr-FR-Chirp-HD-D", "ssmlGender": "MALE", "naturalSampleRateHertz": 24000 },
+    { "languageCodes": ["fr-FR"], "name": "fr-FR-Neural2-A", "ssmlGender": "FEMALE", "naturalSampleRateHertz": 24000 },
+    { "languageCodes": ["fr-FR"], "name": "fr-FR-Wavenet-B", "ssmlGender": "MALE", "naturalSampleRateHertz": 24000 },
+    { "languageCodes": ["fr-CA"], "name": "fr-CA-Chirp3-HD-Aoede", "ssmlGender": "FEMALE", "naturalSampleRateHertz": 24000 }
+  ]
+}
