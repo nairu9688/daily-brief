@@ -19,6 +19,7 @@
     "brief:audio": "tsx pipeline/audio/cli.ts",
     "brief:render": "tsx pipeline/render/cli.ts",
     "brief:publish": "tsx pipeline/publish/cli.ts",
+    "audio:samples": "tsx pipeline/audio/samples-cli.ts",
     "check:thenewsapi": "tsx pipeline/collect/check-thenewsapi.ts",
     "maps:preview": "tsx packages/maps/scripts/preview.ts"
   },
