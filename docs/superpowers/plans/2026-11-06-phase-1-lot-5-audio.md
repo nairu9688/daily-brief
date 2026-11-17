@@ -3133,3 +3133,19 @@ Ces points sont repris, à cocher, dans la section 7 de `docs/setup-audio.md`. R
 - **ffmpeg dans le conteneur de la routine.** Sa présence et celle de `libmp3lame` sont à vérifier ; sinon, les MP3 restent au débit de Google, et l'avertissement le dit.
 - **Tarif et palier gratuit.** Le million de caractères gratuits par mois pour Chirp 3 HD (spec §15) est à confirmer, ainsi que la façon de compter (caractères ou octets, espaces comprises).
 - **Codes d'erreur.** Le code d'une voix inconnue (400 attendu), d'une clé non restreinte à la bonne API (403) et d'un quota (429) sont à confirmer. Le disjoncteur traite 401, 403 et 429 comme fatals, les autres 4xx comme des échecs ordinaires.
+
+## Écarts après exécution (revues de code)
+
+Le lot a été exécuté par sous-agents, avec une revue après chaque moitié du lot puis une revue finale. Les revues ont durci le code au-delà du texte ci-dessus. **Le dépôt fait foi** ; ce plan reste la trace de la conception initiale. Résultat final : 78 fichiers de test, 821 tests (12 de plus que prévu, ajoutés par les revues), typage strict propre.
+
+| Zone | Écart par rapport au plan | Raison |
+|---|---|---|
+| Trames MP3 | Étiquette Xing/Info cherchée 2 octets plus loin quand la trame porte un CRC (bit de protection à 0) ; « TAG » à 128 octets de la fin pris pour une étiquette ID3v1 seulement si une frontière de trame y tombe exactement ; moins de 4 octets de fin ignorés ; `formatDuration` rend « 0:00 » pour une valeur non finie | Une trame d'information protégée n'est plus comptée comme audio ; trois octets audio « TAG » ne tronquent pas le fichier ; pas de durée « NaN:NaN » dans `audio.json` |
+| Concaténation | Quand ffmpeg échoue et que le repli trame par trame échoue aussi, le message donne les deux causes | Le rapport dit pourquoi ffmpeg n'a pas servi, pas seulement pourquoi le repli a échoué |
+| Client Text-to-Speech | Texte vide et voix dont le nom ne commence pas par `languageCode` refusés avant tout appel | Pas de caractère facturé pour une requête vouée au 400 |
+| Anciennes sorties de `brief:audio` | Chaque suppression est tentée séparément et chaque échec est nommé dans le rapport ; au moindre échec : code 2 (`invalid`), aucun appel ; message distinct pour un dossier du jour impossible à créer ; messages de lecture des éditions masqués avec la clé | Un ancien MP3 présenterait l'audio d'un autre passage comme celui du jour ; ne pas dépenser de caractères quand le résultat ne peut pas être propre. Limite connue : le fichier resté en place peut encore être repris par `brief:render`/`brief:publish` (consigne du lot 7) |
+| `audio:samples` | Échantillons écrits dans `voice-samples.tmp` (vidé au départ s'il en reste un), qui remplace `voice-samples/` seulement si au moins un échantillon a été écrit ; `--count` contrôlé strictement (entier décimal positif, ramené à 10 au plus) | Une clé refusée ou un service muet ne détruit pas les échantillons déjà écoutés ; pas de `--count 1e3` ni `--count 2.5` |
+| Tests | Dossiers temporaires de `voices.test.ts` et `concat.test.ts` supprimés après les tests | Pas de déchets dans `/tmp` |
+| Documentation | `docs/setup-audio.md` section 5 : prérequis (Node 22, `npm install`, `.env` à la racine du dépôt), syntaxe `npm run audio:samples -- --count 5`, comportement du remplacement des échantillons | Guide utilisable sans connaître Node ni npm |
+
+Points laissés ouverts (mineurs) : une dernière trame tronquée suivie d'une étiquette ID3v1 est refusée par le repli sans ffmpeg (l'édition part alors sans lecteur, cf. « À vérifier avec la vraie API ») ; le message d'erreur de lecture d'édition cite le chemin absolu renvoyé par Node.

@@ -50,7 +50,7 @@ Le champ `degraded` de `collect-report.json` vaut `true` quand la collecte est m
 
 - **0** : au moins un MP3 est écrit (`status` vaut `ok`, ou `degraded` s'il en manque un), ou l'audio est désactivé faute de clé (`disabled`, avec un avertissement) ;
 - **1** : la clé est présente mais aucun MP3 n'a été produit (`failed`) ;
-- **2** : entrée invalide (`invalid`) : date incorrecte, `voices.json` invalide ou aucune édition vérifiée lisible.
+- **2** : entrée invalide (`invalid`) : date incorrecte, `voices.json` invalide ou aucune édition vérifiée lisible, ou ancien fichier audio impossible à supprimer (aucun appel ; le fichier restant peut être publié).
 
 Quel que soit ce code, la routine enchaîne sur `brief:render`, qui lit `audio.json` pour l'encart audio du PDF : `brief:audio` passe donc **avant** `brief:render`. `audio:samples` sert une seule fois, à la mise en place : il liste les voix Chirp 3 HD de chaque langue et écrit des échantillons dans `out/voice-samples/` (voir `docs/setup-audio.md`).
 

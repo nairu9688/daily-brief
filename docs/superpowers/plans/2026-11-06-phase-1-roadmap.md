@@ -77,7 +77,7 @@ Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-4-supabase-publication-dri
 - `npm run brief:publish`.
 - Tests : correspondance `Edition` → lignes SQL (fonction pure), nom du dossier de mois, client Drive contre un serveur HTTP local qui simule le 302 d'Apps Script.
 
-### Lot 5 — Audio ✅ plan détaillé
+### Lot 5 — Audio ✅ terminé (821 tests)
 
 Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-5-audio.md`
 
@@ -194,3 +194,4 @@ Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-5-audio.md`
   - **Variables.** `.env` doit contenir `GOOGLE_TTS_API_KEY` (Vault). `FFMPEG_PATH` est facultatif.
   - **Mise en place.** Suivre `docs/setup-audio.md`, puis cocher sa section 7 au premier passage réel.
   - **`runs`.** La page Santé ne voit pas encore l'étape audio : ajouter `audio-report.json` au bilan de `pipeline/publish/run-summary.ts` (étape `audio`, compteurs `mp3` et `characters`).
+  - **Ancien fichier audio.** Code 2 avec « ancien fichier audio impossible à supprimer » : un MP3 ou `audio.json` d'un passage précédent du même jour peut être repris par `brief:render`/`brief:publish` ; le signaler dans le rapport de la routine. Option à trancher au lot 7 : faire lire à `brief:publish` les `editions[].file` d'`audio-report.json` au lieu de tout MP3 présent.
