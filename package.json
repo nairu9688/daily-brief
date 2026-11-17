@@ -7,11 +7,12 @@
   },
   "workspaces": [
     "packages/*",
-    "pipeline"
+    "pipeline",
+    "apps/*"
   ],
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json && npm run typecheck -w @daily-brief/web",
     "schema:emit": "tsx packages/schema/scripts/emit-json-schema.ts",
     "brief:context": "tsx pipeline/context/cli.ts",
     "brief:collect": "tsx pipeline/collect/cli.ts",
@@ -21,7 +22,12 @@
     "brief:publish": "tsx pipeline/publish/cli.ts",
     "audio:samples": "tsx pipeline/audio/samples-cli.ts",
     "check:thenewsapi": "tsx pipeline/collect/check-thenewsapi.ts",
-    "maps:preview": "tsx packages/maps/scripts/preview.ts"
+    "maps:preview": "tsx packages/maps/scripts/preview.ts",
+    "web:dev": "npm run dev -w @daily-brief/web",
+    "web:build": "npm run build -w @daily-brief/web",
+    "web:e2e": "playwright test -c apps/web/playwright.config.ts",
+    "web:check-bundle": "tsx apps/web/scripts/check-bundle.ts",
+    "web:icons": "tsx apps/web/scripts/make-icons.ts"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.16",
