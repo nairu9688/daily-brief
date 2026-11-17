@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { repoPath } from './helpers';
 
 /** Variables jamais transmises aux CLI testés : aucun test ne doit atteindre une vraie API. */
-const SECRET_VARS = ['THENEWSAPI_KEY', 'EXA_API_KEY', 'WEBZ_TOKEN', 'PEXELS_API_KEY', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'APPS_SCRIPT_URL', 'APPS_SCRIPT_TOKEN'];
+const SECRET_VARS = ['THENEWSAPI_KEY', 'EXA_API_KEY', 'WEBZ_TOKEN', 'PEXELS_API_KEY', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'APPS_SCRIPT_URL', 'APPS_SCRIPT_TOKEN', 'GOOGLE_TTS_API_KEY'];
 
 /**
  * Lance un script TypeScript du dépôt avec tsx, depuis un dossier vide (aucun `.env` n'y est lu)
