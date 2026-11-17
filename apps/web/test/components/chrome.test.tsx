@@ -28,6 +28,18 @@ describe('en-tête, bandeaux et barre d’onglets', () => {
     expect(screen.getAllByRole('status')[1].textContent).toContain('Yesterday’s brief (Thu 5 Nov)');
   });
 
+  it('traduit le libellé en gras de chaque bandeau', () => {
+    const label = (kind: 'light' | 'yesterday' | 'latest', lang: 'fr' | 'en' | 'es') => {
+      const { container, unmount } = render(<Banner kind={kind} lang={lang} date="2026-11-03" />);
+      const text = container.querySelector('b')!.textContent;
+      unmount();
+      return text;
+    };
+    expect([label('light', 'en'), label('yesterday', 'en'), label('latest', 'en')]).toEqual(['Light edition', 'Yesterday’s brief', 'Latest brief']);
+    expect([label('light', 'es'), label('yesterday', 'es'), label('latest', 'es')]).toEqual(['Edición reducida', 'Brief del día anterior', 'Último brief']);
+    expect([label('yesterday', 'fr'), label('latest', 'fr')]).toEqual(['Brief de la veille', 'Dernier brief']);
+  });
+
   it('allume l’onglet de la page courante (Santé est rangée sous Archive)', () => {
     nav.path = '/threads/abc';
     const { unmount } = render(<TabBar />);

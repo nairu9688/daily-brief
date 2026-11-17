@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { queueAnki, setVocabSelected } from '@/app/actions';
 import type { AnkiStatus } from '@/lib/data/types';
 
-export type VocabCardWord = { id: string; term: string; pos: string; translation: string; example: string; ankiStatus: AnkiStatus; selected: boolean; meta?: string };
+/** `lang` : langue du mot et de l'exemple (la traduction est en français). */
+export type VocabCardWord = { id: string; term: string; pos: string; translation: string; example: string; ankiStatus: AnkiStatus; selected: boolean; lang?: string; meta?: string };
 
 const plural = (n: number) => (n > 1 ? 's' : '');
 
@@ -62,7 +63,7 @@ export function VocabCard({ kicker, title, words }: { kicker: string; title: str
         </button>
       </header>
       {words.map((w) => (
-        <label className="vrow" key={w.id}>
+        <label className="vrow" key={w.id} lang={w.lang}>
           <input type="checkbox" className="vchk" checked={checked.has(w.id)} onChange={(e) => select([w.id], e.currentTarget.checked)} />
           <span className="box" />
           <span className="vt">
@@ -70,9 +71,11 @@ export function VocabCard({ kicker, title, words }: { kicker: string; title: str
               {w.term}
               <em>{w.pos}</em>
             </b>
-            <span className="fr">{w.translation}</span>
+            <span className="fr" lang="fr">
+              {w.translation}
+            </span>
             <p>{w.example}</p>
-            {w.meta && <span className="vmeta mono">{w.meta}{status.get(w.id) !== 'none' ? ` · Anki : ${status.get(w.id)}` : ''}</span>}
+            {w.meta && <span className="vmeta mono" lang="fr">{w.meta}{status.get(w.id) !== 'none' ? ` · Anki : ${status.get(w.id)}` : ''}</span>}
           </span>
         </label>
       ))}

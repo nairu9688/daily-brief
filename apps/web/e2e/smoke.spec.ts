@@ -49,6 +49,12 @@ test('le Brief FR suit la maquette : onglets, cartes, puces, lecteur', async ({ 
   await expect(page.locator('.rub:visible')).toHaveCount(1);
 });
 
+test('le flou de l’en-tête, de la barre d’onglets et des légendes est bien appliqué', async ({ page }) => {
+  await open(page, '/?ed=fr');
+  const blur = await page.evaluate(() => ['.topbar', '.tabbar', '.media .cap'].map((sel) => getComputedStyle(document.querySelector(sel)!).backdropFilter));
+  expect(blur).toEqual(['blur(14px)', 'blur(14px)', 'blur(6px)']);
+});
+
 test('l’onglet choisi est retenu', async ({ page }) => {
   await open(page, '/?ed=es');
   await open(page, '/');

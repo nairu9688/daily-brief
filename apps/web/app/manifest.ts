@@ -3,6 +3,8 @@ import type { MetadataRoute } from 'next';
 /** Manifeste PWA (spec §8.3) : appli installable sur l'écran d'accueil. */
 export default function manifest(): MetadataRoute.Manifest {
   return {
+    // Identité stable de l'appli installée, indépendante de start_url.
+    id: '/',
     name: 'Daily Brief',
     short_name: 'Daily Brief',
     description: 'Briefing d’actualité quotidien, privé.',

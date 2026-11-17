@@ -4,6 +4,7 @@ import { LANGS, LangSchema, type Lang } from '@daily-brief/schema';
 import { z } from 'zod';
 import { isIsoDate } from '@/lib/dates';
 import { isLang } from '@/lib/edition-choice';
+import { MAX_IDS, VOCAB_LIMIT } from './limits';
 import {
   EditionRowSchema,
   editionFromRows,
@@ -28,7 +29,7 @@ import type { DataSource, EditionDay, EditionView, FileTarget, RunRecord, Thread
  */
 
 export const SIGNED_URL_SECONDS = 600;
-export const MAX_IDS = 50;
+export { MAX_IDS } from './limits';
 
 export const EDITION_COLUMNS = 'id,date,lang,region,headline,morning_brief,sections,vocab_title,audio_path,pdf_path,status,generated_at';
 export const STORY_COLUMNS = 'id,key,rubric,position,kicker,date_label,title,summary,visual,stats,quote,divergences,prepa,thread_id,thread_subtitle,thread:threads(id,title)';
@@ -144,7 +145,7 @@ export class SupabaseDataSource implements DataSource {
     if (filter.lang) q = q.eq('lang', filter.lang);
     if (filter.date) q = q.eq('edition.date', filter.date);
     if (filter.selected !== undefined) q = q.eq('selected', filter.selected);
-    const rows = parseRows(VocabEntryRowSchema, check('vocabulaire', await q.limit(500)), 'mot');
+    const rows = parseRows(VocabEntryRowSchema, check('vocabulaire', await q.limit(VOCAB_LIMIT)), 'mot');
     report(rows.problems);
     return rows.value.map(vocabEntryFromRow).sort((a, b) => (a.date === b.date ? 0 : a.date < b.date ? 1 : -1));
   }

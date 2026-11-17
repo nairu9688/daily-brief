@@ -32,6 +32,12 @@ export function Player({ src, lang, listenLabel, pauseLabel }: { src: string; la
   const toggle = async () => {
     const a = audio.current;
     if (!a) return;
+    if (failed) {
+      // Nouvel essai : la route /audio redonne une URL signée neuve, puis la durée revient par loadedmetadata.
+      setFailed(false);
+      a.load();
+      return;
+    }
     if (playing) {
       a.pause();
       return;
@@ -45,7 +51,7 @@ export function Player({ src, lang, listenLabel, pauseLabel }: { src: string; la
 
   const progress = duration ? Math.round((time / duration) * BARS) : 0;
   return (
-    <div className={playing ? 'player playing' : 'player'} data-lang={lang}>
+    <div className={playing ? 'player playing' : 'player'} data-lang={lang} data-failed={failed || undefined}>
       <audio
         ref={audio}
         src={src}
@@ -57,7 +63,7 @@ export function Player({ src, lang, listenLabel, pauseLabel }: { src: string; la
         onEnded={() => setPlaying(false)}
         onError={() => setFailed(true)}
       />
-      <button type="button" className="play" aria-label={playing ? pauseLabel : listenLabel} onClick={toggle} disabled={failed}>
+      <button type="button" className="play" aria-label={playing ? pauseLabel : listenLabel} onClick={toggle}>
         {playing ? <Pause /> : <Play />}
       </button>
       <div className="wave" aria-hidden="true">

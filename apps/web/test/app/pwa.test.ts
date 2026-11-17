@@ -11,7 +11,7 @@ const ICON_DIR = join(process.cwd(), 'apps/web/public/icons');
 describe('PWA', () => {
   it('le manifeste rend l’appli installable', () => {
     const m = manifest();
-    expect(m).toMatchObject({ name: 'Daily Brief', start_url: '/', display: 'standalone', lang: 'fr' });
+    expect(m).toMatchObject({ id: '/', name: 'Daily Brief', start_url: '/', display: 'standalone', lang: 'fr' });
     expect(m.icons?.map((i) => [i.sizes, i.purpose])).toEqual([
       ['192x192', 'any'],
       ['512x512', 'any'],

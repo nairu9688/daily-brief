@@ -241,11 +241,11 @@ export function threadFromRow(r: ThreadRow): ThreadDetail {
       };
     })
     .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
-  return { ...threadSummary(r), events };
+  return { ...threadSummary(r), description: null, events };
 }
 
 export function threadSummary(r: ThreadRow): ThreadSummary {
-  const sorted = [...r.thread_events].sort((a, b) => (a.date < b.date ? 1 : -1));
+  const sorted = [...r.thread_events].sort((a, b) => b.date.localeCompare(a.date));
   return {
     id: r.id,
     title: r.title,

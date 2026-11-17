@@ -12,17 +12,18 @@ import { VocabCard } from './VocabCard';
 
 /**
  * Écran d'une édition (spec §8.3) : en-tête, bandeaux, Morning Brief, puces, rubriques et « En bref »,
- * Vocab du jour, colophon. `today` sert au bandeau « brief de la veille » (absent de l'archive).
+ * Vocab du jour, colophon. `stale` : bandeau « brief de la veille » ou « dernier brief » quand l'édition
+ * affichée n'est pas celle du jour (absent de l'archive). `lang` sur la section : lecteurs d'écran et césure.
  */
-export function EditionScreen({ edition, basePath, yesterdayOf }: { edition: EditionView; basePath: string; yesterdayOf?: string }) {
+export function EditionScreen({ edition, basePath, stale }: { edition: EditionView; basePath: string; stale?: 'yesterday' | 'latest' }) {
   const t = T[edition.lang];
   const present = new Set(edition.sections.map((s) => s.key));
   const outlets = uniqueOutlets(edition.sections.flatMap((s) => [...s.stories.flatMap((x) => x.sources), ...s.briefs]));
   return (
     <>
       <TopBar lang={edition.lang} date={edition.date} generatedAt={edition.generatedAt} basePath={basePath} />
-      <section className="edition" data-for={edition.lang}>
-        {yesterdayOf && <Banner kind="yesterday" lang={edition.lang} date={edition.date} />}
+      <section className="edition" data-for={edition.lang} lang={edition.lang}>
+        {stale && <Banner kind={stale} lang={edition.lang} date={edition.date} />}
         {edition.light && <Banner kind="light" lang={edition.lang} date={edition.date} />}
         <MorningBrief edition={edition} />
         <RubricFilter chips={RUBRIC_KEYS.map((key) => ({ key, label: CHIP_LABELS[edition.lang][key], present: present.has(key) }))} allLabel={t.all} emptyLabel={t.empty}>
@@ -44,7 +45,7 @@ export function EditionScreen({ edition, basePath, yesterdayOf }: { edition: Edi
                 <h2>Vocab du jour</h2>
                 <span className="mono">{edition.vocab.words.length} mots</span>
               </div>
-              <VocabCard kicker="Tirés des articles du jour" title={edition.vocab.title} words={edition.vocab.words} />
+              <VocabCard kicker="Tirés des articles du jour" title={edition.vocab.title} words={edition.vocab.words.map((w) => ({ ...w, lang: edition.lang }))} />
             </div>
           )}
         </RubricFilter>

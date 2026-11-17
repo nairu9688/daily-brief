@@ -23,6 +23,14 @@ export type EditionStrings = {
   episodes: (n: number) => string;
   light: string;
   yesterday: (date: string) => string;
+  /** Bandeau quand l'édition affichée est plus ancienne que la veille. */
+  latest: (date: string) => string;
+  /** Libellés en gras des bandeaux. */
+  lightLabel: string;
+  yesterdayLabel: string;
+  latestLabel: string;
+  /** Frise : épisode du jour. */
+  today: string;
 };
 
 export const T: Record<Lang, EditionStrings> = {
@@ -48,6 +56,11 @@ export const T: Record<Lang, EditionStrings> = {
     episodes: (n) => (n > 1 ? `${n} épisodes` : `${n} épisode`),
     light: 'Édition allégée : peu de sources lisibles ce matin.',
     yesterday: (d) => `Brief de la veille (${d}) : l’édition du jour n’est pas encore disponible.`,
+    latest: (d) => `Dernier brief publié (${d}) : l’édition du jour n’est pas encore disponible.`,
+    lightLabel: 'Édition allégée',
+    yesterdayLabel: 'Brief de la veille',
+    latestLabel: 'Dernier brief',
+    today: 'Aujourd’hui',
   },
   en: {
     label: 'English',
@@ -71,6 +84,11 @@ export const T: Record<Lang, EditionStrings> = {
     episodes: (n) => (n > 1 ? `${n} episodes` : `${n} episode`),
     light: 'Light edition: few readable sources this morning.',
     yesterday: (d) => `Yesterday’s brief (${d}): today’s edition is not available yet.`,
+    latest: (d) => `Latest published brief (${d}): today’s edition is not available yet.`,
+    lightLabel: 'Light edition',
+    yesterdayLabel: 'Yesterday’s brief',
+    latestLabel: 'Latest brief',
+    today: 'Today',
   },
   es: {
     label: 'Español',
@@ -94,6 +112,11 @@ export const T: Record<Lang, EditionStrings> = {
     episodes: (n) => (n > 1 ? `${n} episodios` : `${n} episodio`),
     light: 'Edición reducida: pocas fuentes legibles esta mañana.',
     yesterday: (d) => `Brief del día anterior (${d}): la edición de hoy aún no está disponible.`,
+    latest: (d) => `Último brief publicado (${d}): la edición de hoy aún no está disponible.`,
+    lightLabel: 'Edición reducida',
+    yesterdayLabel: 'Brief del día anterior',
+    latestLabel: 'Último brief',
+    today: 'Hoy',
   },
 };
 

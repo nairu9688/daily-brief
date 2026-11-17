@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { SupabaseDataSource, SIGNED_URL_SECONDS, STORY_COLUMNS } from '@/lib/data/supabase';
+import { MAX_IDS, SupabaseDataSource, SIGNED_URL_SECONDS, STORY_COLUMNS } from '@/lib/data/supabase';
 import { createTestDb, type TestDb } from '../../../../pipeline/test/supabase/pg';
 import { fakeSupabase, op, type Call } from './fake-supabase';
 import { asUserJson, editionRows, publishFixture } from './pg-rows';
@@ -84,7 +84,8 @@ describe('source de données Supabase', () => {
     ]);
     expect(op(calls[1], 'eq')).toEqual([['anki_status', 'none']]);
     expect(await ds.setSelected([], true)).toBe(0);
-    expect(await ds.setSelected(Array.from({ length: 51 }, (_, i) => `id${i}`), true)).toBe(0);
+    expect(await ds.setSelected(Array(MAX_IDS + 1).fill(A), true)).toBe(0);
+    expect(MAX_IDS).toBe(500);
   });
 
   it('signe l’audio pour 10 minutes et refuse un chemin inattendu', async () => {

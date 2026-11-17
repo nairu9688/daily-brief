@@ -1,12 +1,12 @@
 import Link from 'next/link';
 import { getDataSource } from '@/lib/data';
 import { shortDate } from '@/lib/dates';
+import { sortThreads } from '@/lib/threads';
 
 /** Liste des Threads : suivis d'abord, puis ouverts, puis fermés. */
 export default async function ThreadsPage() {
   const ds = await getDataSource();
-  const rank = (t: { followed: boolean; status: string }) => (t.followed ? 0 : t.status === 'open' ? 1 : 2);
-  const threads = (await ds.threads()).sort((a, b) => rank(a) - rank(b) || ((b.lastDate ?? '') > (a.lastDate ?? '') ? 1 : -1));
+  const threads = sortThreads(await ds.threads());
   return (
     <>
       <div className="page-head">

@@ -33,9 +33,36 @@ describe('écran d’une édition', () => {
     expect((container.querySelector('.empty') as HTMLElement).hidden).toBe(true);
   });
 
-  it('affiche les bandeaux « brief de la veille » et « édition allégée »', () => {
-    render(<EditionScreen edition={fixtureView('es', { light: true })} basePath="/" yesterdayOf="2026-11-07" />);
+  it('affiche les bandeaux « brief de la veille » ou « dernier brief », et « édition allégée »', () => {
+    const { unmount } = render(<EditionScreen edition={fixtureView('es', { light: true })} basePath="/" stale="yesterday" />);
     expect(screen.getAllByRole('status').map((s) => s.getAttribute('data-kind'))).toEqual(['yesterday', 'light']);
+    unmount();
+    render(<EditionScreen edition={fixtureView('fr')} basePath="/" stale="latest" />);
+    expect(screen.getByRole('status').getAttribute('data-kind')).toBe('latest');
+  });
+
+  it('déclare la langue de l’édition et celle des mots', () => {
+    const { container } = render(<EditionScreen edition={fixtureView('es')} basePath="/" />);
+    expect(container.querySelector('section.edition')?.getAttribute('lang')).toBe('es');
+    const rows = [...container.querySelectorAll('.vrow')];
+    expect(rows).toHaveLength(6);
+    expect(rows.every((r) => r.getAttribute('lang') === 'es')).toBe(true);
+    expect(rows.every((r) => r.querySelector('.fr')?.getAttribute('lang') === 'fr')).toBe(true);
+  });
+
+  it('le lecteur permet de réessayer après une erreur de chargement', async () => {
+    const { container } = render(<EditionScreen edition={fixtureView('fr')} basePath="/" />);
+    const audio = container.querySelector('audio')!;
+    const load = vi.fn();
+    Object.defineProperty(audio, 'load', { value: load });
+    act(() => {
+      fireEvent.error(audio);
+    });
+    const button = screen.getByRole('button', { name: 'Écouter' }) as HTMLButtonElement;
+    expect(button.disabled).toBe(false);
+    expect(container.querySelector('.ptime')?.textContent).toContain('–:––');
+    await userEvent.click(button);
+    expect(load).toHaveBeenCalledTimes(1);
   });
 
   it('montre le lecteur seulement s’il y a un MP3, et lit sa durée dans les métadonnées', () => {

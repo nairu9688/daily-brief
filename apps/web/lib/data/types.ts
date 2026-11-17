@@ -77,8 +77,11 @@ export type ThreadEventView = {
   map: { spec: MapSpec; caption: string } | null;
 };
 
-/** Frise : événements du plus récent au plus ancien. */
-export type ThreadDetail = ThreadSummary & { events: ThreadEventView[] };
+/**
+ * Frise : événements du plus récent au plus ancien. `description` : présentation du Thread (en-tête de
+ * la maquette) ; la base n'en a pas encore (null), le mode fixture la lit dans threads-2026-11-06.json.
+ */
+export type ThreadDetail = ThreadSummary & { description: string | null; events: ThreadEventView[] };
 
 export type VocabEntry = VocabWord & { date: string; lang: Lang };
 export type VocabFilter = { lang?: Lang; date?: string; selected?: boolean };

@@ -197,7 +197,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 /* thread */
 .th-head{padding:calc(16px + env(safe-area-inset-top)) 18px 16px;border-bottom:1px solid var(--line)}
 .back{font-size:12px;color:var(--ink-3)}
-.th-head h2{font-size:28px;line-height:1.08;letter-spacing:-.028em;font-weight:340;margin:12px 0 8px}
+.th-head h2,.th-head h1{font-size:28px;line-height:1.08;letter-spacing:-.028em;font-weight:340;margin:12px 0 8px}
 .th-head p{font-size:13.5px;color:var(--ink-2);line-height:1.45}
 .follow{margin-top:14px;display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:450;padding:8px 13px;border-radius:999px;background:var(--accent);color:#fff}
 .follow svg{width:12px;height:12px}
@@ -225,6 +225,8 @@ body{background:var(--bg)}
 .banner{margin:14px 18px 0;padding:10px 12px;border-radius:12px;border:1px solid color-mix(in srgb,var(--accent) 40%,var(--line));background:color-mix(in srgb,var(--accent) 8%,var(--surface));font-size:12.5px;line-height:1.4;color:var(--ink-2)}
 .banner b{display:block;font-size:9.5px;text-transform:uppercase;color:var(--accent);font-weight:500;margin-bottom:2px}
 .play:disabled{opacity:.5}
+.player[data-failed] .play{opacity:.5}
+.vrow input:focus-visible+.box{outline:2px solid var(--accent);outline-offset:2px}
 .photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .photo .pex a{color:inherit;text-decoration:underline}
 .ed-filter[data-show="pol"] .rub:not([data-rub="pol"]),.ed-filter[data-show="int"] .rub:not([data-rub="int"]),.ed-filter[data-show="eco"] .rub:not([data-rub="eco"]),
@@ -279,3 +281,9 @@ body{background:var(--bg)}
 .signout{padding:0 18px 18px}
 .signout button{font-size:11px;color:var(--ink-3);text-transform:uppercase;text-decoration:underline}
 [data-ed="fr"]{--accent:var(--fr)} [data-ed="en"]{--accent:var(--en)} [data-ed="es"]{--accent:var(--es)}
+/* Lightning CSS (build de Next) retire le backdrop-filter sans préfixe des règles ci-dessus : redéclaré
+   sous @supports, il est conservé tel quel. */
+@supports (backdrop-filter: blur(1px)){
+  .topbar,.tabbar{backdrop-filter:blur(14px)}
+  .media .cap,.photo .cap{backdrop-filter:blur(6px)}
+}

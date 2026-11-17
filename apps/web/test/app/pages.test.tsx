@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FixtureDataSource, resetFixtureState } from '@/lib/data/fixture';
 
@@ -41,6 +41,14 @@ describe('pages', () => {
     expect(screen.getAllByRole('status').map((s) => s.getAttribute('data-kind'))).toEqual(['yesterday', 'light']);
   });
 
+  it('une édition plus ancienne que la veille est le « dernier brief », pas « la veille »', async () => {
+    m.today = '2026-11-09';
+    render(await BriefPage());
+    const banner = screen.getByRole('status');
+    expect(banner.getAttribute('data-kind')).toBe('latest');
+    expect(banner.querySelector('b')?.textContent).toBe('Dernier brief');
+  });
+
   it('sans aucune édition, le dit simplement', async () => {
     m.today = '2026-11-01';
     render(await BriefPage());
@@ -58,10 +66,34 @@ describe('pages', () => {
     render(await ThreadsPage());
     const link = screen.getByRole('link', { name: /Épisodes méditerranéens 2026/ });
     const id = link.getAttribute('href')!.split('/').pop()!;
-    render(await ThreadPage({ params: Promise.resolve({ id }) }));
+    const { container } = render(await ThreadPage({ params: Promise.resolve({ id }) }));
     expect(screen.getByRole('button', { name: 'Suivre ce thread' })).toBeTruthy();
-    expect(screen.getAllByRole('listitem').filter((li) => li.closest('.timeline'))).toHaveLength(2);
+    const episodes = screen.getAllByRole('listitem').filter((li) => li.closest('.timeline'));
+    expect(episodes).toHaveLength(2);
+    // Maquette, écran 2 : titre en h1, description du Thread dans l'en-tête, texte de l'épisode du jour sous l'épisode.
+    expect(within(container).getByRole('heading', { level: 1 }).textContent).toBe('Épisodes méditerranéens 2026');
+    expect(container.querySelector('.th-head p')?.textContent).toBe('Les pluies diluviennes qui frappent le Sud-Est et la Corse depuis la mi-octobre, épisode par épisode.');
+    expect(episodes[0].querySelector('.d')?.textContent).toBe('Ven. 6 nov. · Aujourd’hui');
+    expect(episodes[0].querySelector('p')?.textContent).toBeTruthy();
+    expect(screen.getByRole('link', { name: '← BRIEF' }).getAttribute('href')).toBe('/');
+    expect(container.querySelector('[data-ed]')?.getAttribute('lang')).toBe('fr');
     await expect(ThreadPage({ params: Promise.resolve({ id: 'pas-un-uuid' }) })).rejects.toThrow('NOT_FOUND');
+  });
+
+  it('trie les Threads : suivis, puis ouverts, puis fermés, chacun du plus récent au plus ancien', async () => {
+    const ds = new FixtureDataSource({ today: '2026-11-06' });
+    const base = (await ds.threads())[0];
+    const list = [
+      { ...base, id: 'a', title: 'A', followed: false, status: 'open' as const, lastDate: '2026-11-01' },
+      { ...base, id: 'b', title: 'B', followed: false, status: 'open' as const, lastDate: null },
+      { ...base, id: 'c', title: 'C', followed: false, status: 'open' as const, lastDate: '2026-11-05' },
+      { ...base, id: 'd', title: 'D', followed: false, status: 'closed' as const, lastDate: '2026-11-06' },
+      { ...base, id: 'e', title: 'E', followed: true, status: 'open' as const, lastDate: '2026-10-01' },
+      { ...base, id: 'f', title: 'F', followed: false, status: 'open' as const, lastDate: '2026-11-05' },
+    ];
+    const { sortThreads } = await import('@/lib/threads');
+    expect(sortThreads(list).map((t) => t.id)).toEqual(['e', 'c', 'f', 'a', 'b', 'd']);
+    expect(sortThreads([...list].reverse()).map((t) => t.id)).toEqual(['e', 'f', 'c', 'a', 'b', 'd']);
   });
 
   it('filtre le vocabulaire par langue et par date', async () => {

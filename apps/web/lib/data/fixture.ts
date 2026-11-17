@@ -17,7 +17,7 @@ export type FixtureOptions = { today: string; light?: Lang[] };
 
 const ThreadsFixture = z.record(
   z.string(),
-  z.object({ title: z.string(), nodes: z.array(z.object({ st: z.string(), d: z.string(), h: z.string(), p: z.string(), src: z.string().optional() })) }),
+  z.object({ title: z.string(), intro: z.string().optional(), nodes: z.array(z.object({ st: z.string(), d: z.string(), h: z.string(), p: z.string(), src: z.string().optional() })) }),
 );
 
 /** Remonte depuis le dossier courant jusqu'au dossier fixtures/ du dépôt (vitest : racine ; next : apps/web). */
@@ -119,14 +119,15 @@ export class FixtureDataSource implements DataSource {
           };
           const past: ThreadEventView[] = [];
           const file = this.threadsFile[ed.lang];
+          const description = file && file.title === st.thread.title ? (file.intro ?? null) : null;
           if (file && file.title === st.thread.title) {
             for (const n of file.nodes.filter((x) => x.st === '')) {
               const date = nodeDate(n.d, year);
               if (date && date < ed.date) past.push({ date, title: n.h, text: n.p, rubric: null, source: null, map: null });
             }
           }
-          const events = [event, ...past].sort((a, b) => (a.date < b.date ? 1 : -1));
-          out.set(id, { id, title: st.thread.title, lang: ed.lang, status: 'open', followed: state.followed.get(id) ?? false, eventCount: events.length, lastDate: events[0].date, lastTitle: events[0].title, events });
+          const events = [event, ...past].sort((a, b) => b.date.localeCompare(a.date));
+          out.set(id, { id, title: st.thread.title, lang: ed.lang, status: 'open', followed: state.followed.get(id) ?? false, eventCount: events.length, lastDate: events[0].date, lastTitle: events[0].title, description, events });
         }
       }
     }
@@ -134,7 +135,7 @@ export class FixtureDataSource implements DataSource {
   }
 
   async threads(): Promise<ThreadSummary[]> {
-    return this.allThreads().map(({ events: _events, ...summary }) => summary);
+    return this.allThreads().map(({ events: _events, description: _description, ...summary }) => summary);
   }
 
   async thread(id: string): Promise<ThreadDetail | null> {
