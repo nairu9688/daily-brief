@@ -105,6 +105,44 @@ describe('client Drive contre un faux Apps Script local (302)', () => {
     expect(drive.breaker.reason).toBe('application web non publique');
   });
 
+  it.each([
+    ['sans adresse', { status: 302, headers: new Headers() }, 'redirection sans adresse'],
+    ['http', { status: 302, headers: new Headers({ location: 'http://script.googleusercontent.com/macros/echo?user_content_key=secret' }) }, 'redirection non sûre'],
+    ['autre hôte', { status: 302, headers: new Headers({ location: 'https://exemple.fr/macros/echo?user_content_key=secret' }) }, 'redirection non sûre'],
+    ['identifiants', { status: 302, headers: new Headers({ location: 'https://user:pw@script.googleusercontent.com/macros/echo?user_content_key=secret' }) }, 'redirection non sûre'],
+  ] as const)('redirection %s : refusée sans GET, non fatale', async (_n, first, message) => {
+    const calls: string[] = [];
+    const f: HttpFetch = async (url) => {
+      calls.push(String(url));
+      return { ok: false, body: null, ...first } as unknown as Awaited<ReturnType<HttpFetch>>;
+    };
+    const e = await failure(createDriveClient({ url: 'https://script.google.com/macros/s/x/exec', token: DRIVE_TOKEN }, f).send(DAY, pdfFile(DAY), PDF_BYTES));
+    expect(e.message).toBe(`Drive Daily Brief 2026-11-06.pdf : ${message}`);
+    expect(e.fatal).toBe(false);
+    expect(calls).toEqual(['https://script.google.com/macros/s/x/exec']);
+  });
+
+  it('délai dépassé pendant le GET de la redirection : coupe Drive', async () => {
+    let n = 0;
+    const f: HttpFetch = (url, init) => {
+      if (n++ === 0) return realFetch(url, init);
+      return new Promise((_r, reject) => init?.signal?.addEventListener('abort', () => reject(init.signal!.reason)));
+    };
+    drive = createDriveClient({ url: server.url, token: DRIVE_TOKEN }, f, { hosts: [server.host], timeoutMs: 100 });
+    const e = await failure(drive.send(DAY, pdfFile(DAY), PDF_BYTES));
+    expect(e.message).toBe('Drive Daily Brief 2026-11-06.pdf : délai dépassé');
+    expect(drive.breaker.reason).toBe('délai dépassé');
+  });
+
+  it('quota Drive : erreur non fatale, qui n’est pas un refus de jeton', async () => {
+    server.google.state.failCreateFile = true;
+    server.google.state.failMessage = 'Service invoked too many times';
+    const e = await failure(drive.send(DAY, pdfFile(DAY), PDF_BYTES));
+    expect(e.message).toBe('Drive Daily Brief 2026-11-06.pdf : refus d’Apps Script (drive-quota)');
+    expect(e.fatal).toBe(false);
+    expect(drive.breaker.open).toBe(false);
+  });
+
   it('redirections sans fin : abandon après trois sauts', async () => {
     server.state.mode = 'loop';
     const e = await failure(drive.send(DAY, pdfFile(DAY), PDF_BYTES));

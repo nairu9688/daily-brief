@@ -236,7 +236,7 @@ Le pipeline utilise l'API Google Cloud Text-to-Speech (clé API restreinte à ce
 
 ## 10. Dépôt dans Google Drive
 
-`apps-script/Code.gs` est déployé en application web (« exécuter en tant que moi », accès « tout le monde »), protégé par `APPS_SCRIPT_TOKEN` stocké dans les propriétés du script. `doPost` reçoit `{ token, date, files: [{ name, mimeType, base64 }] }`. Il crée au besoin `Daily Brief/AAAA/MM - Mois` (mois en français, par exemple `11 - Novembre`) en mémorisant l'id du dossier racine. Il remplace un fichier de même nom (mise à la corbeille, puis recréation) et renvoie `{ ok, ids }`. Le client suit la redirection 302 d'Apps Script pour lire la réponse. En cas d'échec, les fichiers vont dans `drive_pending` et l'envoi est retenté au passage suivant (`publish/retry-pending.ts`).
+`apps-script/Code.gs` est déployé en application web (« exécuter en tant que moi », accès « tout le monde »), protégé par `APPS_SCRIPT_TOKEN` stocké dans les propriétés du script. `doPost` reçoit `{ token, date, files: [{ name, mimeType, base64 }] }`. Il crée au besoin `Daily Brief/AAAA/MM - Mois` (mois en français, par exemple `11 - Novembre`) en mémorisant l'id du dossier racine. Il remplace un fichier de même nom : il crée le nouveau fichier puis met à la corbeille les anciens de même nom. Il renvoie `{ ok, ids }`. Le client suit la redirection 302 d'Apps Script pour lire la réponse. En cas d'échec, les fichiers vont dans `drive_pending` et l'envoi est retenté au passage suivant (`publish/retry-pending.ts`).
 
 ## 11. Routine planifiée
 

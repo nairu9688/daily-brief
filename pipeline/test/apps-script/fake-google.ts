@@ -32,7 +32,7 @@ export function loadCodeGs(properties: Record<string, string> = {}) {
   const nextId = (prefix: string) => `${prefix}-${++seq}`;
   const root: FakeFolder = { id: 'root', name: 'Mon Drive', trashed: false, folders: [], files: [] };
   const byId = new Map<string, FakeFolder>([[root.id, root]]);
-  const state = { locked: false, lockAvailable: true, failCreateFile: false, creations: [] as string[] };
+  const state = { locked: false, lockAvailable: true, failCreateFile: false, failMessage: 'Service Drive indisponible : jeton interne xyz', creations: [] as string[] };
 
   const folderApi = (f: FakeFolder): Record<string, unknown> => ({
     getId: () => f.id,
@@ -51,13 +51,14 @@ export function loadCodeGs(properties: Record<string, string> = {}) {
         f.files
           .filter((x) => x.name === name && !x.trashed)
           .map((x) => ({
+            getId: () => x.id,
             setTrashed: (v: boolean) => {
               x.trashed = v;
             },
           })),
       ),
     createFile: (blob: { name: string; mimeType: string; bytes: Buffer }) => {
-      if (state.failCreateFile) throw new Error('Service Drive indisponible : jeton interne xyz');
+      if (state.failCreateFile) throw new Error(state.failMessage);
       const file: FakeFile = { id: nextId('file'), name: blob.name, mimeType: blob.mimeType, bytes: blob.bytes, trashed: false };
       f.files.push(file);
       state.creations.push(`fichier ${blob.name}`);
@@ -95,7 +96,12 @@ export function loadCodeGs(properties: Record<string, string> = {}) {
       }),
     },
     Utilities: {
-      base64Decode: (s: string) => Buffer.from(s, 'base64'),
+      base64Decode: (s: string) => {
+        // Strict comme Utilities.base64Decode : une chaîne qui n'est pas du base64 canonique lève une erreur.
+        const bytes = Buffer.from(s, 'base64');
+        if (bytes.toString('base64') !== s) throw new Error('Caractères non valides');
+        return bytes;
+      },
       newBlob: (bytes: Buffer, mimeType: string, name: string) => ({ bytes, mimeType, name }),
     },
     ContentService: {

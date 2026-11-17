@@ -81,14 +81,18 @@ export function createDriveClient(config: DriveConfig, fetch: HttpFetch, options
     for (let hop = 0; res.status >= 300 && res.status < 400; hop++) {
       await res.body?.cancel().catch(() => {});
       if (hop >= MAX_REDIRECTS) throw new DriveError('trop de redirections');
+      const location = res.headers.get('location');
+      if (!location) throw new DriveError('redirection sans adresse');
       let next: URL;
       try {
-        next = new URL(res.headers.get('location') ?? '', config.url);
+        next = new URL(location, config.url);
       } catch {
         throw new DriveError('redirection sans adresse');
       }
       // Une redirection vers la connexion Google signifie que l'application n'est pas publique.
-      if (!allowed(next, hosts)) throw new DriveError(`redirection hors d’Apps Script (${next.host}) : l’application web doit être déployée avec l’accès « Tout le monde »`, true);
+      if (next.host === 'accounts.google.com') throw new DriveError(`redirection hors d’Apps Script (${next.host}) : l’application web doit être déployée avec l’accès « Tout le monde »`, true);
+      // Toute autre destination (http, autre hôte, identifiants dans l'URL) est refusée sans être suivie.
+      if (!allowed(next, hosts) || next.username || next.password) throw new DriveError('redirection non sûre');
       res = await fetch(next.href, { method: 'GET', signal, redirect: 'manual' });
     }
     if (!res.ok) {

@@ -72,7 +72,7 @@ function validatePayload(payload) {
     var m = FILE_NAME.exec(f.name);
     if (!m || m[1] !== payload.date) return { ok: false, error: 'bad-name' };
     if (MIME_BY_EXTENSION[m[2]] !== f.mimeType) return { ok: false, error: 'bad-type' };
-    if (f.base64.length === 0 || f.base64.length > MAX_BASE64_LENGTH || !/^[A-Za-z0-9+/]+={0,2}$/.test(f.base64)) return { ok: false, error: 'bad-content' };
+    if (f.base64.length === 0 || f.base64.length % 4 !== 0 || f.base64.length > MAX_BASE64_LENGTH || !/^[A-Za-z0-9+/]+={0,2}$/.test(f.base64)) return { ok: false, error: 'bad-content' };
     if (seen[f.name]) return { ok: false, error: 'duplicate-name' };
     seen[f.name] = true;
   }
@@ -128,12 +128,34 @@ function monthFolder(props, date) {
   return childFolder(childFolder(rootFolder(props), names.year), names.month);
 }
 
-/** Dépose un fichier en remplaçant tout fichier de même nom (corbeille, puis recréation). */
-function replaceFile(folder, file) {
-  var blob = Utilities.newBlob(Utilities.base64Decode(file.base64), file.mimeType, file.name);
-  var old = folder.getFilesByName(file.name);
-  while (old.hasNext()) old.next().setTrashed(true);
-  return folder.createFile(blob).getId();
+/** Décode tous les fichiers avant le premier effet sur Drive ; null si l'un d'eux est indécodable. */
+function decodeAll(files) {
+  try {
+    var blobs = [];
+    for (var i = 0; i < files.length; i++) blobs.push(Utilities.newBlob(Utilities.base64Decode(files[i].base64), files[i].mimeType, files[i].name));
+    return blobs;
+  } catch (err) {
+    return null;
+  }
+}
+
+/**
+ * Dépose un fichier en remplaçant tout fichier de même nom : le nouveau est créé d'abord, puis les
+ * anciens (tous les ids sauf le nouveau) vont à la corbeille. Une création en échec laisse l'ancien.
+ */
+function replaceFile(folder, blob) {
+  var id = folder.createFile(blob).getId();
+  var old = folder.getFilesByName(blob.name);
+  while (old.hasNext()) {
+    var f = old.next();
+    if (f.getId() !== id) f.setTrashed(true);
+  }
+  return id;
+}
+
+/** Vrai pour une erreur de quota de Google (message non transmis au client). */
+function isQuotaError(err) {
+  return /too many times|quota|limit exceeded/i.test(String((err && err.message) || err));
 }
 
 /** Traite une requête déjà lue : contrôle du jeton, validation, dépôt. Ne lève jamais. */
@@ -141,16 +163,18 @@ function handle(payload, props) {
   if (!payload || !tokenMatches(props.getProperty('TOKEN'), payload.token)) return { ok: false, error: 'unauthorized' };
   var checked = validatePayload(payload);
   if (!checked.ok) return checked;
+  var blobs = decodeAll(checked.files);
+  if (!blobs) return { ok: false, error: 'bad-content' };
   // Un seul dépôt à la fois : deux requêtes simultanées ne créent pas deux dossiers du même nom.
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(30000)) return { ok: false, error: 'busy' };
   try {
     var folder = monthFolder(props, checked.date);
     var ids = {};
-    for (var i = 0; i < checked.files.length; i++) ids[checked.files[i].name] = replaceFile(folder, checked.files[i]);
+    for (var i = 0; i < blobs.length; i++) ids[blobs[i].name] = replaceFile(folder, blobs[i]);
     return { ok: true, ids: ids };
   } catch (err) {
-    return { ok: false, error: 'drive-error' };
+    return { ok: false, error: isQuotaError(err) ? 'drive-quota' : 'drive-error' };
   } finally {
     lock.releaseLock();
   }

@@ -69,6 +69,7 @@ describe('Code.gs : fonctions pures', () => {
     ['bad-type', { date: '2026-11-06', files: [{ ...MP3, mimeType: 'application/pdf' }] }],
     ['bad-content', { date: '2026-11-06', files: [{ ...PDF, base64: '' }] }],
     ['bad-content', { date: '2026-11-06', files: [{ ...PDF, base64: '<script>' }] }],
+    ['bad-content', { date: '2026-11-06', files: [{ ...PDF, base64: 'AAA' }] }],
     ['duplicate-name', { date: '2026-11-06', files: [PDF, PDF] }],
   ])('validatePayload : %s', (error, payload) => {
     expect(gs.validatePayload(payload)).toEqual({ ok: false, error });
@@ -113,6 +114,33 @@ describe('Code.gs : doPost', () => {
     expect(g.tree()).toEqual(['Daily Brief/2026/11 - Novembre/Daily Brief 2026-11-06.pdf (corbeille)', 'Daily Brief/2026/11 - Novembre/Daily Brief 2026-11-06.pdf']);
     const files = g.root.folders[0].folders[0].folders[0].files;
     expect(files.filter((f) => !f.trashed).map((f) => f.bytes.toString())).toEqual(['%PDF-1.7 v2']);
+  });
+
+  it('un base64 indécodable : bad-content avant toute mise à la corbeille', () => {
+    const g = loadCodeGs({ TOKEN });
+    g.post(body());
+    g.state.creations.length = 0;
+    expect(g.post(body({ files: [PDF, { ...MP3, base64: 'AB==' }] }))).toEqual({ ok: false, error: 'bad-content' });
+    expect(g.tree()).toEqual(['Daily Brief/2026/11 - Novembre/Daily Brief 2026-11-06.pdf']);
+    expect(g.state.creations).toEqual([]);
+  });
+
+  it('crée le nouveau fichier avant de mettre l’ancien à la corbeille : une création en échec laisse l’ancien', () => {
+    const g = loadCodeGs({ TOKEN });
+    g.post(body());
+    g.state.failCreateFile = true;
+    expect(g.post(body())).toEqual({ ok: false, error: 'drive-error' });
+    expect(g.tree()).toEqual(['Daily Brief/2026/11 - Novembre/Daily Brief 2026-11-06.pdf']);
+  });
+
+  it('quota Drive dépassé : drive-quota, sans détail', () => {
+    const g = loadCodeGs({ TOKEN });
+    g.state.failCreateFile = true;
+    g.state.failMessage = 'Service invoked too many times for one day: driveWriteOps. jeton interne';
+    expect(g.gs.doPost({ postData: { contents: JSON.stringify(body()) } }).text).toBe('{"ok":false,"error":"drive-quota"}');
+    g.state.failMessage = 'Limit Exceeded: DriveApp';
+    expect(g.post(body())).toEqual({ ok: false, error: 'drive-quota' });
+    expect(g.state.locked).toBe(false);
   });
 
   it('dossier racine mémorisé mis à la corbeille ou supprimé : retrouvé par son nom, sinon recréé', () => {
