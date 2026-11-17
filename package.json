@@ -21,6 +21,7 @@
     "maps:preview": "tsx packages/maps/scripts/preview.ts"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.16",
     "@types/node": "^22.10.0",
     "@types/pngjs": "^6.0.5",
     "pixelmatch": "^7.2.0",
