@@ -77,7 +77,9 @@ Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-4-supabase-publication-dri
 - `npm run brief:publish`.
 - Tests : correspondance `Edition` → lignes SQL (fonction pure), nom du dossier de mois, client Drive contre un serveur HTTP local qui simule le 302 d'Apps Script.
 
-### Lot 5 — Audio
+### Lot 5 — Audio ✅ plan détaillé
+
+Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-5-audio.md`
 
 - Vérification §16 : noms exacts des voix Chirp 3 HD avec `voices.list` filtré sur « Chirp3-HD », et présence de ffmpeg.
 - `pipeline/render/audio.ts` : découpage de `audioScript` sous la limite par requête (on vise moins de 4 500 octets par morceau, en coupant aux fins de phrase), synthèse en MP3, concaténation avec ffmpeg (sinon concaténation binaire des trames MP3), puis 64 kb/s mono. Le fichier s'appelle `Daily Brief AAAA-MM-JJ FR.mp3`. En cas d'échec, l'édition est publiée sans lecteur.
