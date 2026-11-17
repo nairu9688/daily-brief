@@ -35,9 +35,12 @@ describe('actions serveur', () => {
   });
 
   it('revalide les pages concernées après une écriture réussie, et seulement alors', async () => {
+    // Cocher ne revalide pas /vocab : sur « Non cochés », le mot coché resterait sinon à disparaître de la liste.
     await setVocabSelected({ ids: [ID], selected: true });
+    expect(cache.revalidatePath.mock.calls.map((c) => c[0])).toEqual(['/', '/edition/[date]']);
+    cache.revalidatePath.mockClear();
     await queueAnki({ ids: [ID] });
-    expect(cache.revalidatePath.mock.calls.map((c) => c[0]).sort()).toEqual(['/', '/', '/edition/[date]', '/edition/[date]', '/vocab', '/vocab'].sort());
+    expect(cache.revalidatePath.mock.calls.map((c) => c[0])).toEqual(['/', '/edition/[date]', '/vocab']);
     cache.revalidatePath.mockClear();
     await setThreadFollowed({ id: ID, followed: true });
     expect(cache.revalidatePath.mock.calls.map((c) => c[0])).toEqual(['/threads', '/threads/[id]']);

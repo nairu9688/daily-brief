@@ -78,6 +78,18 @@ describe('proxy', () => {
     expect(r.cookies.get('sb-ref-auth-token')?.value).toBe('neuf');
   });
 
+  it('laisse passer une action serveur sans session (l’action répond « Session expirée »), mais pas une page', async () => {
+    const action = new NextRequest('http://brief.example/vocab', { method: 'POST', headers: { 'next-action': 'abc123', 'content-type': 'text/plain' } });
+    const r = await proxy(action);
+    expect(r.headers.get('location')).toBeNull();
+    expect(r.status).toBe(200);
+    expect(r.headers.get('content-security-policy')).toContain('nonce-');
+    const page = await proxy(req('/vocab'));
+    expect(page.status).toBe(303);
+    m.email = 'intrus@exemple.fr';
+    expect((await proxy(action)).headers.get('location')).toBeNull();
+  });
+
   it('laisse /login ouvert sans session', async () => {
     expect((await proxy(req('/login'))).headers.get('location')).toBeNull();
   });

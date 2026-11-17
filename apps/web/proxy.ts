@@ -45,7 +45,11 @@ export async function proxy(request: NextRequest) {
     const { data } = await supabase.auth.getClaims();
     const email = typeof data?.claims?.email === 'string' ? data.claims.email : null;
     const decision = access(request.nextUrl.pathname, email, isAllowedEmail(email));
-    if (decision === 'login' || decision === 'refuse') {
+    // Une action serveur (POST avec l'en-tête Next-Action) n'est pas redirigée : le client ne saurait pas
+    // lire la page /login. L'action elle-même est le garde-fou : elle vérifie currentUser() avant tout
+    // et répond « Session expirée », sans lire ni écrire quoi que ce soit.
+    const action = request.method === 'POST' && request.headers.has('next-action');
+    if ((decision === 'login' || decision === 'refuse') && !action) {
       const url = request.nextUrl.clone();
       url.pathname = '/login';
       url.search = decision === 'refuse' ? '?erreur=refuse' : '';

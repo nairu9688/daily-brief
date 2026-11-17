@@ -4,7 +4,7 @@ import { LANGS, LangSchema, type Lang } from '@daily-brief/schema';
 import { z } from 'zod';
 import { isIsoDate } from '@/lib/dates';
 import { isLang } from '@/lib/edition-choice';
-import { MAX_IDS, VOCAB_LIMIT } from './limits';
+import { MAX_IDS, VOCAB_LIMIT, WRITE_BATCH } from './limits';
 import {
   EditionRowSchema,
   editionFromRows,
@@ -168,17 +168,29 @@ export class SupabaseDataSource implements DataSource {
     return valid.length > 0 ? valid : null;
   }
 
+  /**
+   * Écrit par lots de WRITE_BATCH identifiants : 500 uuid dans un seul `?id=in.(…)` donneraient une URL
+   * d'environ 20 Ko, au-delà des limites des passerelles (Cloudflare, Kong). Les comptes s'additionnent.
+   */
+  private static async batched(ids: string[], write: (batch: string[]) => Promise<number>): Promise<number> {
+    let total = 0;
+    for (let i = 0; i < ids.length; i += WRITE_BATCH) total += await write(ids.slice(i, i + WRITE_BATCH));
+    return total;
+  }
+
   async setSelected(ids: string[], selected: boolean): Promise<number> {
     const valid = SupabaseDataSource.validIds(ids);
     if (!valid) return 0;
-    return SupabaseDataSource.count('mots', await this.db.from('vocab_items').update({ selected }).in('id', valid).select('id'));
+    return SupabaseDataSource.batched(valid, async (batch) => SupabaseDataSource.count('mots', await this.db.from('vocab_items').update({ selected }).in('id', batch).select('id')));
   }
 
   /** « Ajouter à Anki » : met en file les mots encore à `none` (un mot déjà envoyé n'est pas rétrogradé). */
   async queueAnki(ids: string[]): Promise<number> {
     const valid = SupabaseDataSource.validIds(ids);
     if (!valid) return 0;
-    return SupabaseDataSource.count('Anki', await this.db.from('vocab_items').update({ anki_status: 'queued', selected: true }).in('id', valid).eq('anki_status', 'none').select('id'));
+    return SupabaseDataSource.batched(valid, async (batch) =>
+      SupabaseDataSource.count('Anki', await this.db.from('vocab_items').update({ anki_status: 'queued', selected: true }).in('id', batch).eq('anki_status', 'none').select('id')),
+    );
   }
 
   async setFollowed(id: string, followed: boolean): Promise<number> {

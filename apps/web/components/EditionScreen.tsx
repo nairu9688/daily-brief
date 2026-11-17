@@ -41,11 +41,12 @@ export function EditionScreen({ edition, basePath, stale }: { edition: EditionVi
           ))}
           {edition.vocab && (
             <div className="rub" data-rub="vocab">
-              <div className="rubhead">
+              {/* Libellés de l'interface, en français dans toutes les éditions (maquette) */}
+              <div className="rubhead" lang="fr">
                 <h2>Vocab du jour</h2>
                 <span className="mono">{edition.vocab.words.length} mots</span>
               </div>
-              <VocabCard kicker="Tirés des articles du jour" title={edition.vocab.title} words={edition.vocab.words.map((w) => ({ ...w, lang: edition.lang }))} />
+              <VocabCard kicker="Tirés des articles du jour" title={edition.vocab.title} titleLang={edition.lang} words={edition.vocab.words.map((w) => ({ ...w, lang: edition.lang }))} />
             </div>
           )}
         </RubricFilter>

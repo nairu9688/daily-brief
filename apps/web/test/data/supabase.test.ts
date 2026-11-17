@@ -88,6 +88,19 @@ describe('source de données Supabase', () => {
     expect(MAX_IDS).toBe(500);
   });
 
+  it('écrit par lots de 100 identifiants au plus et additionne les comptes', async () => {
+    const ids = Array.from({ length: 250 }, (_, i) => `6f1e1c2a-3b4d-4e5f-8a9b-${String(i).padStart(12, '0')}`);
+    const echo = () => fakeSupabase((c: Call) => ({ data: ((op(c, 'in')[0]?.[1] as string[] | undefined) ?? []).map((id) => ({ id })), error: null }));
+    const sel = echo();
+    expect(await new SupabaseDataSource(sel.client, today).setSelected(ids, true)).toBe(250);
+    expect(sel.calls.map((c) => (op(c, 'in')[0][1] as string[]).length)).toEqual([100, 100, 50]);
+    expect(sel.calls.flatMap((c) => op(c, 'in')[0][1] as string[])).toEqual(ids);
+    const anki = echo();
+    expect(await new SupabaseDataSource(anki.client, today).queueAnki(ids)).toBe(250);
+    expect(anki.calls).toHaveLength(3);
+    expect(anki.calls.every((c) => (op(c, 'in')[0][1] as string[]).length <= 100 && op(c, 'eq')[0][1] === 'none')).toBe(true);
+  });
+
   it('signe l’audio pour 10 minutes et refuse un chemin inattendu', async () => {
     const ok = fakeSupabase(() => ({ data: { audio_path: '2026-11-06/fr.mp3' }, error: null }));
     expect(await new SupabaseDataSource(ok.client, today).audio('2026-11-06', 'fr')).toEqual({ kind: 'redirect', url: 'https://ref.supabase.co/storage/v1/object/sign/audio/2026-11-06/fr.mp3?token=t' });

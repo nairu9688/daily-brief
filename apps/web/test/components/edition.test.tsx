@@ -50,6 +50,17 @@ describe('écran d’une édition', () => {
     expect(rows.every((r) => r.querySelector('.fr')?.getAttribute('lang') === 'fr')).toBe(true);
   });
 
+  it('marque en français les libellés de l’interface dans une édition étrangère', () => {
+    const { container } = render(<EditionScreen edition={fixtureView('es')} basePath="/" />);
+    const vocabRub = container.querySelector('.rub[data-rub="vocab"]')!;
+    const langOf = (el: Element | null) => el?.closest('[lang]')?.getAttribute('lang');
+    expect(langOf(vocabRub.querySelector('.rubhead h2'))).toBe('fr');
+    expect(langOf(vocabRub.querySelector('.rubhead span'))).toBe('fr');
+    expect(langOf(vocabRub.querySelector('.vocab .kicker'))).toBe('fr');
+    expect(langOf(vocabRub.querySelector('.selall'))).toBe('fr');
+    expect(langOf(vocabRub.querySelector('.vocab h3'))).toBe('es');
+  });
+
   it('le lecteur permet de réessayer après une erreur de chargement', async () => {
     const { container } = render(<EditionScreen edition={fixtureView('fr')} basePath="/" />);
     const audio = container.querySelector('audio')!;
@@ -84,6 +95,45 @@ describe('écran d’une édition', () => {
   it('a un lien PDF seulement si le PDF existe', () => {
     render(<EditionScreen edition={fixtureView('fr', { hasPdf: true })} basePath="/" />);
     expect(screen.getByRole('link', { name: 'PDF du jour' }).getAttribute('href')).toBe('/pdf/2026-11-06');
+  });
+});
+
+describe('échecs des actions côté client', () => {
+  it('une case revient à son état si l’action échoue (rejet)', async () => {
+    actions.setVocabSelected.mockRejectedValueOnce(new Error('Failed to fetch'));
+    render(<EditionScreen edition={fixtureView('en')} basePath="/" />);
+    const box = screen.getAllByRole('checkbox')[0] as HTMLInputElement;
+    await userEvent.click(box);
+    expect(box.checked).toBe(false);
+    expect(screen.getByRole('alert').textContent).toBe('Enregistrement impossible, réessaie.');
+  });
+
+  it('« Ajouter à Anki » se réactive après un rejet, et montre « Session expirée »', async () => {
+    render(<EditionScreen edition={fixtureView('en')} basePath="/" />);
+    await userEvent.click(screen.getAllByRole('checkbox')[0]);
+    actions.queueAnki.mockRejectedValueOnce(new Error('Failed to fetch'));
+    await userEvent.click(screen.getByRole('button', { name: 'Ajouter 1 mot à Anki' }));
+    expect(screen.getByRole('alert').textContent).toBe('Enregistrement impossible, réessaie.');
+    const button = screen.getByRole('button', { name: 'Ajouter 1 mot à Anki' }) as HTMLButtonElement;
+    expect(button.disabled).toBe(false);
+    actions.queueAnki.mockResolvedValueOnce({ ok: false, error: 'Session expirée : reconnecte-toi.' } as never);
+    await userEvent.click(button);
+    expect(screen.getByRole('alert').textContent).toBe('Session expirée : reconnecte-toi.');
+    expect(button.disabled).toBe(false);
+  });
+
+  it('« Suivre ce thread » revient à son état si l’action échoue ou rend « Session expirée »', async () => {
+    const { FollowButton } = await import('@/components/FollowButton');
+    render(<FollowButton id="t" followed={false} followLabel="Suivre ce thread" followingLabel="Thread suivi" />);
+    const button = screen.getByRole('button');
+    actions.setThreadFollowed.mockRejectedValueOnce(new Error('Failed to fetch'));
+    await userEvent.click(button);
+    expect(button.getAttribute('aria-pressed')).toBe('false');
+    expect(screen.getByRole('alert').textContent).toBe('Enregistrement impossible, réessaie.');
+    actions.setThreadFollowed.mockResolvedValueOnce({ ok: false, error: 'Session expirée : reconnecte-toi.' } as never);
+    await userEvent.click(button);
+    expect(button.getAttribute('aria-pressed')).toBe('false');
+    expect(screen.getByRole('alert').textContent).toBe('Session expirée : reconnecte-toi.');
   });
 });
 

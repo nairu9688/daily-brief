@@ -8,12 +8,15 @@ export type VocabCardWord = { id: string; term: string; pos: string; translation
 
 const plural = (n: number) => (n > 1 ? 's' : '');
 
+/** Message d'une action qui n'a pas abouti (réseau coupé, serveur injoignable) : le même que côté serveur. */
+const FAILED = 'Enregistrement impossible, réessaie.';
+
 /**
  * Mots à cocher, « Tout cocher » et « Ajouter N mots à Anki ». Chaque case écrit `selected` par une
  * action serveur ; le bouton Anki passe `anki_status` à `queued` (phase 1 : simple mise en file).
  * En cas d'échec, la case revient à son état et un message s'affiche.
  */
-export function VocabCard({ kicker, title, words }: { kicker: string; title: string; words: VocabCardWord[] }) {
+export function VocabCard({ kicker, title, titleLang, words }: { kicker: string; title: string; titleLang?: string; words: VocabCardWord[] }) {
   const [checked, setChecked] = useState(() => new Set(words.filter((w) => w.selected).map((w) => w.id)));
   const [status, setStatus] = useState(() => new Map(words.map((w) => [w.id, w.ankiStatus])));
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
@@ -30,33 +33,46 @@ export function VocabCard({ kicker, title, words }: { kicker: string; title: str
       else next.delete(id);
     }
     setChecked(next);
-    const r = await setVocabSelected({ ids, selected });
-    if (!r.ok) {
+    let error: string | null;
+    try {
+      const r = await setVocabSelected({ ids, selected });
+      error = r.ok ? null : r.error;
+    } catch {
+      error = FAILED;
+    }
+    if (error !== null) {
       setChecked(before);
-      setMessage({ text: r.error, error: true });
+      setMessage({ text: error, error: true });
     }
   }
 
   async function anki() {
+    const ids = toQueue;
     setBusy(true);
-    const r = await queueAnki({ ids: toQueue });
-    setBusy(false);
-    if (!r.ok) {
-      setMessage({ text: r.error, error: true });
-      return;
+    try {
+      const r = await queueAnki({ ids });
+      if (!r.ok) {
+        setMessage({ text: r.error, error: true });
+        return;
+      }
+      setStatus(new Map([...status, ...ids.map((id) => [id, 'queued' as AnkiStatus] as const)]));
+      setMessage({ text: `${r.count} mot${plural(r.count)} en file pour Anki ✓`, error: false });
+    } catch {
+      setMessage({ text: FAILED, error: true });
+    } finally {
+      setBusy(false);
     }
-    setStatus(new Map([...status, ...toQueue.map((id) => [id, 'queued' as AnkiStatus] as const)]));
-    setMessage({ text: `${r.count} mot${plural(r.count)} en file pour Anki ✓`, error: false });
   }
 
   return (
-    <div className="vocab">
+    // Interface en français (maquette) ; le titre et chaque mot portent leur propre langue.
+    <div className="vocab" lang="fr">
       <header>
         <div>
           <div className="kicker mono">
             <span className="acc">{kicker}</span>
           </div>
-          <h3>{title}</h3>
+          <h3 lang={titleLang}>{title}</h3>
         </div>
         <button type="button" className="selall mono" onClick={() => select(words.map((w) => w.id), !allChecked)}>
           {allChecked ? 'Tout décocher' : 'Tout cocher'}

@@ -10,10 +10,17 @@ export function FollowButton({ id, followed, followLabel, followingLabel }: { id
   async function toggle() {
     const next = !on;
     setOn(next);
-    const r = await setThreadFollowed({ id, followed: next });
-    if (!r.ok) {
+    setError(null);
+    let failure: string | null;
+    try {
+      const r = await setThreadFollowed({ id, followed: next });
+      failure = r.ok ? null : r.error;
+    } catch {
+      failure = 'Enregistrement impossible, réessaie.';
+    }
+    if (failure !== null) {
       setOn(!next);
-      setError(r.error);
+      setError(failure);
     }
   }
   return (

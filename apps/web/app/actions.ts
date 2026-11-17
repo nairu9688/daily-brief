@@ -23,8 +23,12 @@ const INVALID: ActionResult = { ok: false, error: 'Demande invalide.' };
 const SESSION: ActionResult = { ok: false, error: 'Session expirée : reconnecte-toi.' };
 const FAILED: ActionResult = { ok: false, error: 'Enregistrement impossible, réessaie.' };
 
-/** Pages dont le rendu dépend de la colonne écrite (rendu dynamique, mais le cache client de Next les garde). */
-const VOCAB_PAGES = ['/', '/edition/[date]', '/vocab'];
+/**
+ * Pages dont le rendu dépend de la colonne écrite (rendu dynamique, mais le cache client de Next les garde).
+ * Cocher ne revalide pas /vocab : filtrée sur « Non cochés », la liste perdrait aussitôt le mot coché.
+ */
+const SELECT_PAGES = ['/', '/edition/[date]'];
+const ANKI_PAGES = ['/', '/edition/[date]', '/vocab'];
 const THREAD_PAGES = ['/threads', '/threads/[id]'];
 
 /** Utilisateur d'abord (une requête sans session ne voit même pas la validation), puis entrée, écriture et revalidation. */
@@ -44,11 +48,11 @@ async function run<T>(schema: z.ZodType<T>, input: unknown, write: (value: T) =>
 }
 
 export async function setVocabSelected(input: unknown): Promise<ActionResult> {
-  return run(SelectInput, input, async ({ ids, selected }) => (await getDataSource()).setSelected(ids, selected), VOCAB_PAGES);
+  return run(SelectInput, input, async ({ ids, selected }) => (await getDataSource()).setSelected(ids, selected), SELECT_PAGES);
 }
 
 export async function queueAnki(input: unknown): Promise<ActionResult> {
-  return run(AnkiInput, input, async ({ ids }) => (await getDataSource()).queueAnki(ids), VOCAB_PAGES);
+  return run(AnkiInput, input, async ({ ids }) => (await getDataSource()).queueAnki(ids), ANKI_PAGES);
 }
 
 export async function setThreadFollowed(input: unknown): Promise<ActionResult> {
