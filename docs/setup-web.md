@@ -5,7 +5,7 @@ Ce guide met en ligne l'appli du Daily Brief (spec §5, §8.3 et §14, étape 5)
 Deux règles valent pour tout le guide :
 
 - **L'appli n'utilise que la clé publique** de Supabase (`anon` ou `sb_publishable_…`). La clé de service (`service_role` ou `sb_secret_…`) ne doit jamais entrer dans Vercel : l'appli refuse de démarrer si on la lui donne par erreur.
-- **`FIXTURE=1` n'existe qu'en local.** Ce mode ouvre l'appli sans connexion ; il est refusé sur Vercel.
+- **`FIXTURE=1` n'existe qu'en local.** Ce mode ouvre l'appli sans connexion ; il est refusé sur Vercel, et en production (`next start`) sauf `FIXTURE_ALLOW_START=1`, que seuls les tests de bout en bout posent. Ne jamais définir ces deux variables dans Vercel.
 
 ## 1. Créer le projet Vercel
 
@@ -36,8 +36,10 @@ Dans le tableau de bord Supabase, *Authentication* :
 
 1. *URL Configuration* :
    - *Site URL* : la valeur de `SITE_URL` ;
-   - *Redirect URLs* : `https://<SITE_URL>/auth/confirm` (et `http://localhost:3000/auth/confirm` pour le développement local).
-2. *Emails* → *Magic Link* : remplacer le modèle par celui-ci, qui donne à la fois un lien et un code :
+   - *Redirect URLs* : `<SITE_URL>/auth/confirm`, par exemple `https://daily-brief-xxx.vercel.app/auth/confirm` (`SITE_URL` contient déjà `https://`), et `http://localhost:3000/auth/confirm` pour le développement local.
+
+   En développement local, le lien du courriel pointe quand même vers la *Site URL* de production (le modèle utilise `{{ .SiteURL }}`) : saisir alors le **code** du courriel sur `http://localhost:3000/login`.
+2. *Emails* → *Magic Link* **et** *Emails* → *Confirm signup* : remplacer les deux modèles par celui-ci, qui donne à la fois un lien et un code. La toute première connexion crée le compte et envoie le modèle *Confirm signup*, pas *Magic Link* : sans ce second remplacement, le premier courriel n'a ni lien `token_hash` ni code.
 
    ```html
    <h2>Daily Brief</h2>
@@ -73,6 +75,10 @@ npm test && npm run typecheck
 npm run web:build && npm run web:e2e   # captures à 390 px, clair et sombre (FIXTURE=1)
 npm run web:check-bundle               # aucun secret ni nom de variable serveur côté navigateur
 ```
+
+`web:check-bundle` ne fouille que `.next/static`, le code JavaScript envoyé au navigateur. Il ne voit pas les données que les composants serveur passent en props aux composants clients (elles voyagent dans le HTML et le flux RSC de chaque page) : ce cas est couvert par la règle statique de `apps/web/test/security/static.test.ts` (aucun composant client n'importe les modules de données ou d'authentification) et par la relecture, qui vérifie qu'aucune prop ne porte un secret.
+
+**En-têtes de sécurité.** `next.config.ts` pose `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options` et `Permissions-Policy`, et `proxy.ts` la CSP. HSTS (`Strict-Transport-Security`) n'est pas ajouté par l'appli : Vercel l'envoie déjà sur tous ses domaines en https.
 
 ## 6. À contrôler sur le vrai service
 
