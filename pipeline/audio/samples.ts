@@ -1,4 +1,4 @@
-import { mkdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, renameSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { LANGS, type Lang } from '@daily-brief/schema';
 import { Breaker, describeError } from '../collect/breaker';
@@ -50,14 +50,20 @@ export function pickSampleVoices(byCode: Record<string, VoiceInfo[]>, preferred:
  * `npm run audio:samples` (mise en place, spec §14) : liste les voix Chirp 3 HD de chaque langue
  * (voices.list filtré sur « Chirp3-HD », spec §16), synthétise `count` échantillons par langue
  * dans `<outDir>/voice-samples/` et écrit `index.json`. Ne sert jamais pendant la routine.
+ * Les fichiers sont écrits dans un dossier voisin `voice-samples.tmp`, qui remplace le dossier
+ * précédent seulement si au moins un échantillon a été écrit : un passage en échec (clé refusée,
+ * service muet) laisse les échantillons précédents intacts.
  * Codes : 0 = tous les échantillons écrits ; 1 = certains seulement ; 2 = aucun.
  */
 export async function runVoiceSamples(opts: SamplesOptions): Promise<{ exitCode: 0 | 1 | 2; index: SamplesIndex; dir: string }> {
-  const count = Math.min(MAX_SAMPLES, Math.max(1, Math.floor(opts.count ?? DEFAULT_SAMPLES)));
-  const dir = join(opts.outDir, 'voice-samples');
+  const requested = opts.count ?? DEFAULT_SAMPLES;
+  const count = Math.min(MAX_SAMPLES, Math.max(1, Math.floor(requested)));
+  const final = join(opts.outDir, 'voice-samples');
+  const dir = `${final}.tmp`;
   const secrets = [opts.apiKey];
   const clean = (m: string) => redactText(m, secrets);
   const index: SamplesIndex = { generatedAt: '', voices: { fr: [], en: [], es: [] }, samples: [], characters: 0, issues: [] };
+  if (count !== requested) index.issues.push(`--count ${requested} ramené à ${count} (${requested > MAX_SAMPLES ? 'maximum' : 'minimum 1, entier'})`);
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
 
@@ -101,5 +107,10 @@ export async function runVoiceSamples(opts: SamplesOptions): Promise<{ exitCode:
   index.generatedAt = new Date().toISOString();
   writeAtomic(join(dir, 'index.json'), stripSecrets(JSON.stringify(index, null, 2), secrets) + '\n');
   const made = index.samples.filter((s) => s.file).length;
-  return { exitCode: made === 0 ? 2 : made === index.samples.length ? 0 : 1, index, dir };
+  // Remplace le dossier précédent seulement si quelque chose a été écrit (ou s'il n'y avait rien à protéger).
+  if (made > 0 || !existsSync(final)) {
+    rmSync(final, { recursive: true, force: true });
+    renameSync(dir, final);
+  } else rmSync(dir, { recursive: true, force: true });
+  return { exitCode: made === 0 ? 2 : made === index.samples.length ? 0 : 1, index, dir: final };
 }

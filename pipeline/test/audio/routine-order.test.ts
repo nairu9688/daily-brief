@@ -9,7 +9,8 @@ import { fakeFetch } from '../render/fake-fetch';
 import { fakeTts } from './fake-tts';
 
 const DAY = '2026-11-06';
-const KEY = 'AIzaSy-cle-de-test-0123456789';
+const KEY = 'AIza+Sy/abc=def+ghi/jkl==';
+const KEY_FORMS = [KEY, encodeURIComponent(KEY)];
 
 function day() {
   const outDir = mkdtempSync(join(tmpdir(), 'routine-'));
@@ -40,6 +41,7 @@ describe('ordre de la routine : brief:audio puis brief:render', () => {
     expect((await runAudio({ outDir, date: DAY, apiKey: KEY, fetch: fakeTts().fetch, ffmpeg: null })).exitCode).toBe(0);
     const { r, html } = await render(outDir);
     expect(r.exitCode).toBe(0);
+    for (const form of KEY_FORMS) expect(html).not.toContain(form);
     expect(html.match(/0:03 · voix Chirp HD/g)).toHaveLength(3);
   });
 

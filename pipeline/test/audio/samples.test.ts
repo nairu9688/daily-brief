@@ -58,6 +58,36 @@ describe('runVoiceSamples', () => {
     expect(readFileSync(join(r.dir, 'index.json'), 'utf8')).not.toContain(KEY);
   });
 
+  it('--count au-delà du maximum : ramené à 10 avec un avertissement', async () => {
+    const outDir = mkdtempSync(join(tmpdir(), 'samples-'));
+    const r = await runVoiceSamples({ apiKey: KEY, fetch: fakeTts().fetch, outDir, voices: loadVoices(), count: 50 });
+    expect(r.index.issues).toContain('--count 50 ramené à 10 (maximum)');
+    expect(r.index.samples.filter((s) => s.lang === 'en')).toHaveLength(8);
+  });
+
+  it('clé refusée : les échantillons d’un passage précédent restent intacts', async () => {
+    const outDir = mkdtempSync(join(tmpdir(), 'samples-'));
+    await runVoiceSamples({ apiKey: KEY, fetch: fakeTts().fetch, outDir, voices: loadVoices(), count: 1 });
+    const dir = join(outDir, 'voice-samples');
+    const before = readdirSync(dir).sort();
+    const indexBefore = readFileSync(join(dir, 'index.json'), 'utf8');
+    expect(before).toHaveLength(4);
+    const r = await runVoiceSamples({ apiKey: KEY, fetch: fakeTts(undefined, () => ({ status: 403, json: {} })).fetch, outDir, voices: loadVoices() });
+    expect(r.exitCode).toBe(2);
+    expect(readdirSync(dir).sort()).toEqual(before);
+    expect(readFileSync(join(dir, 'index.json'), 'utf8')).toBe(indexBefore);
+    expect(readdirSync(outDir)).toEqual(['voice-samples']);
+  });
+
+  it('un passage réussi remplace entièrement le dossier précédent', async () => {
+    const outDir = mkdtempSync(join(tmpdir(), 'samples-'));
+    mkdirSync(join(outDir, 'voice-samples'));
+    writeFileSync(join(outDir, 'voice-samples', 'ancien.mp3'), 'x');
+    await runVoiceSamples({ apiKey: KEY, fetch: fakeTts().fetch, outDir, voices: loadVoices(), count: 1 });
+    expect(readdirSync(join(outDir, 'voice-samples'))).not.toContain('ancien.mp3');
+    expect(readdirSync(outDir)).toEqual(['voice-samples']);
+  });
+
   it('clé refusée : le service est coupé dès la première liste, aucun échantillon, code 2', async () => {
     const outDir = mkdtempSync(join(tmpdir(), 'samples-'));
     const net = fakeTts(undefined, () => ({ status: 403, json: {} }));

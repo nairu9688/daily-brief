@@ -6,7 +6,8 @@ import { fixtureEdition } from '../helpers';
 import { runCli } from '../run-cli';
 
 const DAY = '2026-11-06';
-const KEY = 'AIzaSy-cle-de-test-0123456789';
+const KEY = 'AIza+Sy/abc=def+ghi/jkl==';
+const KEY_FORMS = [KEY, encodeURIComponent(KEY)];
 const PRELOAD = 'pipeline/test/audio/fake-tts-preload.ts';
 
 /** Dossier du jour avec les trois éditions vérifiées de la fixture ; `--out` absolu. */
@@ -47,7 +48,8 @@ describe('CLI brief:audio', () => {
     expect(r.stdout).toContain('[error] FR morceau 1/1 : HTTP 403 (https://texttospeech.googleapis.com/v1/text:synthesize) — Text-to-Speech coupé (HTTP 403) : édition publiée sans lecteur');
     expect(r.stdout).toContain('ES : sans lecteur');
     expect(r.stdout).toContain('Audio en échec : éditions publiées sans lecteur.');
-    expect(r.stdout + r.stderr + readFileSync(join(r.dayDir, 'audio-report.json'), 'utf8')).not.toContain(KEY);
+    const everything = r.stdout + r.stderr + readFileSync(join(r.dayDir, 'audio-report.json'), 'utf8');
+    for (const form of KEY_FORMS) expect(everything).not.toContain(form);
   }, 30_000);
 
   it('lit la clé dans .env', () => {
@@ -68,7 +70,7 @@ describe('CLI brief:audio', () => {
     const r = runCli('pipeline/audio/cli.ts', [`--${KEY}`], { GOOGLE_TTS_API_KEY: KEY }, { preload: PRELOAD });
     expect(r.status).toBe(2);
     expect(r.stderr).toContain('brief:audio :');
-    expect(r.stderr).not.toContain(KEY);
+    for (const form of KEY_FORMS) expect(r.stderr).not.toContain(form);
   }, 30_000);
 
   it('le script npm brief:audio pointe sur ce CLI', () => {

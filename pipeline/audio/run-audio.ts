@@ -145,12 +145,24 @@ export async function runAudio(opts: RunAudioOptions): Promise<RunAudioResult> {
 
   try {
     mkdirSync(dayDir, { recursive: true });
-    // Les anciens MP3 d'abord : brief:publish prend tout MP3 présent pour une édition publiable.
-    for (const name of audioOutputs(opts.date)) rmSync(join(dayDir, name), { force: true });
   } catch (e) {
-    issue('error', `anciens fichiers audio impossibles à supprimer : ${(e as Error).message}`);
+    issue('error', `dossier ${dayDir} impossible à créer : ${(e as Error).message}`);
     return finish(2, 'invalid');
   }
+  // Les anciens MP3 d'abord : brief:publish prend tout MP3 présent pour une édition publiable.
+  // Chaque suppression est tentée même si une autre échoue, et chaque échec est signalé. Un ancien
+  // fichier (MP3, audio.json) qui reste présenterait l'audio d'un autre passage comme celui du
+  // jour : au moindre échec, le passage s'arrête en « invalid » (code 2), sans aucun appel.
+  let staleLeft = 0;
+  for (const name of audioOutputs(opts.date)) {
+    try {
+      rmSync(join(dayDir, name), { force: true });
+    } catch (e) {
+      staleLeft++;
+      issue('error', `ancien fichier audio impossible à supprimer : ${name} (${(e as Error).message})`);
+    }
+  }
+  if (staleLeft > 0) return finish(2, 'invalid');
 
   let voices: Voices;
   try {
@@ -164,7 +176,7 @@ export async function runAudio(opts: RunAudioOptions): Promise<RunAudioResult> {
   const todo: Edition[] = [];
   for (const lang of LANGS) {
     const r = readEdition(dayDir, lang, opts.date);
-    if (r.issue) issues.push(r.issue);
+    if (r.issue) issues.push({ ...r.issue, message: redactText(r.issue.message, secrets) });
     if (r.edition) todo.push(r.edition);
   }
   if (todo.length === 0) {

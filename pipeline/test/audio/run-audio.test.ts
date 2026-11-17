@@ -13,7 +13,8 @@ import { fakeTts, okSynth } from './fake-tts';
 
 const DAY = '2026-11-06';
 const FFMPEG = findFfmpeg();
-const KEY = 'AIzaSy-cle-de-test-0123456789';
+const KEY = 'AIza+Sy/abc=def+ghi/jkl==';
+const KEY_FORMS = [KEY, encodeURIComponent(KEY)];
 
 /** Dossier du jour avec les éditions vérifiées demandées (copies de la fixture). */
 function makeDay(langs: Lang[] = ['fr', 'en', 'es']) {
@@ -157,13 +158,40 @@ describe('runAudio', () => {
 
   it('aucun secret dans le rapport, les messages ni audio.json, même si une erreur réseau cite la clé', async () => {
     const { outDir, dayDir } = makeDay();
-    const net = fakeTts(() => ({ error: new Error(`connect ECONNRESET https://texttospeech.googleapis.com/v1/text:synthesize?key=${KEY} (x-goog-api-key: ${KEY})`) }));
+    const net = fakeTts(() => ({ error: new Error(`connect ECONNRESET https://texttospeech.googleapis.com/v1/text:synthesize?key=${encodeURIComponent(KEY)} (x-goog-api-key: ${KEY})`) }));
     const r = await run(outDir, net);
     expect(r.exitCode).toBe(1);
     const everything = JSON.stringify(r.report) + readFileSync(join(dayDir, 'audio-report.json'), 'utf8');
-    expect(everything).not.toContain(KEY);
+    for (const form of KEY_FORMS) expect(everything).not.toContain(form);
     expect(everything).toContain('***');
     expect(net.calls.every((c) => !c.url.includes(KEY) && c.headers?.['x-goog-api-key'] === KEY)).toBe(true);
+  });
+
+  it('succès : ni le rapport ni audio.json ne contiennent la clé, brute ou encodée', async () => {
+    const { outDir, dayDir } = makeDay();
+    const r = await run(outDir, fakeTts());
+    expect(r.exitCode).toBe(0);
+    const everything = JSON.stringify(r.report) + readFileSync(join(dayDir, 'audio-report.json'), 'utf8') + readFileSync(join(dayDir, 'audio.json'), 'utf8');
+    for (const form of KEY_FORMS) expect(everything).not.toContain(form);
+  });
+
+  it('suppression des anciennes sorties : tout est tenté, chaque échec est signalé, code 2 sans appel ni faux succès', async () => {
+    const { outDir, dayDir } = makeDay();
+    // Un dossier non vide ne se supprime pas sans récursivité : rmSync échoue sur ces deux noms.
+    for (const f of [`Daily Brief ${DAY} FR.mp3`, 'audio.json']) {
+      mkdirSync(join(dayDir, f));
+      writeFileSync(join(dayDir, f, 'x'), 'x');
+    }
+    writeFileSync(join(dayDir, `Daily Brief ${DAY} EN.mp3`), 'ancien');
+    const net = fakeTts();
+    const r = await run(outDir, net);
+    expect([r.exitCode, r.report.status, net.requests.length]).toEqual([2, 'invalid', 0]);
+    expect(existsSync(join(dayDir, `Daily Brief ${DAY} EN.mp3`))).toBe(false); // la suite a été tentée
+    const msgs = r.report.issues.filter((i) => i.level === 'error').map((i) => i.message);
+    expect(msgs).toHaveLength(2);
+    expect(msgs[0]).toMatch(new RegExp(`^ancien fichier audio impossible à supprimer : Daily Brief ${DAY} FR\\.mp3`));
+    expect(msgs[1]).toMatch(/^ancien fichier audio impossible à supprimer : audio\.json/);
+    expect(readJson(join(dayDir, 'audio-report.json')).status).toBe('invalid');
   });
 
   it('échéance globale : le passage s’arrête sans attendre, code 1', async () => {

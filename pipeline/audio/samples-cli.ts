@@ -14,7 +14,7 @@ try {
     process.exit(2);
   }
   const count = Number(values.count);
-  if (!Number.isInteger(count) || count < 1) throw new Error(`--count invalide : « ${values.count} »`);
+  if (!/^[1-9]\d*$/.test(values.count!) || !Number.isSafeInteger(count)) throw new Error(`--count invalide : « ${values.count} »`);
   const { exitCode, index, dir } = await runVoiceSamples({ apiKey, fetch: fetch as HttpFetch, outDir: values.out!, voices: loadVoices(), count });
   console.log('audio:samples');
   for (const i of index.issues) console.log(`[warning] ${i}`);
