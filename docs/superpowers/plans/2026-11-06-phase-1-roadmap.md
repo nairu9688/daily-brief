@@ -87,7 +87,7 @@ Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-5-audio.md`
 - Script de mise en place `npm run audio:samples` (`pipeline/audio/samples.ts`) : trois échantillons par langue, pour que Naïm choisisse sa voix. Le choix est rangé dans `pipeline/config/voices.json`.
 - Tests : découpage (aucun morceau au-dessus de la limite, aucune phrase ni aucun mot coupé), concaténation sur deux vrais MP3 produits par ffmpeg (ignorée sans ffmpeg) et sur des trames synthétiques.
 
-### Lot 6 — Application web ✅ plan détaillé
+### Lot 6 — Application web ✅ terminé (944 tests)
 
 Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-6-appli-web.md`
 
@@ -207,6 +207,7 @@ Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-6-appli-web.md`
   - **Types de la base.** Générer les types TypeScript depuis le projet réel une fois les migrations appliquées, et les comparer aux schémas zod de `apps/web/lib/data/rows.ts` (ce lot n'a pas eu accès au projet).
   - **Étape `audio` dans `runs`.** La page Santé affiche toute étape présente dans `runs.steps`, dans l'ordre `context`, `collect`, `verify`, `audio`, `render`, `publish`, `drive` : l'étape `audio` apparaîtra dès que `pipeline/publish/run-summary.ts` l'écrira (consigne du lot 5). Une ligne `running` de plus de 6 h (depuis `updated_at`) s'affiche « interrompu ».
   - **Notification.** Le site affiche de lui-même la veille avec un bandeau quand l'édition du jour manque, et le bandeau « édition allégée » quand `editions.status = 'light'` : la routine n'a rien à faire de plus pour eux.
+  - **Description de Thread.** Colonne `threads.description` absente ; l'ajouter (migration + publish) si on la veut dans la frise, sinon la ligne reste vide.
 - **Phase 2** :
   - **Anki.** La synchro lit `vocab_items` à `anki_status = 'queued'` et les passe à `sent` avec la clé de service ; l'appli ne rétrograde jamais un mot `sent`.
   - **Hors ligne.** Pas de service worker en phase 1 : la lecture hors ligne demandera un cache qui se vide à la déconnexion.

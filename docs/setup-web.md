@@ -12,12 +12,12 @@ Deux règles valent pour tout le guide :
 1. Sur <https://vercel.com/new>, importer le dépôt GitHub `daily-brief`.
 2. *Root Directory* : `apps/web`. Laisser cochée l'option qui inclut les fichiers hors de ce dossier : l'appli importe `packages/schema` et `packages/maps`.
 3. *Framework Preset* : Next.js. Laisser les commandes par défaut : Vercel installe depuis la racine (`package-lock.json` des workspaces npm) puis lance `next build`.
-4. *Node.js Version* (*Settings* → *Build and Deployment*) : 22.x.
-5. Ne pas déployer tout de suite : renseigner d'abord les variables (§2).
+4. L'écran d'import n'offre que le bouton *Deploy* : avant de cliquer, ouvrir son panneau *Environment Variables* et y saisir les variables du §2. Si le projet a été déployé sans elles, ce n'est pas grave : ce premier déploiement échoue (ou refuse toute page), et le §4 redéploie une fois les variables renseignées dans *Settings* → *Environment Variables*.
+5. Une fois le projet créé : *Settings* → *Build and Deployment* → *Node.js Version* : 22.x (ce réglage n'existe pas sur l'écran d'import), puis redéployer si le premier déploiement a utilisé une autre version.
 
 ## 2. Variables d'environnement
 
-*Settings* → *Environment Variables*, pour *Production* (et *Preview* si besoin) :
+Dans le panneau *Environment Variables* de l'écran d'import (§1, étape 4), ou plus tard dans *Settings* → *Environment Variables*, pour *Production* (et *Preview* si besoin) :
 
 | Nom | Valeur | Secret ? |
 |---|---|---|
