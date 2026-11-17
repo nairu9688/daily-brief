@@ -5,8 +5,15 @@
 -- (à défaut : updated_at en date de Paris) date d'au moins p_days jours avant p_date.
 -- Les fermetures sont notées dans runs.steps.closedThreads : une relance ne les perd pas.
 create or replace function public.close_stale_threads(p_date date, p_days integer default 21) returns jsonb
-language sql security invoker set search_path = ''
+language plpgsql security invoker set search_path = ''
 as $$
+declare
+  v_ids jsonb;
+begin
+  -- Garde-fou : un délai nul ou négatif fermerait tous les Threads, même ceux d'aujourd'hui.
+  if p_days is null or p_days < 1 then
+    raise exception 'close_stale_threads : p_days doit valoir 1 au moins' using errcode = '22023';
+  end if;
   with last as (
     select t.id,
            coalesce(
@@ -37,7 +44,9 @@ as $$
       updated_at = now()
     returning 1
   )
-  select ids.list from ids;
+  select ids.list into v_ids from ids;
+  return v_ids;
+end
 $$;
 
 -- Threads ouverts, au format OpenThread du schéma (updatedAt en ISO 8601 avec « T » et « Z »).
@@ -76,19 +85,31 @@ as $$
   ) x;
 $$;
 
+-- Une ligne `runs` reste à `running` si le pipeline meurt avant save_run (close_stale_threads la crée
+-- à ce statut). La page Santé (lot 6) doit afficher « interrompu » pour une ligne `running` de plus
+-- de 6 h, au lieu de la croire en cours.
+
 -- Enregistre le bilan du passage d'une date. Les fermetures de Threads déjà notées par
 -- close_stale_threads (`steps.closedThreads`) sont conservées.
 create or replace function public.save_run(p_date date, p_status text, p_steps jsonb, p_notes text default null) returns jsonb
-language sql security invoker set search_path = ''
+language plpgsql security invoker set search_path = ''
 as $$
+declare
+  v_out jsonb;
+begin
+  if p_steps is null or jsonb_typeof(p_steps) <> 'object' then
+    raise exception 'save_run : p_steps doit être un objet JSON' using errcode = '22023';
+  end if;
   insert into public.runs as r (date, status, steps, notes)
-  values (p_date, p_status, (coalesce(p_steps, '{}'::jsonb) - 'closedThreads') || jsonb_build_object('closedThreads', '[]'::jsonb), p_notes)
+  values (p_date, p_status, (p_steps - 'closedThreads') || jsonb_build_object('closedThreads', '[]'::jsonb), p_notes)
   on conflict (date) do update set
     status = excluded.status,
     steps = excluded.steps || jsonb_build_object('closedThreads', coalesce(r.steps -> 'closedThreads', '[]'::jsonb)),
     notes = excluded.notes,
     updated_at = now()
-  returning jsonb_build_object('id', r.id::text, 'closedThreads', r.steps -> 'closedThreads');
+  returning jsonb_build_object('id', r.id::text, 'closedThreads', r.steps -> 'closedThreads') into v_out;
+  return v_out;
+end
 $$;
 
 -- Supabase accorde par défaut l'exécution des fonctions de `public` à anon et authenticated :

@@ -163,6 +163,18 @@ describe('SupabaseContextStore', () => {
     await expect(store.openThreads()).rejects.toThrow('Supabase context_open_threads : réponse inattendue');
   });
 
+  it('close_stale_threads refuse un nombre de jours inférieur à 1 ; save_run exige un objet', async () => {
+    const ids = await seed([{ slug: 'vieux', events: ['2026-10-01'] }]);
+    for (const days of [0, -5]) await expect(rpc(db, 'close_stale_threads', { p_date: '2026-11-06', p_days: days })).rejects.toThrow(/p_days/);
+    await expect(store.closeStaleThreads('2026-11-06', 0)).rejects.toThrow(/p_days/);
+    expect(await openSlugs()).toEqual(['vieux']);
+    for (const steps of [[1], 'texte', 3, null, true]) {
+      await expect(asRole(db, 'service_role', (tx) => tx.query(`select public.save_run('2026-11-06', 'ok', $1::jsonb)`, [JSON.stringify(steps)]))).rejects.toThrow(/p_steps/);
+    }
+    expect(await rows(db, 'select * from public.runs')).toEqual([]);
+    expect(ids.vieux).toBeTruthy();
+  });
+
   it('les fonctions de contexte sont refusées à l’utilisateur de l’appli et au rôle anon', async () => {
     for (const role of ['anon', { email: 'nanigeek@gmail.com' }] as const) {
       await expect(asRole(db, role, (tx) => tx.query(`select public.close_stale_threads('2026-11-06')`))).rejects.toThrow(/permission denied/);

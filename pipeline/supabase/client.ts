@@ -64,7 +64,7 @@ const FATAL_STATUS = new Set([401, 402, 403, 429]);
 /** Réponse 2xx illisible ou d'une forme inattendue : erreur de données, pas de santé du service. */
 class ResponseError extends Error {}
 
-const ErrorBody = z.object({ code: z.string().optional(), message: z.string().optional(), error: z.string().optional() });
+const ErrorBody = z.object({ code: z.string().optional(), message: z.string().optional(), error: z.string().optional(), statusCode: z.union([z.string(), z.number()]).optional() });
 const NAME = /^[a-z][a-z0-9_]*$/;
 /** Segment de chemin sûr : pas de « .. », pas de barre oblique, caractères simples seulement. */
 const SEGMENT = /^(?!\.+$)[A-Za-z0-9._-]+$/;
@@ -91,28 +91,41 @@ export function createSupabaseClient(config: SupabaseConfig, fetch: SupabaseFetc
    * délai. Une erreur SQL ou de données (4xx hors 401, 402, 403 et 429) ne compte pas pour le
    * disjoncteur : elle ne dit rien de la santé de Supabase.
    */
+  /** Erreur HTTP d'une réponse : code et détail masqués AVANT d'être tronqués (une clé coupée ne se reconnaît plus). */
+  async function errorOf(res: HttpResponse, what: string): Promise<SupabaseError> {
+    const info = await errorInfo(res);
+    return new SupabaseError(res.status, what, info.code, info.detail);
+  }
+
+  async function errorInfo(res: HttpResponse): Promise<{ code?: string; detail?: string; statusCode?: string; error?: string; message?: string }> {
+    try {
+      const body = ErrorBody.parse(JSON.parse(new TextDecoder().decode(await readCapped(res, 10_000))));
+      const detail = clean(body.message ?? body.error ?? '').slice(0, 200);
+      return { code: body.code ? clean(String(body.code)).slice(0, 20) : undefined, detail: detail || undefined, statusCode: body.statusCode === undefined ? undefined : String(body.statusCode), error: body.error, message: body.message };
+    } catch {
+      await res.body?.cancel().catch(() => {});
+      return {};
+    }
+  }
+
   async function call<T>(what: string, url: string, init: SupabaseInit, opts: CallOptions | undefined, defaultTimeout: number, read: (res: HttpResponse) => Promise<T>, okStatuses: number[] = []): Promise<T> {
     if (breaker.open) throw new SupabaseDownError(breaker.reason!);
     const parents = [base.signal, opts?.signal].filter((s): s is AbortSignal => !!s);
     const signal = deadline(opts?.timeoutMs ?? defaultTimeout, parents.length ? AbortSignal.any(parents) : undefined);
     try {
       const res = await fetch(url, { ...init, headers: { ...auth, ...init.headers }, signal });
-      if (!res.ok && !okStatuses.includes(res.status)) {
-        let code: string | undefined;
-        let detail: string | undefined;
-        try {
-          const body = ErrorBody.parse(JSON.parse(new TextDecoder().decode(await readCapped(res, 10_000))));
-          code = body.code;
-          detail = (body.message ?? body.error)?.slice(0, 200);
-        } catch {
-          await res.body?.cancel().catch(() => {});
-        }
-        throw new SupabaseError(res.status, what, code, detail && clean(detail));
-      }
+      if (!res.ok && !okStatuses.includes(res.status)) throw await errorOf(res, what);
       const out = await read(res);
       breaker.success();
       return out;
     } catch (e) {
+      // Appel interrompu par l'appelant ou par l'échéance globale : ce n'est pas un échec de Supabase.
+      const aborted = parents.some((s) => s.aborted);
+      if (aborted && !(e instanceof SupabaseError)) {
+        const err = new Error(`${what} : ${clean(messageOf(e))}`);
+        if (e instanceof Error) err.name = e.name;
+        throw err;
+      }
       if (e instanceof ResponseError) throw new Error(`${what} : ${e.message}`);
       if (e instanceof SupabaseError) {
         if (e.status >= 500 || FATAL_STATUS.has(e.status)) breaker.trip(e);
@@ -167,8 +180,15 @@ export function createSupabaseClient(config: SupabaseConfig, fetch: SupabaseFetc
         STORAGE_TIMEOUT_MS,
         async (res) => {
           if (!res.ok) {
-            await discard(res);
-            return null;
+            // Storage répond 400 ou 404 pour un objet absent ; un autre 400 (droits, requête) est une erreur.
+            if (res.status === 404) {
+              await discard(res);
+              return null;
+            }
+            const info = await errorInfo(res);
+            const absent = info.statusCode === '404' || info.error === 'not_found' || /^object not found$/i.test(info.message ?? '');
+            if (absent) return null;
+            throw new SupabaseError(res.status, `Supabase Storage (lecture ${bucket}/${path})`, info.code, info.detail);
           }
           return readCapped(res, MAX_FILE_BYTES);
         },

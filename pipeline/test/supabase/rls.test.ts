@@ -81,6 +81,42 @@ describe('RLS : lecture', () => {
     }
   });
 
+  it('un email vide ne correspond jamais, même si le réglage est vide', async () => {
+    await db.exec(`update private.app_settings set value = '' where key = 'allowed_email'`);
+    try {
+      expect(await counts({ email: '' })).toEqual(NONE);
+      expect(await counts({ email: '   ' })).toEqual(NONE);
+      expect(await counts({ email: null })).toEqual(NONE);
+    } finally {
+      await db.exec(`update private.app_settings set value = '${ALLOWED_EMAIL}' where key = 'allowed_email'`);
+    }
+  });
+
+  it('un jeton anonyme portant l’email autorisé ne lit rien', async () => {
+    expect(await counts({ email: ALLOWED_EMAIL, anonymous: true })).toEqual(NONE);
+  });
+
+  it('le rôle anon portant l’email autorisé dans son jeton ne lit rien', async () => {
+    const asAnon = (sql: string) =>
+      db.transaction(async (tx) => {
+        await tx.query(`select set_config('request.jwt.claims', $1, true)`, [JSON.stringify({ role: 'anon', email: ALLOWED_EMAIL })]);
+        await tx.exec('set local role anon');
+        return tx.query(sql);
+      });
+    for (const t of TABLES) await expect(asAnon(`select count(*) from public.${t}`)).rejects.toThrow(/permission denied/);
+    await expect(asAnon('select count(*) from storage.objects')).resolves.toMatchObject({ rows: [{ count: 0 }] });
+  });
+
+  it('une session sans aucune revendication de jeton ne lit rien', async () => {
+    const out = await db.transaction(async (tx) => {
+      await tx.exec('set local role authenticated');
+      const n: Record<string, number> = {};
+      for (const t of TABLES) n[t] = Number((await tx.query<{ n: number }>(`select count(*)::int as n from public.${t}`)).rows[0].n);
+      return n;
+    });
+    expect(out).toEqual(NONE);
+  });
+
   it('les réglages privés sont illisibles pour l’utilisateur, même autorisé', async () => {
     await expect(run(USER, 'select * from private.app_settings')).rejects.toThrow(/permission denied/);
     await expect(run('anon', 'select private.is_allowed_user()')).rejects.toThrow(/permission denied/);

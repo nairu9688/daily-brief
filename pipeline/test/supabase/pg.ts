@@ -7,7 +7,7 @@ export const MIGRATIONS_DIR = repoPath('supabase/migrations');
 export const ALLOWED_EMAIL = 'nanigeek@gmail.com';
 
 export type TestDb = PGlite;
-export type Role = 'service_role' | 'anon' | { email: string | null };
+export type Role = 'service_role' | 'anon' | { email: string | null; anonymous?: boolean };
 type Tx = Pick<PGlite, 'query' | 'exec'>;
 
 /** Migrations du dépôt, dans l'ordre de leur nom (0001, 0002, …). */
@@ -43,7 +43,7 @@ export async function resetData(db: TestDb): Promise<void> {
 export async function asRole<T>(db: TestDb, role: Role, fn: (tx: Tx) => Promise<T>): Promise<T> {
   return db.transaction(async (tx) => {
     const name = typeof role === 'string' ? role : 'authenticated';
-    const claims = typeof role === 'string' ? { role: name } : { role: name, ...(role.email === null ? {} : { email: role.email }) };
+    const claims = typeof role === 'string' ? { role: name } : { role: name, ...(role.email === null ? {} : { email: role.email }), ...(role.anonymous ? { is_anonymous: true } : {}) };
     await tx.query(`select set_config('request.jwt.claims', $1, true)`, [JSON.stringify(claims)]);
     await tx.exec(`set local role ${name}`);
     return fn(tx as unknown as Tx);

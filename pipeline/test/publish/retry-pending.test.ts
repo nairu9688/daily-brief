@@ -90,6 +90,19 @@ describe('retryPending', () => {
     expect(server.google.root.folders[0].folders[0].folders[0].files[0].bytes).toEqual(PDF_BYTES);
   });
 
+  it('un 400 de Storage qui n’est pas « objet absent » laisse la ligne en attente (pas de dépôt abandonné à tort)', async () => {
+    await queuePending(client, '2026-11-06', [stored(pdfFile('2026-11-06'))], 'x');
+    fake.intercept = (call) => (call.method === 'GET' && call.path.startsWith('/storage/') ? { status: 400, json: { statusCode: '403', error: 'Unauthorized', message: 'denied' } } : undefined);
+    const r = await retryPending(client, drive, TODAY);
+    expect(r.resolved).toEqual([]);
+    expect(r.failed).toEqual(['2026-11-06']);
+    expect(r.issues).toEqual([{ level: 'warning', message: expect.stringContaining('HTTP 400 — denied') }]);
+    const [row] = await pending();
+    expect([row.attempts, row.files]).toEqual([2, [pdfFile('2026-11-06')]]);
+    expect(row.last_error).toContain('HTTP 400');
+    expect(server.hits).toEqual([]);
+  });
+
   it('ne touche pas au dépôt du jour, que le passage en cours envoie lui-même', async () => {
     await queuePending(client, TODAY, [stored(pdfFile(TODAY))], 'x');
     const r = await retryPending(client, drive, TODAY);

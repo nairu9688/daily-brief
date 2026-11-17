@@ -150,6 +150,7 @@ Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-4-supabase-publication-dri
   - **Fermetures.** Les consigner dans `runs`, pour qu'une relance ne les perde pas : les Threads fermés ne reviennent plus de `openThreads()`, donc le rapport d'un second passage ne les liste plus.
   - **Dates.** `thread_events.date` est de type `date` (pas `timestamptz`).
 - **Lot 6 (appli)** : le bandeau « édition allégée » se fonde sur `perLang.<lang>.light` de `collect-report.json` (moins de 15 textes lus), que la publication recopie dans `runs`.
+- **Lot 6 (appli)** : Une ligne `runs` peut rester à `running` si le pipeline meurt avant `save_run` : la page Santé doit afficher « interrompu » pour une ligne `running` de plus de 6 h.
 - **Lot 7 (routine)** :
   - **Mise en place.** Lancer `npm run check:thenewsapi` dès que la clé existe. Code 1 : passer `"primary": "exa"` dans `pipeline/config/collect.json` et commiter.
   - **Codes de sortie.** `brief:collect` code 2 : pas de `raw.json`, notifier « Brief incomplet ». `brief:context` code 2 : rédiger sans rattacher ni créer de Thread ce jour-là, et le signaler.

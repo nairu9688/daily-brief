@@ -9,6 +9,13 @@
 -- Schéma non exposé par l'API : ni la table des réglages ni la fonction ne sont appelables de l'extérieur.
 create schema if not exists private;
 
+-- Droits par défaut : les objets créés plus tard par ce rôle n'ouvrent rien à anon, authenticated ni
+-- PUBLIC. Chaque migration accorde explicitement ce qu'elle veut ouvrir (service_role, lecture RLS).
+alter default privileges in schema public revoke all on tables from anon, authenticated;
+alter default privileges in schema public revoke all on sequences from anon, authenticated;
+alter default privileges in schema public revoke execute on functions from public, anon, authenticated;
+alter default privileges revoke execute on functions from public;
+
 create table if not exists private.app_settings (
   key text primary key,
   value text not null
@@ -25,9 +32,11 @@ on conflict (key) do nothing;
 create or replace function private.is_allowed_user() returns boolean
 language sql stable security definer set search_path = ''
 as $$
+  -- Un email vide ne correspond à rien (nullif), et un jeton de session anonyme n'est jamais autorisé.
   select coalesce(
-    lower(btrim(auth.jwt() ->> 'email'))
-      = (select lower(btrim(s.value)) from private.app_settings s where s.key = 'allowed_email'),
+    nullif(lower(btrim(auth.jwt() ->> 'email')), '')
+      = (select nullif(lower(btrim(s.value)), '') from private.app_settings s where s.key = 'allowed_email')
+    and coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false) = false,
     false
   );
 $$;

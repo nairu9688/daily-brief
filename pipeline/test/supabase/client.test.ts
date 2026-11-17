@@ -92,6 +92,53 @@ describe('client Supabase', () => {
     expect(b.message).toBe('Supabase f : connexion refusée avec ***');
   });
 
+  it('masque la clé AVANT de tronquer : aucun fragment de clé, même placée à la limite des 200 caractères', async () => {
+    const fake = fakeSupabase();
+    const client = createSupabaseClient(config, fake.fetch);
+    fake.intercept = () => ({ status: 400, json: { code: `x${FAKE_KEY}`, message: `${'a'.repeat(190)}${FAKE_KEY}${'b'.repeat(50)}` } });
+    const e = (await client.rpc('f', {}, Any).catch((x: Error) => x)) as SupabaseError;
+    expect(e.message).toBe(`Supabase f : HTTP 400 x*** — ${'a'.repeat(190)}***${'b'.repeat(7)}`);
+    for (let n = 6; n <= FAKE_KEY.length; n++) expect(e.message).not.toContain(FAKE_KEY.slice(0, n));
+    expect(e.code).toBe('x***');
+  });
+
+  it('download : un 400 d’un autre ordre (droits, requête) est une erreur ; un 400 « objet absent » donne null', async () => {
+    const fake = fakeSupabase();
+    const client = createSupabaseClient(config, fake.fetch);
+    fake.intercept = () => ({ status: 400, json: { statusCode: '403', error: 'Unauthorized', message: 'new row violates row-level security policy' } });
+    await expect(client.download('pdf', 'a.pdf')).rejects.toThrow('Supabase Storage (lecture pdf/a.pdf) : HTTP 400 — new row violates row-level security policy');
+    fake.intercept = () => ({ status: 400, json: {} });
+    await expect(client.download('pdf', 'a.pdf')).rejects.toBeInstanceOf(SupabaseError);
+    for (const json of [{ statusCode: '404', error: 'not_found', message: 'x' }, { statusCode: 404, message: 'x' }, { error: 'not_found' }, { message: 'Object not found' }, { message: 'OBJECT NOT FOUND' }]) {
+      fake.intercept = () => ({ status: 400, json });
+      expect(await client.download('pdf', 'a.pdf')).toBeNull();
+    }
+    fake.intercept = () => ({ status: 404, json: { message: 'autre chose' } });
+    expect(await client.download('pdf', 'a.pdf')).toBeNull();
+    expect(client.breaker.open).toBe(false);
+  });
+
+  it('une annulation par l’appelant ou par l’échéance globale ne coupe pas Supabase ; seul le délai propre le fait', async () => {
+    const fake = fakeSupabase();
+    fake.intercept = () => ({ hang: true });
+    const client = createSupabaseClient(config, fake.fetch);
+    for (let i = 0; i < 4; i++) {
+      const c = new AbortController();
+      const p = client.rpc('f', {}, Any, { signal: c.signal });
+      c.abort();
+      await expect(p).rejects.toThrow(/^Supabase f : /);
+    }
+    expect(client.breaker.open).toBe(false);
+    const global = new AbortController();
+    const other = createSupabaseClient(config, fake.fetch, { signal: global.signal });
+    const q = other.rpc('f', {}, Any);
+    global.abort();
+    await expect(q).rejects.toThrow(/^Supabase f : /);
+    expect(other.breaker.open).toBe(false);
+    await expect(client.rpc('f', {}, Any, { timeoutMs: 20 })).rejects.toThrow(/^Supabase f : /);
+    expect(client.breaker.reason).toBe('délai dépassé');
+  });
+
   it.each([401, 402, 403, 429])('un HTTP %i coupe Supabase : plus aucun appel ne part', async (status) => {
     const fake = fakeSupabase();
     fake.intercept = () => ({ status, json: { message: 'non' } });

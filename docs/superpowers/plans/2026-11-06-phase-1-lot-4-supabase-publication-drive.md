@@ -6160,6 +6160,7 @@ Ces points ne peuvent pas être vérifiés hors ligne. Ils sont à cocher au pre
 - [ ] **Fichier absent.** Le code HTTP que Storage renvoie pour un fichier absent (400 ou 404) est bien traité comme « absent » par la relance des dépôts en attente.
 - [ ] **Purge.** Après 31 jours, les MP3 anciens disparaissent du bucket `audio` et `editions.audio_path` est vide pour ces dates.
 - [ ] **Apps Script.** Le POST reçoit bien une redirection 302 vers `script.googleusercontent.com`, et un PDF réel de quelques Mo passe en moins de 3 minutes.
+- [ ] **Passage interrompu.** Une ligne `runs` peut rester à `running` si le pipeline meurt avant `save_run` (`close_stale_threads` la crée à ce statut). Ce n'est pas une erreur de la base : la page Santé (lot 6) affiche « interrompu » pour une ligne `running` de plus de 6 h.
 - [ ] **Fuseau.** `select (now() at time zone 'Europe/Paris')::date;` renvoie la date de Paris.
 - [ ] **Version de Postgres.** Les tests tournent sur Postgres 18 (PGlite) ; le projet hébergé peut être en version 15 ou 17. Les migrations n'utilisent que du SQL courant, mais c'est leur application réelle qui fait foi.
 ````
@@ -6264,7 +6265,7 @@ par :
   - **Écriture.** L'utilisateur ne peut modifier que `vocab_items.selected`, `vocab_items.anki_status` et `threads.followed` : un `update` qui nomme une autre colonne est refusé. Le bouton « Ajouter N mots à Anki » passe `anki_status` à `queued`.
   - **Forme des données.** Les rubriques d'une édition et leur ordre sont dans `editions.sections` (`[{ key, title }]`). Les sujets se trient par `stories.position` ; les brèves sont les `sources` dont `story_id` est nul, par `rubric` puis `position`. `morning_brief[].storyId` désigne `stories.key`. Le sous-titre du Thread d'un sujet est `stories.thread_subtitle`.
   - **Fichiers.** `editions.pdf_path` et `editions.audio_path` sont des chemins dans les buckets privés `pdf` et `audio` : créer une URL signée avec la session de l'utilisateur. Un `audio_path` nul signifie « pas de lecteur » (audio en échec, ou MP3 purgé après 30 jours).
-  - **Bandeaux.** `editions.status = 'light'` marque l'édition allégée. La page Santé lit `runs` : `status` (`running`, `ok`, `degraded`, `failed`) et `steps.<étape>` (`status`, `finishedAt`, `durationMs`, `counters`, `errors`), plus `steps.closedThreads`. Une ligne restée à `running` signifie que la publication n'a pas eu lieu.
+  - **Bandeaux.** `editions.status = 'light'` marque l'édition allégée. La page Santé lit `runs` : `status` (`running`, `ok`, `degraded`, `failed`) et `steps.<étape>` (`status`, `finishedAt`, `durationMs`, `counters`, `errors`), plus `steps.closedThreads`. Une ligne restée à `running` signifie que la publication n'a pas eu lieu. Elle peut aussi rester à `running` si le pipeline meurt avant `save_run` : afficher « interrompu » pour une ligne `running` de plus de 6 h.
   - **Types.** Générer les types TypeScript de la base depuis le projet réel une fois les migrations appliquées.
 - **Lot 7 (routine)** :
   - **Mise en place.** Suivre `docs/setup-supabase.md` (projet, migrations, email autorisé, Vault, Apps Script), puis cocher sa section 7 au premier passage réel.
