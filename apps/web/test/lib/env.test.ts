@@ -11,6 +11,15 @@ describe('configuration de l’appli', () => {
     expect(() => fixtureMode({ FIXTURE: '1', VERCEL: '1' })).toThrow(ConfigError);
   });
 
+  it('refuse FIXTURE=1 en production, sauf avec l’accord explicite des tests de bout en bout', () => {
+    expect(() => fixtureMode({ FIXTURE: '1', NODE_ENV: 'production' })).toThrow(/production/);
+    expect(() => fixtureMode({ FIXTURE: '1', NODE_ENV: 'production', FIXTURE_ALLOW_START: 'true' })).toThrow(ConfigError);
+    expect(fixtureMode({ FIXTURE: '1', NODE_ENV: 'production', FIXTURE_ALLOW_START: '1' })).toBe(true);
+    expect(fixtureMode({ FIXTURE: '1', NODE_ENV: 'development' })).toBe(true);
+    expect(fixtureMode({ NODE_ENV: 'production' })).toBe(false);
+    expect(() => fixtureMode({ FIXTURE: '1', NODE_ENV: 'production', FIXTURE_ALLOW_START: '1', VERCEL: '1' })).toThrow(/Vercel/);
+  });
+
   it('« aujourd’hui » du mode fixture vaut la date de la fixture, ou FIXTURE_TODAY', () => {
     expect(fixtureToday({})).toBe('2026-11-06');
     expect(fixtureToday({ FIXTURE_TODAY: '2026-11-07' })).toBe('2026-11-07');

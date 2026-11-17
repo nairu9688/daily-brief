@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { z } from 'zod';
 import { LANGS, parseBrief, type Brief, type Lang } from '@daily-brief/schema';
+import { isIsoDate } from '@/lib/dates';
 import { editionFromFixture, fixtureThreadId, fixtureVocabId } from './fixture-edition';
 import type { AnkiStatus, DataSource, EditionDay, EditionView, FileTarget, RunRecord, ThreadDetail, ThreadEventView, ThreadSummary, VocabEntry, VocabFilter } from './types';
 
@@ -91,7 +92,7 @@ export class FixtureDataSource implements DataSource {
   }
 
   async latestDate(_lang: Lang, onOrBefore: string): Promise<string | null> {
-    return this.brief.date <= onOrBefore ? this.brief.date : null;
+    return isIsoDate(onOrBefore) && this.brief.date <= onOrBefore ? this.brief.date : null;
   }
 
   async days(from: string, to: string): Promise<EditionDay[]> {

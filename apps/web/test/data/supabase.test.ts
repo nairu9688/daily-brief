@@ -41,6 +41,18 @@ describe('source de données Supabase', () => {
     expect(await new SupabaseDataSource(client, today).days('2026-11-01', '2026-11-30')).toEqual([{ date: '2026-11-06', langs: ['fr', 'en', 'es'], light: [] }]);
   });
 
+  it('écarte une ligne d’archive illisible au lieu de l’afficher', async () => {
+    const rows = [
+      { date: '2026-11-06', lang: 'fr', status: 'light' },
+      { date: 'pas-une-date', lang: 'fr', status: 'published' },
+      { date: '2026-11-07', lang: 'de', status: 'published' },
+      { date: '2026-11-08', lang: 'en' },
+      null,
+    ];
+    const { client } = fakeSupabase(() => ({ data: rows, error: null }));
+    expect(await new SupabaseDataSource(client, today).days('2026-11-01', '2026-11-30')).toEqual([{ date: '2026-11-06', langs: ['fr'], light: ['fr'] }]);
+  });
+
   it('lit les Threads et leur frise sous RLS', async () => {
     const rows = await asUserJson(
       db,
@@ -59,11 +71,12 @@ describe('source de données Supabase', () => {
   });
 
   it('n’écrit que les colonnes ouvertes par la RLS', async () => {
-    const { client, calls } = fakeSupabase(() => ({ data: [{ id: 'a' }], error: null }));
+    const A = '6f1e1c2a-3b4d-4e5f-8a9b-0c1d2e3f4a5b';
+    const { client, calls } = fakeSupabase(() => ({ data: [{ id: A }], error: null }));
     const ds = new SupabaseDataSource(client, today);
-    expect(await ds.setSelected(['a'], true)).toBe(1);
-    expect(await ds.queueAnki(['a'])).toBe(1);
-    expect(await ds.setFollowed('t', true)).toBe(1);
+    expect(await ds.setSelected([A], true)).toBe(1);
+    expect(await ds.queueAnki([A])).toBe(1);
+    expect(await ds.setFollowed(A, true)).toBe(1);
     expect(calls.map((c) => [c.table, op(c, 'update')[0][0]])).toEqual([
       ['vocab_items', { selected: true }],
       ['vocab_items', { anki_status: 'queued', selected: true }],

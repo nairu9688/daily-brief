@@ -28,12 +28,18 @@ export async function sendLink(_prev: LoginState, form: FormData): Promise<Login
   if (!email.success) return { step: 'email', error: 'Adresse invalide.' };
   if (fixtureMode()) return { step: 'email', error: 'Mode fixture : pas de connexion, l’appli est ouverte.' };
   const sent: LoginState = { step: 'code', email: email.data, message: SENT };
-  if (!isAllowedEmail(email.data)) return sent;
+  // Configuration vérifiée avant l'adresse : l'erreur, s'il y en a une, est la même pour toutes.
   const origin = siteOrigin(await requestOrigin());
   if (!origin) return { step: 'email', error: 'SITE_URL n’est pas configurée.' };
+  if (!isAllowedEmail(email.data)) return sent;
   const supabase = await createSupabase();
   const { error } = await supabase.auth.signInWithOtp({ email: email.data, options: { emailRedirectTo: `${origin}/auth/confirm`, shouldCreateUser: true } });
-  if (error) return { step: 'email', error: 'Envoi impossible pour le moment, réessaie dans une minute.' };
+  // Un échec d'envoi (quota, panne) donne la même réponse qu'une autre adresse : la page ne révèle
+  // jamais si l'adresse est autorisée. Il est journalisé côté serveur, sans l'adresse ni le message.
+  if (error) {
+    const { status, code } = error as { status?: unknown; code?: unknown };
+    console.error(`[daily-brief] envoi du lien impossible : statut ${String(status ?? '?')}, code ${String(code ?? '?')}`);
+  }
   return sent;
 }
 

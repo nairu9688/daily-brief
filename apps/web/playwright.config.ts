@@ -20,7 +20,8 @@ export default defineConfig({
   webServer: {
     command: `npx next start -p ${PORT} -H 127.0.0.1`,
     url: `http://127.0.0.1:${PORT}/login`,
-    env: { FIXTURE: '1', NEXT_TELEMETRY_DISABLED: '1' },
+    // FIXTURE_ALLOW_START : accord explicite, sans lequel `next start` refuse le mode fixture.
+    env: { FIXTURE: '1', FIXTURE_ALLOW_START: '1', NEXT_TELEMETRY_DISABLED: '1' },
     reuseExistingServer: false,
     timeout: 60_000,
   },

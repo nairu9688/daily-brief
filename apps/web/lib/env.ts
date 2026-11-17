@@ -20,10 +20,15 @@ export const FIXTURE_DATE = '2026-11-06';
 /**
  * FIXTURE=1 : l'appli lit fixtures/ au lieu de Supabase, sans connexion. Interdit sur Vercel
  * (variable VERCEL présente au build comme à l'exécution) : ce mode ouvre tout sans authentification.
+ * Interdit aussi en production (`next start`), sauf accord explicite FIXTURE_ALLOW_START=1, que seuls
+ * les tests de bout en bout posent (playwright.config.ts).
  */
 export function fixtureMode(env: Env = process.env): boolean {
   if (env.FIXTURE !== '1') return false;
   if (env.VERCEL) throw new ConfigError('FIXTURE=1 est interdit sur Vercel : ce mode désactive la connexion.');
+  if (env.NODE_ENV === 'production' && env.FIXTURE_ALLOW_START !== '1') {
+    throw new ConfigError('FIXTURE=1 est interdit en production : ce mode désactive la connexion (FIXTURE_ALLOW_START=1 pour les tests de bout en bout).');
+  }
   return true;
 }
 

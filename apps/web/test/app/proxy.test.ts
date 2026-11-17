@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { unstable_doesMiddlewareMatch } from 'next/experimental/testing/server';
 import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { access, isPublicPath } from '@/lib/access';
@@ -16,7 +17,7 @@ vi.mock('@supabase/ssr', () => ({
   }),
 }));
 
-import { proxy } from '@/proxy';
+import { config, proxy } from '@/proxy';
 
 const req = (path: string, init?: { https?: boolean }) => new NextRequest(`${init?.https ? 'https' : 'http'}://brief.example${path}`);
 
@@ -54,8 +55,16 @@ describe('CSP', () => {
 });
 
 describe('proxy', () => {
+  it('ne laisse hors du proxy que les fichiers statiques, le manifeste et les icônes, à l’adresse exacte', () => {
+    const runs = (url: string) => unstable_doesMiddlewareMatch({ config, url });
+    for (const url of ['/_next/static/chunks/a.js', '/icons/icon-192.png', '/manifest.webmanifest', '/favicon.ico']) expect(runs(url), url).toBe(false);
+    for (const url of ['/', '/vocab', '/favicon.icoX', '/manifest.webmanifest/x', '/manifest.webmanifestX', '/audio/2026-11-06/fr']) expect(runs(url), url).toBe(true);
+  });
+
   it('renvoie vers /login sans session, et vers /login?erreur=refuse pour une autre adresse', async () => {
-    expect((await proxy(req('/vocab'))).headers.get('location')).toBe('http://brief.example/login');
+    const login = await proxy(req('/vocab'));
+    expect(login.status).toBe(303);
+    expect(login.headers.get('location')).toBe('http://brief.example/login');
     m.email = 'intrus@exemple.fr';
     expect((await proxy(req('/'))).headers.get('location')).toBe('http://brief.example/login?erreur=refuse');
   });

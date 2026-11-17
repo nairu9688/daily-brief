@@ -54,15 +54,28 @@ describe('connexion par lien magique', () => {
   it('prend SITE_URL en production et refuse un Host forgé', async () => {
     m.host = 'evil.example';
     expect(await sendLink({ step: 'email' }, form({ email: 'nanigeek@gmail.com' }))).toEqual({ step: 'email', error: 'SITE_URL n’est pas configurée.' });
+    expect(await sendLink({ step: 'email' }, form({ email: 'intrus@exemple.fr' }))).toEqual({ step: 'email', error: 'SITE_URL n’est pas configurée.' });
     vi.stubEnv('SITE_URL', 'https://daily-brief.vercel.app');
     await sendLink({ step: 'email' }, form({ email: 'nanigeek@gmail.com' }));
     expect(m.auth.signInWithOtp).toHaveBeenCalledWith(expect.objectContaining({ options: expect.objectContaining({ emailRedirectTo: 'https://daily-brief.vercel.app/auth/confirm' }) }));
   });
 
-  it('refuse une adresse invalide et signale un échec d’envoi', async () => {
+  it('refuse une adresse invalide', async () => {
     expect((await sendLink({ step: 'email' }, form({ email: 'pas une adresse' }))).error).toBe('Adresse invalide.');
-    m.auth.signInWithOtp.mockResolvedValueOnce({ error: { message: 'rate limit' } });
-    expect((await sendLink({ step: 'email' }, form({ email: 'nanigeek@gmail.com' }))).error).toMatch(/Envoi impossible/);
+  });
+
+  it('un échec d’envoi donne la même réponse qu’une autre adresse, et n’est journalisé que côté serveur', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const other = await sendLink({ step: 'email' }, form({ email: 'intrus@exemple.fr' }));
+    m.auth.signInWithOtp.mockResolvedValueOnce({ error: Object.assign(new Error('rate limit for nanigeek@gmail.com'), { status: 429, code: 'over_email_send_rate_limit' }) });
+    const failed = await sendLink({ step: 'email' }, form({ email: 'nanigeek@gmail.com' }));
+    expect(failed).toEqual({ ...other, email: 'nanigeek@gmail.com' });
+    expect(failed.error).toBeUndefined();
+    expect(log).toHaveBeenCalledTimes(1);
+    const logged = log.mock.calls[0].map(String).join(' ');
+    expect(logged).toContain('over_email_send_rate_limit');
+    expect(logged).not.toContain('nanigeek');
+    log.mockRestore();
   });
 
   it('vérifie le code reçu puis renvoie vers le Brief', async () => {

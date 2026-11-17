@@ -8,7 +8,7 @@ const m = vi.hoisted(() => ({
     verifyOtp: vi.fn(async (_: unknown) => ({ error: null as null | Error })),
     exchangeCodeForSession: vi.fn(async (_: unknown) => ({ error: null as null | Error })),
     getClaims: vi.fn(async () => ({ data: { claims: { email: m.email } }, error: null })),
-    signOut: vi.fn(async () => ({ error: null })),
+    signOut: vi.fn(async (_?: unknown) => ({ error: null })),
   },
 }));
 vi.mock('@/lib/supabase/server', () => ({ createSupabase: async () => ({ auth: m.auth }) }));
@@ -54,6 +54,7 @@ describe('retour du lien magique', () => {
   it('déconnecte en POST', async () => {
     const r = await POST(new NextRequest('https://brief.example/auth/signout', { method: 'POST' }));
     expect(r.headers.get('location')).toBe('https://brief.example/login');
-    expect(m.auth.signOut).toHaveBeenCalled();
+    // Session de cet appareil seulement : l'appli installée (PWA) reste connectée.
+    expect(m.auth.signOut).toHaveBeenCalledWith({ scope: 'local' });
   });
 });

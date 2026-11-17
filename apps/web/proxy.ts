@@ -49,7 +49,8 @@ export async function proxy(request: NextRequest) {
       const url = request.nextUrl.clone();
       url.pathname = '/login';
       url.search = decision === 'refuse' ? '?erreur=refuse' : '';
-      response = NextResponse.redirect(url);
+      // 303 : le navigateur suit en GET. Un 307 rejouerait vers /login le POST d'une action serveur.
+      response = NextResponse.redirect(url, 303);
     }
   }
 
@@ -61,5 +62,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   // Tout sauf les fichiers statiques de Next, le manifeste et les icônes (lus sans session par le navigateur).
-  matcher: ['/((?!_next/static|_next/image|icons/|manifest.webmanifest|favicon.ico).*)'],
+  // Exclusions ancrées : /favicon.icoX ou /manifest.webmanifest/x passent par le proxy.
+  matcher: ['/((?!_next/static|_next/image|icons/|manifest\\.webmanifest$|favicon\\.ico$).*)'],
 };

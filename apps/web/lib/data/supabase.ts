@@ -1,6 +1,9 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { LANGS, type Lang } from '@daily-brief/schema';
+import { LANGS, LangSchema, type Lang } from '@daily-brief/schema';
+import { z } from 'zod';
+import { isIsoDate } from '@/lib/dates';
+import { isLang } from '@/lib/edition-choice';
 import {
   EditionRowSchema,
   editionFromRows,
@@ -36,6 +39,15 @@ export const THREAD_COLUMNS = 'id,title,lang,status,followed,thread_events(date,
 const AUDIO_PATH = /^\d{4}-\d{2}-\d{2}\/(fr|en|es)\.mp3$/;
 const PDF_PATH = /^\d{4}-\d{2}-\d{2}\/daily-brief-\d{4}-\d{2}-\d{2}\.pdf$/;
 
+/**
+ * Garde-fous à la frontière de la base : un identifiant, une date ou une langue invalide n'est jamais
+ * envoyé à PostgREST (Postgres répondrait 22P02, d'où une DataError et une page 500). La source répond
+ * alors comme la fixture : null, liste vide ou zéro ligne modifiée.
+ */
+const isUuid = (v: unknown): v is string => z.uuid().safeParse(v).success;
+
+const DayRowSchema = z.object({ date: z.string().refine(isIsoDate), lang: LangSchema, status: z.string() });
+
 export class DataError extends Error {
   constructor(message: string) {
     super(message);
@@ -68,6 +80,7 @@ export class SupabaseDataSource implements DataSource {
   }
 
   async edition(date: string, lang: Lang): Promise<EditionView | null> {
+    if (!isIsoDate(date) || !isLang(lang)) return null;
     const row = check('édition', await this.db.from('editions').select(EDITION_COLUMNS).eq('date', date).eq('lang', lang).maybeSingle());
     if (row === null) return null;
     const edition = EditionRowSchema.safeParse(row);
@@ -87,16 +100,18 @@ export class SupabaseDataSource implements DataSource {
   }
 
   async latestDate(lang: Lang, onOrBefore: string): Promise<string | null> {
+    if (!isLang(lang) || !isIsoDate(onOrBefore)) return null;
     const rows = check('dernière édition', await this.db.from('editions').select('date').eq('lang', lang).lte('date', onOrBefore).order('date', { ascending: false }).limit(1));
     const first = Array.isArray(rows) ? (rows[0] as { date?: unknown } | undefined) : undefined;
     return typeof first?.date === 'string' ? first.date : null;
   }
 
   async days(from: string, to: string): Promise<EditionDay[]> {
-    const rows = check('archive', await this.db.from('editions').select('date,lang,status').gte('date', from).lte('date', to).order('date'));
+    if (!isIsoDate(from) || !isIsoDate(to)) return [];
+    const rows = parseRows(DayRowSchema, check('archive', await this.db.from('editions').select('date,lang,status').gte('date', from).lte('date', to).order('date')), 'jour d’archive');
+    report(rows.problems);
     const byDate = new Map<string, EditionDay>();
-    for (const r of Array.isArray(rows) ? (rows as { date: string; lang: Lang; status: string }[]) : []) {
-      if (!LANGS.includes(r.lang)) continue;
+    for (const r of rows.value) {
       const day = byDate.get(r.date) ?? { date: r.date, langs: [], light: [] };
       day.langs.push(r.lang);
       if (r.status === 'light') day.light.push(r.lang);
@@ -118,11 +133,13 @@ export class SupabaseDataSource implements DataSource {
   }
 
   async thread(id: string): Promise<ThreadDetail | null> {
+    if (!isUuid(id)) return null;
     const [row] = await this.threadRows(id);
     return row ? threadFromRow(row) : null;
   }
 
   async vocab(filter: VocabFilter): Promise<VocabEntry[]> {
+    if ((filter.lang !== undefined && !isLang(filter.lang)) || (filter.date !== undefined && !isIsoDate(filter.date))) return [];
     let q = this.db.from('vocab_items').select(`${VOCAB_COLUMNS},lang,edition:editions!inner(date)`);
     if (filter.lang) q = q.eq('lang', filter.lang);
     if (filter.date) q = q.eq('edition.date', filter.date);
@@ -143,18 +160,28 @@ export class SupabaseDataSource implements DataSource {
     return Array.isArray(data) ? data.length : 0;
   }
 
+  /** Identifiants valides seulement (comme la fixture, qui ignore les inconnus) ; null si la liste est hors bornes. */
+  private static validIds(ids: string[]): string[] | null {
+    if (ids.length === 0 || ids.length > MAX_IDS) return null;
+    const valid = ids.filter(isUuid);
+    return valid.length > 0 ? valid : null;
+  }
+
   async setSelected(ids: string[], selected: boolean): Promise<number> {
-    if (ids.length === 0 || ids.length > MAX_IDS) return 0;
-    return SupabaseDataSource.count('mots', await this.db.from('vocab_items').update({ selected }).in('id', ids).select('id'));
+    const valid = SupabaseDataSource.validIds(ids);
+    if (!valid) return 0;
+    return SupabaseDataSource.count('mots', await this.db.from('vocab_items').update({ selected }).in('id', valid).select('id'));
   }
 
   /** « Ajouter à Anki » : met en file les mots encore à `none` (un mot déjà envoyé n'est pas rétrogradé). */
   async queueAnki(ids: string[]): Promise<number> {
-    if (ids.length === 0 || ids.length > MAX_IDS) return 0;
-    return SupabaseDataSource.count('Anki', await this.db.from('vocab_items').update({ anki_status: 'queued', selected: true }).in('id', ids).eq('anki_status', 'none').select('id'));
+    const valid = SupabaseDataSource.validIds(ids);
+    if (!valid) return 0;
+    return SupabaseDataSource.count('Anki', await this.db.from('vocab_items').update({ anki_status: 'queued', selected: true }).in('id', valid).eq('anki_status', 'none').select('id'));
   }
 
   async setFollowed(id: string, followed: boolean): Promise<number> {
+    if (!isUuid(id)) return 0;
     return SupabaseDataSource.count('Thread', await this.db.from('threads').update({ followed }).eq('id', id).select('id'));
   }
 
@@ -165,12 +192,14 @@ export class SupabaseDataSource implements DataSource {
   }
 
   async audio(date: string, lang: Lang): Promise<FileTarget | null> {
+    if (!isIsoDate(date) || !isLang(lang)) return null;
     const row = check('audio', await this.db.from('editions').select('audio_path').eq('date', date).eq('lang', lang).maybeSingle()) as { audio_path?: unknown } | null;
     const path = row?.audio_path;
     return typeof path === 'string' && AUDIO_PATH.test(path) ? this.signed('audio', path) : null;
   }
 
   async pdf(date: string): Promise<FileTarget | null> {
+    if (!isIsoDate(date)) return null;
     const rows = check('PDF', await this.db.from('editions').select('pdf_path').eq('date', date).not('pdf_path', 'is', null).limit(1));
     const path = Array.isArray(rows) ? (rows[0] as { pdf_path?: unknown } | undefined)?.pdf_path : undefined;
     return typeof path === 'string' && PDF_PATH.test(path) ? this.signed('pdf', path, `Daily Brief ${date}.pdf`) : null;
