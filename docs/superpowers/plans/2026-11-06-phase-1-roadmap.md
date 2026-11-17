@@ -81,10 +81,11 @@ Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-4-supabase-publication-dri
 
 Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-5-audio.md`
 
-- Vérification §16 : noms exacts des voix Chirp 3 HD avec `voices.list` filtré sur « Chirp3-HD », et présence de ffmpeg.
-- `pipeline/render/audio.ts` : découpage de `audioScript` sous la limite par requête (on vise moins de 4 500 octets par morceau, en coupant aux fins de phrase), synthèse en MP3, concaténation avec ffmpeg (sinon concaténation binaire des trames MP3), puis 64 kb/s mono. Le fichier s'appelle `Daily Brief AAAA-MM-JJ FR.mp3`. En cas d'échec, l'édition est publiée sans lecteur.
-- Script de mise en place `pipeline/render/voice-samples.ts` : trois échantillons par langue, pour que Naïm choisisse sa voix. Le choix est rangé dans `pipeline/config/voices.json`.
-- Tests : découpage (aucun morceau au-dessus de la limite, aucune phrase coupée), concaténation sur deux MP3 de test.
+- Vérification §16 : noms exacts des voix Chirp 3 HD avec `voices.list` filtré sur « Chirp3-HD » (`npm run audio:samples`), et présence de ffmpeg (détectée à chaque passage).
+- `pipeline/audio/` (et non `pipeline/render/audio.ts`, une responsabilité par fichier) : découpage de `audioScript` sous 4 500 octets par morceau (limite de l'API : 5 000), aux fins de phrase, sinon aux virgules, sinon entre les mots ; synthèse en MP3 ; concaténation avec ffmpeg en 64 kb/s mono, sinon trame par trame au débit de la source. Le fichier s'appelle `Daily Brief AAAA-MM-JJ FR.mp3`. En cas d'échec, l'édition est publiée sans lecteur.
+- `npm run brief:audio`, lancé **avant** `brief:render`, écrit les MP3, `audio.json` (durées, lues pour l'encart du PDF) et `audio-report.json`.
+- Script de mise en place `npm run audio:samples` (`pipeline/audio/samples.ts`) : trois échantillons par langue, pour que Naïm choisisse sa voix. Le choix est rangé dans `pipeline/config/voices.json`.
+- Tests : découpage (aucun morceau au-dessus de la limite, aucune phrase ni aucun mot coupé), concaténation sur deux vrais MP3 produits par ffmpeg (ignorée sans ffmpeg) et sur des trames synthétiques.
 
 ### Lot 6 — Application web
 
@@ -180,3 +181,16 @@ Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-5-audio.md`
   - **Codes de sortie.** `brief:publish` code 0 : lire `status` dans `publish-report.json` ; `degraded` se signale dans la notification (« Drive en attente », édition manquante). Code 2 : notifier « Brief incomplet : publication impossible ».
   - **Registre d'usage TheNewsAPI.** Il n'est pas persisté dans Supabase par ce lot : il reste dans `out/thenewsapi-usage.json`. À faire ici seulement si la routine relance la collecte dans un conteneur neuf le même jour.
   - **Routine et connecteur.** Le pipeline n'utilise pas le connecteur Supabase : il appelle l'API REST du projet avec la clé de service. Le connecteur ne sert qu'à lire Vault.
+
+### Consignes issues du lot 5
+
+- **Lot 6 (appli)** :
+  - **Lecteur.** Le lecteur MP3 du Morning Brief lit `editions.audio_path` (bucket privé `audio`, chemin `AAAA-MM-JJ/<langue>.mp3`) par une URL signée créée avec la session de l'utilisateur, jamais par une URL publique. Un `audio_path` nul : pas de lecteur, sans message d'erreur.
+  - **Durée.** La durée n'est pas en base : l'appli la lit dans les métadonnées du fichier (`loadedmetadata`). Les MP3 n'ont pas d'étiquette ID3 ; à débit constant, la durée est juste dès le chargement (à vérifier au premier passage réel pour la concaténation sans ffmpeg).
+- **Lot 7 (routine)** :
+  - **Ordre.** `brief:verify` → `brief:audio` → `brief:render` → `brief:publish`. `brief:audio` passe avant le rendu pour que l'encart audio du PDF porte la durée, et avant la publication, qui prend les MP3 présents.
+  - **Codes de sortie de `brief:audio`.** Quel que soit le code, la routine continue avec `brief:render`. Code 0 : lire `status` dans `audio-report.json` (`degraded` : « audio partiel » dans la notification ; `disabled` : « audio désactivé, clé absente »). Code 1 : « audio en échec, éditions sans lecteur ». Code 2 : entrée invalide, à signaler, sans bloquer le reste.
+  - **Prompt de rédaction.** `PROMPT.md` demande un `audioScript` de 350 à 450 mots (environ 3 minutes), en phrases complètes, sans balises ni abréviations ambiguës. Au-delà de 5 000 caractères, l'édition part sans audio.
+  - **Variables.** `.env` doit contenir `GOOGLE_TTS_API_KEY` (Vault). `FFMPEG_PATH` est facultatif.
+  - **Mise en place.** Suivre `docs/setup-audio.md`, puis cocher sa section 7 au premier passage réel.
+  - **`runs`.** La page Santé ne voit pas encore l'étape audio : ajouter `audio-report.json` au bilan de `pipeline/publish/run-summary.ts` (étape `audio`, compteurs `mp3` et `characters`).

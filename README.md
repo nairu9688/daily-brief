@@ -26,6 +26,8 @@ npm run brief:context -- --date AAAA-MM-JJ [--out out] [--allow-empty]
 npm run brief:collect -- --date AAAA-MM-JJ [--out out]
 npm run check:thenewsapi   # vérification §16 : TheNewsAPI est-elle en temps réel ?
 npm run brief:verify -- --date AAAA-MM-JJ [--out out]
+npm run brief:audio -- --date AAAA-MM-JJ [--out out] [--no-ffmpeg]
+npm run audio:samples -- [--out out] [--count 3]   # mise en place : échantillons de voix
 npm run brief:render -- --date AAAA-MM-JJ [--out out]
 npm run brief:publish -- --date AAAA-MM-JJ [--out out]
 npm run maps:preview   # aperçu des cartes de la fixture (out/maps-preview.html)
@@ -44,9 +46,17 @@ Le champ `degraded` de `collect-report.json` vaut `true` quand la collecte est m
 
 `brief:verify` contrôle `out/<date>/{fr,en,es}.json` selon les règles R1 à R12 de la spec. Il écrit `{lang}.verified.json` (conforme aux règles R1 à R12 détectables automatiquement) et `verify-report.json`. Code de sortie : 0 si propre, 1 si des corrections ont été appliquées, 2 en cas d’erreur : édition invalide ou absente, fichier d’entrée illisible, ou date incorrecte (l’édition doit alors être corrigée avant publication).
 
+`brief:audio` lit l'`audioScript` de chaque `{lang}.verified.json` et le fait lire par Google Cloud Text-to-Speech, avec la voix Chirp 3 HD de l'édition (`pipeline/config/voices.json`). Le texte est découpé en morceaux de 4 500 octets au plus (la limite de l'API est de 5 000), aux fins de phrase, sinon aux virgules, sinon entre les mots, sans jamais couper un mot. Les morceaux sont concaténés avec ffmpeg s'il est présent (MP3 64 kb/s mono, `FFMPEG_PATH` pour un autre chemin), sinon trame par trame, au débit de la source. Il écrit `Daily Brief <date> FR.mp3` (et `EN`, `ES`), `audio.json` (`{ "fr": { "duration": "3:24" } }`) et `audio-report.json`. Les anciens MP3 du jour sont supprimés d'abord, parce que `brief:publish` prend tout MP3 présent. La clé `GOOGLE_TTS_API_KEY` vient de l'environnement ou de `.env` ; elle part dans l'en-tête `x-goog-api-key`, jamais dans l'URL, et n'apparaît dans aucun message ni rapport. Chaque requête a un délai de 60 s, et le passage entier est borné à 10 minutes. Le service est coupé après un 401, un 403, un 429, un délai dépassé ou 3 échecs consécutifs ; une erreur 5xx ou réseau a droit à une seconde tentative. Les caractères sont plafonnés à 5 000 par édition et 15 000 par passage. L'audio ne bloque jamais la routine : une édition en échec est publiée sans lecteur. Codes de sortie de `brief:audio` :
+
+- **0** : au moins un MP3 est écrit (`status` vaut `ok`, ou `degraded` s'il en manque un), ou l'audio est désactivé faute de clé (`disabled`, avec un avertissement) ;
+- **1** : la clé est présente mais aucun MP3 n'a été produit (`failed`) ;
+- **2** : entrée invalide (`invalid`) : date incorrecte, `voices.json` invalide ou aucune édition vérifiée lisible.
+
+Quel que soit ce code, la routine enchaîne sur `brief:render`, qui lit `audio.json` pour l'encart audio du PDF : `brief:audio` passe donc **avant** `brief:render`. `audio:samples` sert une seule fois, à la mise en place : il liste les voix Chirp 3 HD de chaque langue et écrit des échantillons dans `out/voice-samples/` (voir `docs/setup-audio.md`).
+
 `brief:render` lit les `{lang}.verified.json` du jour et complète les photos Pexels si `PEXELS_API_KEY` est définie (variable d'environnement ou `.env`). Il écrit `{lang}.final.json`, `Daily Brief <date>.pdf` (A4, FR puis EN puis ES) et `render-report.json`. Une édition absente est omise ; sans aucune édition, il n'y a pas de PDF et le code de sortie vaut 2. Le code 2 peut accompagner des `{lang}.final.json` valides (PDF impossible) : la publication s'appuie sur `finals` du rapport. Le test visuel du PDF compare trois captures à `packages/render-pdf/test/__screens__/`. Après un changement voulu du gabarit, régénère-les avec `UPDATE_VISUAL=1 npx vitest run packages/render-pdf/test/visual.test.ts` et vérifie les images avant de les commiter.
 
-`brief:render` imprime avec Chromium (Playwright 1.63.0) : il est préinstallé via `PLAYWRIGHT_BROWSERS_PATH` ; sinon, lance `npx playwright install chromium`. Le code 0 peut s'accompagner d'entrées de niveau `error` dans le rapport (une édition invalide est omise et le PDF contient les autres). Le fichier facultatif `audio.json`, écrit par le lot 5, a la forme `{ "fr": { "duration": "3:24" }, "en": { "duration": "3:10" }, "es": { "duration": "3:31" } }` ; chaque langue est facultative et les autres clés sont ignorées.
+`brief:render` imprime avec Chromium (Playwright 1.63.0) : il est préinstallé via `PLAYWRIGHT_BROWSERS_PATH` ; sinon, lance `npx playwright install chromium`. Le code 0 peut s'accompagner d'entrées de niveau `error` dans le rapport (une édition invalide est omise et le PDF contient les autres). Le fichier facultatif `audio.json`, écrit par `brief:audio`, a la forme `{ "fr": { "duration": "3:24" }, "en": { "duration": "3:10" }, "es": { "duration": "3:31" } }` ; chaque langue est facultative et les autres clés sont ignorées.
 
 `brief:publish` publie ce que `brief:render` a produit, dans cet ordre :
 
