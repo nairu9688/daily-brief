@@ -28,13 +28,17 @@ declare
   n_removed integer := 0;
   n integer;
 begin
-  if e is null or jsonb_typeof(e) <> 'object' or e ->> 'date' is null or e ->> 'lang' is null then
+  if e is null or jsonb_typeof(e) <> 'object' or e ->> 'date' is null or e ->> 'lang' is null
+     or e ->> 'date' !~ '^\d{4}-\d{2}-\d{2}$' then
     raise exception 'publish_edition : édition absente ou incomplète' using errcode = '22023';
   end if;
   v_date := (e ->> 'date')::date;
   v_lang := e ->> 'lang';
   -- Deux publications simultanées de la même édition s'exécutent l'une après l'autre.
   perform pg_advisory_xact_lock(hashtextextended('publish_edition:' || v_date::text || ':' || v_lang, 0));
+  -- Deux dates de la même langue publiées en même temps pourraient créer le même slug de Thread :
+  -- second verrou, toujours pris après le premier (ordre constant, donc pas d'interblocage).
+  perform pg_advisory_xact_lock(hashtextextended('threads:' || v_lang, 0));
 
   insert into public.editions as ed
     (date, lang, region, headline, morning_brief, sections, vocab_title, audio_path, pdf_path, status, generated_at, published_at)
@@ -91,7 +95,14 @@ begin
         v_slug := t ->> 'slug';
         select th.id into v_thread from public.threads th where th.slug = v_slug and th.lang = v_lang and th.status = 'open';
         if v_thread is null then
-          -- Le slug est pris par un Thread fermé (ou d'une autre langue) : nouveau Thread daté.
+          -- Le slug est pris par un Thread fermé (ou d'une autre langue) : on reprend le Thread daté
+          -- ouvert le plus récent s'il existe, sinon nouveau Thread daté.
+          select th.id into v_thread from public.threads th
+          where th.lang = v_lang and th.status = 'open'
+            and th.slug like replace(replace(replace(v_slug, '\', '\\'), '%', '\%'), '_', '\_') || '-____-__-__'
+          order by th.created_at desc, th.slug desc limit 1;
+        end if;
+        if v_thread is null then
           if exists (select 1 from public.threads th where th.slug = v_slug) then
             v_slug := v_slug || '-' || v_date::text;
           end if;
@@ -145,9 +156,11 @@ begin
   from jsonb_array_elements(coalesce(payload -> 'vocab', '[]'::jsonb)) as v;
   get diagnostics n_vocab = row_count;
 
-  -- Un Thread créé par une publication précédente de cette édition et resté sans événement disparaît.
+  -- Un Thread dont les seuls événements venaient de cette édition (donc créé par elle) et qui est
+  -- resté sans événement disparaît, sauf s'il est suivi : un Thread suivi n'est jamais supprimé.
   delete from public.threads th
   where th.id = any (v_old_threads)
+    and not th.followed
     and not exists (select 1 from public.thread_events te where te.thread_id = th.id);
   get diagnostics n_removed = row_count;
 

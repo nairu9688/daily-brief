@@ -263,6 +263,39 @@ describe('publishEditions', () => {
     expect(fake.calls).toHaveLength(1);
   });
 
+  it('un Thread suivi n’est jamais supprimé, même devenu orphelin à la relance', async () => {
+    const fr = editionFor('fr');
+    await publish([fr]);
+    await asRole(db, { email: ALLOWED_EMAIL }, (tx) => tx.query(`update public.threads set followed = true where slug = 'fr-guerre-en-ukraine'`));
+    const without = editionFor('fr', DAY, (e) => {
+      for (const sec of e.sections) for (const st of sec.stories) st.thread = null;
+    });
+    await publish([without]);
+    expect(await threads()).toEqual([{ slug: 'fr-guerre-en-ukraine', lang: 'fr', status: 'open', followed: true, events: 0 }]);
+  });
+
+  it('le Thread daté d’un Thread fermé est repris le lendemain, sans nouveau Thread', async () => {
+    await db.query(`insert into public.threads (slug, title, lang, status) values ('fr-x', 'X', 'fr', 'closed')`);
+    const day = (date: string) =>
+      editionFor('fr', date, (e) => {
+        e.sections = e.sections.slice(0, 1);
+        e.sections[0].stories = e.sections[0].stories.slice(0, 1);
+        e.sections[0].stories[0].thread = { title: 'X', subtitle: 's' };
+      });
+    expect((await publish([day(DAY)])).results[0].threadsCreated).toBe(1);
+    expect((await publish([day('2026-11-07')])).results[0].threadsCreated).toBe(0);
+    expect(await threads()).toEqual([
+      { slug: 'fr-x', lang: 'fr', status: 'closed', followed: false, events: 0 },
+      { slug: 'fr-x-2026-11-06', lang: 'fr', status: 'open', followed: false, events: 2 },
+    ]);
+  });
+
+  it('refuse une date qui n’est pas AAAA-MM-JJ', async () => {
+    for (const date of ['today', 'epoch', '2026-1-1', '2026-11-06T00:00:00Z']) {
+      await expect(rpc(db, 'publish_edition', { payload: { edition: { date, lang: 'fr' } } })).rejects.toThrow('publish_edition : édition absente ou incomplète');
+    }
+  });
+
   it('publish_edition refuse une charge sans édition, et n’est pas appelable par l’appli', async () => {
     await expect(rpc(db, 'publish_edition', { payload: {} })).rejects.toThrow('publish_edition : édition absente ou incomplète');
     const payload = editionPayload(editionFor('en'), { pdfPath: null, audioPath: null, light: false, generatedAt: RENDERED_AT });
