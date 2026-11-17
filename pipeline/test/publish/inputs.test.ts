@@ -1,7 +1,7 @@
 import { rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { loadPublishInputs, MAX_PDF_BYTES } from '../../publish/inputs';
+import { loadPublishInputs, MAX_JSON_BYTES, MAX_PDF_BYTES } from '../../publish/inputs';
 import { DAY, editionFor, makeDay, MP3_BYTES, PDF_BYTES, RENDERED_AT } from './day';
 
 describe('loadPublishInputs', () => {
@@ -70,10 +70,33 @@ describe('loadPublishInputs', () => {
     const again = loadPublishInputs(dayDir, DAY);
     expect(again.editions).toEqual([]);
     expect(again.issues.map((i) => [i.lang, i.message.split(' : ')[0]])).toEqual([
-      ['fr', 'fr.final.json invalide (1 erreurs)'],
+      ['fr', 'fr.final.json invalide (1 erreur)'],
       ['en', 'en.final.json contient l’édition es du 2026-11-06 (attendu'],
       ['es', 'es.final.json illisible'],
     ]);
+  });
+
+  it('refuse un PDF tronqué (sans %%EOF)', () => {
+    const { dayDir } = makeDay({ pdf: Buffer.from('%PDF-1.7\nfaux PDF coupé') });
+    const r = loadPublishInputs(dayDir, DAY);
+    expect(r.pdf).toBeNull();
+    expect(r.issues).toEqual([{ level: 'error', message: 'Daily Brief 2026-11-06.pdf : ce n’est pas un PDF — non publié' }]);
+  });
+
+  it('plafonne la lecture de render-report.json et des éditions à 5 Mo', () => {
+    expect(MAX_JSON_BYTES).toBe(5 * 1024 * 1024);
+    const big = ' '.repeat(MAX_JSON_BYTES + 1);
+    const a = makeDay().dayDir;
+    writeFileSync(join(a, 'render-report.json'), big);
+    const ra = loadPublishInputs(a, DAY);
+    expect(ra.editions).toEqual([]);
+    expect(ra.issues).toHaveLength(1);
+    expect(ra.issues[0].message).toMatch(/^render-report\.json illisible : fichier trop lourd/);
+    const b = makeDay().dayDir;
+    writeFileSync(join(b, 'en.final.json'), big);
+    const rb = loadPublishInputs(b, DAY);
+    expect(rb.editions.map((e) => e.lang)).toEqual(['fr', 'es']);
+    expect(rb.issues).toEqual([{ level: 'error', lang: 'en', message: expect.stringMatching(/^en\.final\.json illisible : fichier trop lourd/) }]);
   });
 
   it('finals vide : erreur', () => {

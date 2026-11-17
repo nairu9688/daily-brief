@@ -60,14 +60,20 @@ export type EditionMeta = {
  * Un titre sans lettre ni chiffre latin donne une empreinte stable.
  */
 export function threadSlug(lang: Lang, title: string): string {
-  const base = title
-    .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')
+  const full = title
     .toLowerCase()
+    // Lettres que NFKD ne décompose pas : sans cette table, « Œuvre » deviendrait « uvre ».
+    .replace(/œ/g, 'oe')
+    .replace(/æ/g, 'ae')
+    .replace(/ß/g, 'ss')
+    .replace(/ł/g, 'l')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 80)
-    .replace(/-+$/, '');
+    .replace(/^-+|-+$/g, '');
+  // Titre long : 71 caractères, un tiret et 8 signes d'une empreinte du titre complet, pour que deux
+  // titres de même début ne se confondent pas.
+  const base = full.length <= 80 ? full : `${full.slice(0, 71).replace(/-+$/, '')}-${createHash('sha256').update(full).digest('hex').slice(0, 8)}`;
   return `${lang}-${base || createHash('sha256').update(title.normalize('NFC')).digest('hex').slice(0, 12)}`;
 }
 

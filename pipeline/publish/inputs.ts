@@ -31,6 +31,17 @@ const RenderReport = z.object({
 /** Taille maximale d'un PDF (octets) : sous la limite de Storage et de l'envoi à Apps Script. */
 export const MAX_PDF_BYTES = 30 * 1024 * 1024;
 export const MAX_MP3_BYTES = 15 * 1024 * 1024;
+/** Taille maximale de render-report.json et d'une édition finale (octets). */
+export const MAX_JSON_BYTES = 5 * 1024 * 1024;
+
+/** Lit un fichier JSON de taille bornée (la taille est contrôlée avant et après la lecture). */
+function readJson(path: string): unknown {
+  const size = statSync(path).size;
+  if (size > MAX_JSON_BYTES) throw new Error(`fichier trop lourd (${size} octets, ${MAX_JSON_BYTES} au plus)`);
+  const text = readFileSync(path, 'utf8');
+  if (Buffer.byteLength(text) > MAX_JSON_BYTES) throw new Error(`fichier trop lourd (plus de ${MAX_JSON_BYTES} octets)`);
+  return JSON.parse(text);
+}
 
 function readChecked(dayDir: string, file: DayFile, max: number): Buffer {
   const path = join(dayDir, file.name);
@@ -38,6 +49,9 @@ function readChecked(dayDir: string, file: DayFile, max: number): Buffer {
   if (size === 0) throw new Error('fichier vide');
   if (size > max) throw new Error(`fichier trop lourd (${size} octets, ${max} au plus)`);
   const bytes = readFileSync(path);
+  // Le fichier a pu grossir entre la mesure et la lecture.
+  if (bytes.length === 0) throw new Error('fichier vide');
+  if (bytes.length > max) throw new Error(`fichier trop lourd (${bytes.length} octets, ${max} au plus)`);
   if (!looksLike(file, bytes)) throw new Error(file.bucket === 'pdf' ? 'ce n’est pas un PDF' : 'ce n’est pas un MP3');
   return bytes;
 }
@@ -59,7 +73,7 @@ export function loadPublishInputs(dayDir: string, date: string): PublishInputs {
   }
   let report: z.infer<typeof RenderReport>;
   try {
-    report = RenderReport.parse(JSON.parse(readFileSync(reportPath, 'utf8')));
+    report = RenderReport.parse(readJson(reportPath));
   } catch (e) {
     issue('error', `render-report.json illisible : ${e instanceof z.ZodError ? `${e.issues.length} champs invalides` : messageOf(e)}`);
     return out;
@@ -79,13 +93,13 @@ export function loadPublishInputs(dayDir: string, date: string): PublishInputs {
     }
     let parsed: ReturnType<typeof parseEdition>;
     try {
-      parsed = parseEdition(JSON.parse(readFileSync(path, 'utf8')));
+      parsed = parseEdition(readJson(path));
     } catch (e) {
       issue('error', `${name} illisible : ${messageOf(e)}`, lang);
       continue;
     }
     if (!parsed.success) {
-      issue('error', `${name} invalide (${parsed.errors.length} erreurs) : ${parsed.errors.slice(0, 3).join(' ; ')}`, lang);
+      issue('error', `${name} invalide (${parsed.errors.length} erreur${parsed.errors.length > 1 ? 's' : ''}) : ${parsed.errors.slice(0, 3).join(' ; ')}`, lang);
       continue;
     }
     if (parsed.data.lang !== lang || parsed.data.date !== date) {

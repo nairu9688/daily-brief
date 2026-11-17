@@ -12,12 +12,34 @@ describe('threadSlug', () => {
     expect(threadSlug('en', 'Midterms 2026')).toBe('en-midterms-2026');
     expect(threadSlug('fr', 'Midterms 2026')).toBe('fr-midterms-2026');
     expect(threadSlug('es', '  ¿Crisis ferroviaria? — ¡2026!  ')).toBe('es-crisis-ferroviaria-2026');
-    expect(threadSlug('fr', 'L’Œuvre de l’été')).toBe('fr-l-uvre-de-l-ete');
+    expect(threadSlug('fr', 'L’Œuvre de l’été')).toBe('fr-l-oeuvre-de-l-ete');
   });
 
-  it('borne la longueur et ne finit jamais par un tiret', () => {
+  it('translittère les ligatures et lettres sans décomposition Unicode (œ, æ, ß, ł)', () => {
+    expect(threadSlug('fr', 'Cœur')).toBe('fr-coeur');
+    expect(threadSlug('fr', 'ŒUVRE Æther')).toBe('fr-oeuvre-aether');
+    expect(threadSlug('en', 'Straße')).toBe('en-strasse');
+    expect(threadSlug('es', 'Łódź Wrocław')).toBe('es-lodz-wroclaw');
+  });
+
+  it('borne la longueur à 80 caractères, sans tiret final, avec une empreinte du titre complet', () => {
     const slug = threadSlug('fr', `${'a'.repeat(79)} b c`);
-    expect(slug).toBe(`fr-${'a'.repeat(79)}`);
+    expect(slug).toMatch(/^fr-a{71}-[0-9a-f]{8}$/);
+    expect(slug.length).toBe(3 + 80);
+    expect(threadSlug('fr', `${'a'.repeat(79)} b c`)).toBe(slug);
+    // Un titre qui tient en 80 caractères n'a pas d'empreinte.
+    expect(threadSlug('fr', 'a'.repeat(80))).toBe(`fr-${'a'.repeat(80)}`);
+    // Coupure juste après un tiret : jamais de double tiret.
+    expect(threadSlug('fr', `${'a'.repeat(70)} ${'b'.repeat(30)}`)).toMatch(/^fr-a{70}-[0-9a-f]{8}$/);
+  });
+
+  it('deux longs titres qui partagent leurs 80 premiers caractères donnent deux slugs', () => {
+    const prefix = 'Réforme des retraites : le calendrier parlementaire et les négociations avec les syndicats';
+    const a = threadSlug('fr', `${prefix} jusqu’en 2027`);
+    const b = threadSlug('fr', `${prefix} jusqu’en 2028`);
+    expect(a).not.toBe(b);
+    expect(a.slice(0, -9)).toBe(b.slice(0, -9));
+    expect(a).toMatch(/^fr-[a-z0-9-]{71}-[0-9a-f]{8}$/);
   });
 
   it('donne une empreinte stable à un titre sans caractère latin', () => {
@@ -122,5 +144,24 @@ describe('fichiers du jour', () => {
     expect(looksLikeMp3(Buffer.from([0xff, 0xfb, 0x90, 0x00]))).toBe(true);
     expect(looksLikeMp3(PDF_BYTES)).toBe(false);
     expect(looksLikeMp3(Buffer.alloc(0))).toBe(false);
+  });
+
+  it('MP3 : refuse les en-têtes de trame réservés (ADTS AAC, version, couche, débit, fréquence)', () => {
+    expect(looksLikeMp3(Buffer.from([0xff, 0xf1, 0x50, 0x80]))).toBe(false); // ADTS AAC : couche 00
+    expect(looksLikeMp3(Buffer.from([0xff, 0xff, 0xff, 0xff]))).toBe(false); // débit 1111, fréquence 11
+    expect(looksLikeMp3(Buffer.from([0xff, 0xe9, 0x90, 0x00]))).toBe(false); // version 01 réservée
+    expect(looksLikeMp3(Buffer.from([0xff, 0xfb, 0xf0, 0x00]))).toBe(false); // débit 1111
+    expect(looksLikeMp3(Buffer.from([0xff, 0xfb, 0x9c, 0x00]))).toBe(false); // fréquence 11
+    expect(looksLikeMp3(Buffer.from([0xff, 0xfb, 0x90, 0x64]))).toBe(true); // MPEG-1 couche III, 128 kb/s, 44,1 kHz
+    expect(looksLikeMp3(Buffer.from([0xff, 0xf3, 0x90, 0x64]))).toBe(true); // MPEG-2 couche III
+    expect(looksLikeMp3(Buffer.from('ID3\x04\x00\x00\x00\x00\x00\x0a'))).toBe(true);
+  });
+
+  it('PDF : exige %%EOF dans le dernier kilooctet', () => {
+    const body = Buffer.from('%PDF-1.7\n' + 'x'.repeat(5000) + '\n');
+    expect(looksLikePdf(body)).toBe(false);
+    expect(looksLikePdf(Buffer.concat([body, Buffer.from('%%EOF\n')]))).toBe(true);
+    expect(looksLikePdf(Buffer.concat([Buffer.from('%PDF-1.7\n%%EOF\n'), Buffer.from('y'.repeat(2000))]))).toBe(false);
+    expect(looksLikePdf(Buffer.from('%PDF-1.7\nx'.repeat(1)))).toBe(false);
   });
 });

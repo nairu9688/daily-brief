@@ -27,10 +27,21 @@ export function isDayFile(f: DayFile, date: string): boolean {
   return expected !== null && expected.mimeType === f.mimeType && expected.bucket === f.bucket && expected.path === f.path;
 }
 
-/** Un PDF commence par « %PDF- ». */
-export const looksLikePdf = (b: Uint8Array): boolean => b.length > 5 && b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46 && b[4] === 0x2d;
+/** Un PDF commence par « %PDF- » et se termine par « %%EOF » (dans le dernier kilooctet) : un fichier tronqué est refusé. */
+export function looksLikePdf(b: Uint8Array): boolean {
+  if (!(b.length > 5 && b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46 && b[4] === 0x2d)) return false;
+  return Buffer.from(b.subarray(Math.max(0, b.length - 1024))).includes('%%EOF');
+}
 
-/** Un MP3 commence par une étiquette ID3 ou par une trame (11 bits de synchronisation à 1). */
-export const looksLikeMp3 = (b: Uint8Array): boolean => b.length > 3 && ((b[0] === 0x49 && b[1] === 0x44 && b[2] === 0x33) || (b[0] === 0xff && (b[1] & 0xe0) === 0xe0));
+/**
+ * Un MP3 commence par une étiquette « ID3 » ou par un en-tête de trame valide : 11 bits de
+ * synchronisation, version (pas la valeur réservée 01), couche (pas 00 : c'est de l'AAC ADTS),
+ * débit (pas 1111) et fréquence d'échantillonnage (pas 11).
+ */
+export function looksLikeMp3(b: Uint8Array): boolean {
+  if (b.length <= 3) return false;
+  if (b[0] === 0x49 && b[1] === 0x44 && b[2] === 0x33) return true;
+  return b[0] === 0xff && (b[1] & 0xe0) === 0xe0 && (b[1] & 0x18) !== 0x08 && (b[1] & 0x06) !== 0 && b[2] >> 4 !== 0x0f && ((b[2] >> 2) & 3) !== 3;
+}
 
 export const looksLike = (f: DayFile, bytes: Uint8Array): boolean => (f.mimeType === PDF_MIME ? looksLikePdf(bytes) : looksLikeMp3(bytes));
