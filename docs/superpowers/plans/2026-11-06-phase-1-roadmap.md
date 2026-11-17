@@ -87,7 +87,9 @@ Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-5-audio.md`
 - Script de mise en place `npm run audio:samples` (`pipeline/audio/samples.ts`) : trois échantillons par langue, pour que Naïm choisisse sa voix. Le choix est rangé dans `pipeline/config/voices.json`.
 - Tests : découpage (aucun morceau au-dessus de la limite, aucune phrase ni aucun mot coupé), concaténation sur deux vrais MP3 produits par ffmpeg (ignorée sans ffmpeg) et sur des trames synthétiques.
 
-### Lot 6 — Application web
+### Lot 6 — Application web ✅ plan détaillé
+
+Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-6-appli-web.md`
 
 - `apps/web` : Next.js (App Router) sur Vercel, `transpilePackages: ['@daily-brief/schema', '@daily-brief/maps']`, polices Geist auto-hébergées via `next/font/local` à partir du paquet `geist`.
 - Authentification Supabase par lien magique, sur un seul email autorisé (`ALLOWED_EMAIL`). Un middleware redirige vers `/login`. Variables Vercel : `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` et `ALLOWED_EMAIL` (la clé anonyme est publique par nature, elle n'est donc pas dans Vault).
@@ -195,3 +197,16 @@ Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-5-audio.md`
   - **Mise en place.** Suivre `docs/setup-audio.md`, puis cocher sa section 7 au premier passage réel.
   - **`runs`.** La page Santé ne voit pas encore l'étape audio : ajouter `audio-report.json` au bilan de `pipeline/publish/run-summary.ts` (étape `audio`, compteurs `mp3` et `characters`).
   - **Ancien fichier audio.** Code 2 avec « ancien fichier audio impossible à supprimer » : un MP3 ou `audio.json` d'un passage précédent du même jour peut être repris par `brief:render`/`brief:publish` ; le signaler dans le rapport de la routine. Option à trancher au lot 7 : faire lire à `brief:publish` les `editions[].file` d'`audio-report.json` au lieu de tout MP3 présent.
+
+### Consignes issues du lot 6
+
+- **Lot 7 (routine et lancement)** :
+  - **Mise en place.** Suivre `docs/setup-web.md` : projet Vercel (dossier `apps/web`, Node 22), variables `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `ALLOWED_EMAIL` (la même adresse que `private.app_settings`) et `SITE_URL`, puis réglages *URL Configuration* et modèle de courriel *Magic Link* de Supabase (lien `token_hash` et code). Cocher sa section 6 au premier passage réel.
+  - **Interdits sur Vercel.** Jamais la clé de service (l'appli refuse de démarrer avec une clé `service_role` ou `sb_secret_…`), jamais `FIXTURE` (refusé quand `VERCEL` est présent).
+  - **Contrôle du site au lancement.** `npm run web:build && npm run web:e2e` et `npm run web:check-bundle` avant le déploiement, puis, sur le site réel, connexion, lecture du MP3, PDF du jour, case cochée, Thread suivi, page Santé.
+  - **Types de la base.** Générer les types TypeScript depuis le projet réel une fois les migrations appliquées, et les comparer aux schémas zod de `apps/web/lib/data/rows.ts` (ce lot n'a pas eu accès au projet).
+  - **Étape `audio` dans `runs`.** La page Santé affiche toute étape présente dans `runs.steps`, dans l'ordre `context`, `collect`, `verify`, `audio`, `render`, `publish`, `drive` : l'étape `audio` apparaîtra dès que `pipeline/publish/run-summary.ts` l'écrira (consigne du lot 5). Une ligne `running` de plus de 6 h (depuis `updated_at`) s'affiche « interrompu ».
+  - **Notification.** Le site affiche de lui-même la veille avec un bandeau quand l'édition du jour manque, et le bandeau « édition allégée » quand `editions.status = 'light'` : la routine n'a rien à faire de plus pour eux.
+- **Phase 2** :
+  - **Anki.** La synchro lit `vocab_items` à `anki_status = 'queued'` et les passe à `sent` avec la clé de service ; l'appli ne rétrograde jamais un mot `sent`.
+  - **Hors ligne.** Pas de service worker en phase 1 : la lecture hors ligne demandera un cache qui se vide à la déconnexion.

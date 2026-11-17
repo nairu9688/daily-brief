@@ -31,6 +31,11 @@ npm run audio:samples -- [--out out] [--count 3]   # mise en place : échantillo
 npm run brief:render -- --date AAAA-MM-JJ [--out out]
 npm run brief:publish -- --date AAAA-MM-JJ [--out out]
 npm run maps:preview   # aperçu des cartes de la fixture (out/maps-preview.html)
+npm run web:dev        # appli web (FIXTURE=1 : données de fixtures/, sans connexion)
+npm run web:build      # build de production de apps/web (hors ligne)
+npm run web:e2e        # Playwright à 390 px, clair et sombre, en FIXTURE=1 (après web:build)
+npm run web:check-bundle   # aucun secret ni nom de variable serveur dans le code du navigateur
+npm run web:icons      # régénère les icônes PWA de apps/web/public/icons/
 ```
 
 `brief:context` ferme les Threads sans événement depuis 21 jours (R12), puis écrit `out/<date>/context.json` (Threads ouverts et sujets de la veille) et `context-report.json`. Il lit Supabase avec `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` (environnement ou `.env`). Sans ces variables, il sort avec le code 2 ; l'option `--allow-empty`, réservée au développement local, écrit alors un contexte vide avec un avertissement. Une URL invalide, une erreur ou un délai dépassé du store donne le code 2, sans `context.json`. Les Threads fermés sont notés dans la table `runs` (`steps.closedThreads`), pour qu'une relance ne les perde pas.
@@ -75,5 +80,7 @@ Relancer une date remplace proprement ses données : mêmes éditions, sujets, s
 La base est décrite par `supabase/migrations/` : tables et RLS (`0001_init.sql`), puis les fonctions appelées par le pipeline. Les tests appliquent ces migrations à un Postgres embarqué (PGlite), avec les rôles `anon`, `authenticated` et `service_role` simulés par `pipeline/test/supabase/prelude.sql` : aucun test n'appelle Supabase, Google ni le réseau. Mise en place du projet réel : `docs/setup-supabase.md`.
 
 `context.json`, `raw.json` et `newsletters/` sont facultatifs. Sans textes sources, toutes les citations et tous les chiffres sont retirés.
+
+L'application web (`apps/web`, Next.js 16) lit Supabase avec la clé publique et la session de l'utilisateur : la RLS ne laisse lire que l'adresse autorisée, et l'appli n'écrit que `vocab_items.selected`, `vocab_items.anki_status` (mise en file Anki) et `threads.followed`. La connexion se fait par lien magique, ou par le code du même courriel, envoyé seulement à `ALLOWED_EMAIL`. Le MP3 et le PDF passent par des URL signées de 10 minutes. Avec `FIXTURE=1`, l'appli lit `fixtures/` sans connexion ni réseau : c'est le mode des tests (Vitest et Testing Library dans `npm test`, Playwright dans `npm run web:e2e`), interdit sur Vercel. Mise en ligne : `docs/setup-web.md`.
 
 Plans d'implémentation : `docs/superpowers/plans/`.
