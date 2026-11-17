@@ -22,15 +22,16 @@ npm install
 npm test               # tests unitaires (Vitest)
 npm run typecheck      # TypeScript strict
 npm run schema:emit    # régénère packages/schema/edition.schema.json
-npm run brief:context -- --date AAAA-MM-JJ [--out out]
+npm run brief:context -- --date AAAA-MM-JJ [--out out] [--allow-empty]
 npm run brief:collect -- --date AAAA-MM-JJ [--out out]
 npm run check:thenewsapi   # vérification §16 : TheNewsAPI est-elle en temps réel ?
 npm run brief:verify -- --date AAAA-MM-JJ [--out out]
 npm run brief:render -- --date AAAA-MM-JJ [--out out]
+npm run brief:publish -- --date AAAA-MM-JJ [--out out]
 npm run maps:preview   # aperçu des cartes de la fixture (out/maps-preview.html)
 ```
 
-`brief:context` ferme les Threads sans événement depuis 21 jours (R12), puis écrit `out/<date>/context.json` (Threads ouverts et sujets de la veille) et `context-report.json`. Tant que le store Supabase n'existe pas (lot 4), il écrit un contexte vide avec un avertissement. Une erreur ou un délai dépassé du store donne le code 2, sans `context.json`.
+`brief:context` ferme les Threads sans événement depuis 21 jours (R12), puis écrit `out/<date>/context.json` (Threads ouverts et sujets de la veille) et `context-report.json`. Il lit Supabase avec `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` (environnement ou `.env`). Sans ces variables, il sort avec le code 2 ; l'option `--allow-empty`, réservée au développement local, écrit alors un contexte vide avec un avertissement. Une URL invalide, une erreur ou un délai dépassé du store donne le code 2, sans `context.json`. Les Threads fermés sont notés dans la table `runs` (`steps.closedThreads`), pour qu'une relance ne les perde pas.
 
 `brief:collect` interroge, chacune indépendamment, la découverte principale (TheNewsAPI, ou Exa selon `primary` dans `pipeline/config/collect.json`), Exa, les flux de `pipeline/config/feeds.json` et, en secours, Webz.io. Il dédoublonne les articles, ne télécharge le texte intégral que pour les domaines `full` de la liste blanche (R1), puis écrit `out/<date>/raw.json` et `collect-report.json` : requêtes par source, budget TheNewsAPI, erreurs sans secret et textes lus par langue, avec `light: true` sous 15 textes (édition allégée, §12). Les clés `THENEWSAPI_KEY`, `EXA_API_KEY` et `WEBZ_TOKEN` viennent de l'environnement ou de `.env` ; sans clé, la source est ignorée avec un avertissement. Le plafond de 90 requêtes TheNewsAPI par jour est suivi dans `<out>/thenewsapi-usage.json` (par défaut `out/`) ; ce registre compte par jour UTC et il est écrit à chaque requête. Un fichier illisible daté d'un jour UTC antérieur remet le compte à zéro avec un avertissement ; illisible le même jour, il rend TheNewsAPI épuisé jusqu'à sa suppression. Deux passages du même jour sont combinés par le maximum des comptes, pas par leur somme. Codes de sortie de `brief:collect` :
 
@@ -46,6 +47,22 @@ Le champ `degraded` de `collect-report.json` vaut `true` quand la collecte est m
 `brief:render` lit les `{lang}.verified.json` du jour et complète les photos Pexels si `PEXELS_API_KEY` est définie (variable d'environnement ou `.env`). Il écrit `{lang}.final.json`, `Daily Brief <date>.pdf` (A4, FR puis EN puis ES) et `render-report.json`. Une édition absente est omise ; sans aucune édition, il n'y a pas de PDF et le code de sortie vaut 2. Le code 2 peut accompagner des `{lang}.final.json` valides (PDF impossible) : la publication s'appuie sur `finals` du rapport. Le test visuel du PDF compare trois captures à `packages/render-pdf/test/__screens__/`. Après un changement voulu du gabarit, régénère-les avec `UPDATE_VISUAL=1 npx vitest run packages/render-pdf/test/visual.test.ts` et vérifie les images avant de les commiter.
 
 `brief:render` imprime avec Chromium (Playwright 1.63.0) : il est préinstallé via `PLAYWRIGHT_BROWSERS_PATH` ; sinon, lance `npx playwright install chromium`. Le code 0 peut s'accompagner d'entrées de niveau `error` dans le rapport (une édition invalide est omise et le PDF contient les autres). Le fichier facultatif `audio.json`, écrit par le lot 5, a la forme `{ "fr": { "duration": "3:24" }, "en": { "duration": "3:10" }, "es": { "duration": "3:31" } }` ; chaque langue est facultative et les autres clés sont ignorées.
+
+`brief:publish` publie ce que `brief:render` a produit, dans cet ordre :
+
+1. il retente les dépôts Drive en attente des jours précédents : chaque ligne de `drive_pending` est prise en charge (tentative comptée) avant d'être traitée, au plus 5 lignes par passage, les plus anciennes d'abord ; après 5 tentatives, ou si un fichier a disparu de Storage, le dépôt est abandonné (il reste visible), et un dépôt abandonné depuis plus de 30 jours est supprimé de la table ;
+2. il dépose le PDF et les MP3 présents dans Supabase Storage (buckets privés `pdf` et `audio`) ;
+3. il publie chaque édition listée dans `finals` de `render-report.json`, par un appel à la fonction SQL `publish_edition` : une transaction par édition, donc jamais d'édition à moitié écrite ;
+4. il dépose les fichiers dans Google Drive par l'application web Apps Script (`apps-script/Code.gs`), un fichier par requête ; `Code.gs` crée le nouveau fichier avant de mettre l'ancien à la corbeille, et signale un quota Google par `drive-quota` ; en cas d'échec, les fichiers présents dans Storage vont dans la table `drive_pending` ;
+5. il supprime les MP3 de plus de 30 jours par l'API Storage (sans pg_cron : une suppression en SQL laisserait le fichier orphelin), puis vide `editions.audio_path` ; il balaie aussi le bucket `audio` et supprime les dossiers datés de plus de 30 jours dont le MP3 n'a plus d'édition ;
+6. il écrit la ligne `runs` du jour (bilan de chaque étape, d'après les rapports `context`, `collect`, `verify` et `render`), puis `publish-report.json`.
+
+Relancer une date remplace proprement ses données : mêmes éditions, sujets, sources et fichiers, sans doublon. Les mots cochés (`vocab_items.selected`, `anki_status`) et les Threads suivis (`threads.followed`) sont conservés. Variables : `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `APPS_SCRIPT_URL` et `APPS_SCRIPT_TOKEN` (environnement ou `.env`) ; aucune n'apparaît dans un message ni dans un rapport. Sans les variables Apps Script, le dépôt Drive est ignoré avec un avertissement. Codes de sortie de `brief:publish` :
+
+- **0** : au moins une édition est publiée dans Supabase. Le champ `status` de `publish-report.json` vaut `ok`, ou `degraded` dès qu'une entrée de niveau `error` figure au rapport (édition manquante ou invalide, par exemple), que le PDF ou un fichier du jour n'est pas dans Storage, ou que le dépôt Drive est `pending` ou `failed`.
+- **2** : aucune édition publiée (configuration Supabase absente ou refusée, rien à publier, date incorrecte). Le PDF est quand même envoyé à Drive quand c'est possible.
+
+La base est décrite par `supabase/migrations/` : tables et RLS (`0001_init.sql`), puis les fonctions appelées par le pipeline. Les tests appliquent ces migrations à un Postgres embarqué (PGlite), avec les rôles `anon`, `authenticated` et `service_role` simulés par `pipeline/test/supabase/prelude.sql` : aucun test n'appelle Supabase, Google ni le réseau. Mise en place du projet réel : `docs/setup-supabase.md`.
 
 `context.json`, `raw.json` et `newsletters/` sont facultatifs. Sans textes sources, toutes les citations et tous les chiffres sont retirés.
 

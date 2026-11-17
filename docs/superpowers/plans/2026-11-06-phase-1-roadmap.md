@@ -69,9 +69,10 @@ Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-3-collecte.md`
 Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-4-supabase-publication-drive.md`
 
 - Création du projet Supabase « daily-brief » (région Paris, `eu-west-3`) via le connecteur, après confirmation de Naïm.
-- `supabase/migrations/0001_init.sql` : tables du §6.2, contrainte unique `(date, lang)`, buckets privés `audio` et `pdf`, purge à 30 jours des MP3 (pg_cron), et RLS. La lecture est réservée à `auth.email() = current_setting('app.allowed_email')` ; l'écriture est réservée à la clé service, sauf `vocab_items.selected`, `vocab_items.anki_status` et `threads.followed`, que l'utilisateur autorisé peut modifier.
+- `supabase/migrations/0001_init.sql` : tables du §6.2, contrainte unique `(date, lang)`, buckets privés `audio` et `pdf`, et RLS. La lecture est réservée à l'email de `private.app_settings` (`allowed_email`), testé par `private.is_allowed_user()` (email vide ou session anonyme refusés) ; l'écriture est réservée à la clé service, sauf `vocab_items.selected`, `vocab_items.anki_status` et `threads.followed`, que l'utilisateur autorisé peut modifier.
+- La purge à 30 jours des MP3 n'utilise pas pg_cron : `brief:publish` supprime les fichiers par l'API Storage (`audio_expired`, `audio_clear`) et balaie les dossiers orphelins du bucket `audio`.
 - `pipeline/publish/supabase.ts` : upsert des éditions, puis suppression et recréation de leurs sujets, sources et vocabulaire. Création ou mise à jour des Threads et `thread_events`. Écriture de `runs`.
-- `apps-script/Code.gs` : `doPost` selon le §10 (jeton, dossier `Daily Brief/AAAA/MM - Mois` avec les mois en français, remplacement d'un fichier de même nom, réponse `{ ok, ids }`).
+- `apps-script/Code.gs` : `doPost` selon le §10 (jeton, dossier `Daily Brief/AAAA/MM - Mois` avec les mois en français, remplacement d'un fichier de même nom en créant le nouveau avant de mettre l'ancien à la corbeille, erreur `drive-quota` en cas de quota Google, réponse `{ ok, ids }`).
 - `pipeline/publish/drive.ts` : POST en base64 avec suivi manuel de la redirection 302. En cas d'échec, les fichiers vont dans `drive_pending`. `pipeline/publish/retry-pending.ts` les renvoie au passage suivant.
 - `npm run brief:publish`.
 - Tests : correspondance `Edition` → lignes SQL (fonction pure), nom du dossier de mois, client Drive contre un serveur HTTP local qui simule le 302 d'Apps Script.
@@ -160,3 +161,20 @@ Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-4-supabase-publication-dri
   - **`SUPABASE_URL`.** Elle n'est pas dans la liste des secrets du Vault de la spec : il faut la fournir explicitement à la routine, avec `SUPABASE_SERVICE_ROLE_KEY`.
   - **Premier passage réel.** Vérifier la redirection apex vers `www` sur les 10 domaines `full` : la lecture du texte intégral utilise l'URL normalisée, sans `www.`. Une redirection refusée (protocole, port ou domaine hors `full`) laisse l'article sans texte.
   - **Groupes de titres.** Au-delà de 25 membres, le regroupement par titre ne rattache plus d'article au groupe : les suivants forment des groupes d'un seul article. Le prompt de rédaction doit savoir qu'un même événement peut alors apparaître sous plusieurs `groupId`.
+
+### Consignes issues du lot 4
+
+- **Lot 5 (audio)** : écrire chaque MP3 dans `out/<date>/` sous le nom `Daily Brief AAAA-MM-JJ FR.mp3` (et `EN`, `ES`), **avant** `brief:publish`. La publication les dépose dans le bucket `audio` au chemin `AAAA-MM-JJ/<langue>.mp3` et remplit `editions.audio_path` ; sans MP3, l'édition est publiée sans lecteur. Un MP3 doit commencer par une étiquette ID3 ou une trame MP3 et peser moins de 15 Mo, sinon il est écarté avec un avertissement. Supprimer d'abord les anciens MP3 du dossier du jour : la publication prend tout MP3 présent pour une édition publiable.
+- **Lot 6 (appli)** :
+  - **Lecture.** Tout passe par la clé publique et la session de l'utilisateur ; la RLS ne laisse lire que l'adresse de `private.app_settings` (`allowed_email`). `ALLOWED_EMAIL` côté Vercel doit porter la même adresse.
+  - **Écriture.** L'utilisateur ne peut modifier que `vocab_items.selected`, `vocab_items.anki_status` et `threads.followed` : un `update` qui nomme une autre colonne est refusé. Le bouton « Ajouter N mots à Anki » passe `anki_status` à `queued`.
+  - **Forme des données.** Les rubriques d'une édition et leur ordre sont dans `editions.sections` (`[{ key, title }]`). Les sujets se trient par `stories.position` ; les brèves sont les `sources` dont `story_id` est nul, par `rubric` puis `position`. `morning_brief[].storyId` désigne `stories.key`. Le sous-titre du Thread d'un sujet est `stories.thread_subtitle`.
+  - **Fichiers.** `editions.pdf_path` et `editions.audio_path` sont des chemins dans les buckets privés `pdf` et `audio` : créer une URL signée avec la session de l'utilisateur. Un `audio_path` nul signifie « pas de lecteur » (audio en échec, ou MP3 purgé après 30 jours).
+  - **Bandeaux.** `editions.status = 'light'` marque l'édition allégée. La page Santé lit `runs` : `status` (`running`, `ok`, `degraded`, `failed`) et `steps.<étape>` (`status`, `finishedAt`, `durationMs`, `counters`, `errors`), plus `steps.closedThreads`. Une ligne restée à `running` signifie que la publication n'a pas eu lieu.
+  - **Types.** Générer les types TypeScript de la base depuis le projet réel une fois les migrations appliquées.
+- **Lot 7 (routine)** :
+  - **Mise en place.** Suivre `docs/setup-supabase.md` (projet, migrations, email autorisé, Vault, Apps Script), puis cocher sa section 7 au premier passage réel.
+  - **Variables.** `.env` doit contenir `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `APPS_SCRIPT_URL` et `APPS_SCRIPT_TOKEN`. Sans les deux premières, `brief:context` et `brief:publish` sortent avec le code 2 (`--allow-empty` de `brief:context` est réservé au développement local).
+  - **Codes de sortie.** `brief:publish` code 0 : lire `status` dans `publish-report.json` ; `degraded` se signale dans la notification (« Drive en attente », édition manquante). Code 2 : notifier « Brief incomplet : publication impossible ».
+  - **Registre d'usage TheNewsAPI.** Il n'est pas persisté dans Supabase par ce lot : il reste dans `out/thenewsapi-usage.json`. À faire ici seulement si la routine relance la collecte dans un conteneur neuf le même jour.
+  - **Routine et connecteur.** Le pipeline n'utilise pas le connecteur Supabase : il appelle l'API REST du projet avec la clé de service. Le connecteur ne sert qu'à lire Vault.
