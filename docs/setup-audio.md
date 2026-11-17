@@ -31,12 +31,20 @@ Dans Supabase : *Project Settings* → *Vault* → *Add new secret*, nom **`GOOG
 
 ## 5. Choisir les voix sur des échantillons
 
-Sur une machine de confiance, avec la clé dans un `.env` local (jamais commité) :
+**Prérequis.**
+
+- Node 22 ou plus (`node --version`).
+- Le dépôt cloné sur la machine, puis `npm install` à la racine.
+- Un fichier `.env` **à la racine du dépôt** (jamais commité), d'une seule ligne : `GOOGLE_TTS_API_KEY=<la clé>`. Le créer avec un éditeur, sans coller la clé dans une conversation.
+
+Sur cette machine de confiance, depuis la racine du dépôt :
 
 ```bash
-# créer .env avec un éditeur, une seule ligne : GOOGLE_TTS_API_KEY=<la clé>
-npm run audio:samples            # 3 échantillons par langue ; --count 5 pour en entendre plus
+npm run audio:samples              # 3 échantillons par langue
+npm run audio:samples -- --count 5 # pour en entendre plus (1 à 10, entier)
 ```
+
+Chaque passage réussi remplace entièrement `out/voice-samples/`. Un passage où rien n'a pu être écrit (clé refusée, service muet) laisse intacts les échantillons du passage précédent.
 
 La commande liste les voix Chirp 3 HD de fr-FR, en-US, en-GB et es-ES (`voices.list` filtré sur « Chirp3-HD »). Elle écrit les échantillons dans `out/voice-samples/` et la liste complète des voix dans `out/voice-samples/index.json`. Elle envoie environ 200 caractères par échantillon.
 
