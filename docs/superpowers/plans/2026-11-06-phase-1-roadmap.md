@@ -64,7 +64,9 @@ Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-3-collecte.md`
 - `npm run brief:context` lit Supabase (Threads ouverts et sujets de la veille) et écrit `out/<date>/context.json` au format `Context` du lot 1. Il ferme aussi les Threads sans événement depuis 21 jours (R12). Il dépend du lot 4 pour la base ; en attendant, il écrit un contexte vide.
 - Tests : dédoublonnage, garde R1, budget de requêtes, parsing de réponses API enregistrées dans `fixtures/api/`.
 
-### Lot 4 — Supabase, publication et Drive
+### Lot 4 — Supabase, publication et Drive ✅ plan détaillé
+
+Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-4-supabase-publication-drive.md`
 
 - Création du projet Supabase « daily-brief » (région Paris, `eu-west-3`) via le connecteur, après confirmation de Naïm.
 - `supabase/migrations/0001_init.sql` : tables du §6.2, contrainte unique `(date, lang)`, buckets privés `audio` et `pdf`, purge à 30 jours des MP3 (pg_cron), et RLS. La lecture est réservée à `auth.email() = current_setting('app.allowed_email')` ; l'écriture est réservée à la clé service, sauf `vocab_items.selected`, `vocab_items.anki_status` et `threads.followed`, que l'utilisateur autorisé peut modifier.
