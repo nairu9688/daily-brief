@@ -37,6 +37,15 @@ describe('synthesize', () => {
     expect(net.calls).toHaveLength(0);
   });
 
+  it('refuse un texte vide ou blanc, et une voix qui ne commence pas par sa langue, sans appel', async () => {
+    const net = fakeHttp({});
+    const client = { apiKey: KEY, fetch: net.fetch };
+    await expect(synthesize('', VOICE, {}, client)).rejects.toThrow(/texte vide/);
+    await expect(synthesize(' \n\t ', VOICE, {}, client)).rejects.toThrow(/texte vide/);
+    await expect(synthesize('Bonjour.', { languageCode: 'fr-FR', name: 'en-US-Chirp3-HD-Charon' }, {}, client)).rejects.toThrow(/voix en-US-Chirp3-HD-Charon.*fr-FR/);
+    expect(net.calls).toHaveLength(0);
+  });
+
   it('erreur HTTP : HttpError avec le statut, sans la clé ni le corps', async () => {
     const net = fakeHttp({ [TTS_BASE]: { status: 403, json: { error: { code: 403, message: `API key ${KEY} not valid`, status: 'PERMISSION_DENIED' } } } });
     const e = await synthesize('Bonjour.', VOICE, {}, { apiKey: KEY, fetch: net.fetch }).catch((x) => x);

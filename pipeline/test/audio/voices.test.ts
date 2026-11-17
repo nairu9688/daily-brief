@@ -1,7 +1,7 @@
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 import { LANGUAGE_CODES, loadVoices, VOICES_PATH } from '../../audio/voices';
 
 const base = {
@@ -11,8 +11,15 @@ const base = {
   es: { languageCode: 'es-ES', name: 'es-ES-Chirp3-HD-Kore' },
 };
 
+const tmpDirs: string[] = [];
+afterAll(() => {
+  for (const d of tmpDirs) rmSync(d, { recursive: true, force: true });
+});
+
 function write(cfg: unknown): string {
-  const path = join(mkdtempSync(join(tmpdir(), 'voices-')), 'voices.json');
+  const dir = mkdtempSync(join(tmpdir(), 'voices-'));
+  tmpDirs.push(dir);
+  const path = join(dir, 'voices.json');
   writeFileSync(path, typeof cfg === 'string' ? cfg : JSON.stringify(cfg));
   return path;
 }

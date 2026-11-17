@@ -56,6 +56,31 @@ describe('parseMp3', () => {
     expect(parseMp3(b).frames.length).toBe(4);
   });
 
+  it('ignore moins de 4 octets après la dernière trame, comme une trame tronquée', () => {
+    expect(parseMp3(Buffer.concat([frames(3), Buffer.from([0, 0])])).frames.length).toBe(3);
+  });
+
+  it('trame Xing d’un MP3 protégé par CRC (bit de protection à 0) : l’étiquette est 2 octets plus loin', () => {
+    const info = xingFrame();
+    info.fill(0, 4 + 9, 4 + 9 + 4); // l'étiquette n'est plus à la place sans CRC
+    info[1] &= 0xfe;
+    info.write('Xing', 4 + 2 + 9, 'latin1');
+    const p = parseMp3(Buffer.concat([info, frames(3)]));
+    expect([p.frames.length, p.infoFrame]).toEqual([3, true]);
+  });
+
+  it('n’enlève l’ID3v1 que si une frontière de trame tombe à 128 octets de la fin', () => {
+    const f = frames(4);
+    const tagLike = Buffer.concat([f, Buffer.alloc(128, 0x20)]);
+    tagLike.write('TAG', f.length, 'latin1');
+    // frontière exacte : retirée
+    expect(parseMp3(tagLike).frames.length).toBe(4);
+    // « TAG » au milieu d'une trame audio, à end-128 : toutes les trames sont gardées
+    const inside = frames(4);
+    inside.write('TAG', inside.length - 128, 'latin1');
+    expect(parseMp3(inside).frames.length).toBe(4);
+  });
+
   it('refuse des octets qui ne sont pas des trames, un mélange de formats ou un fichier sans audio', () => {
     expect(() => parseMp3(Buffer.concat([frames(2), Buffer.from('nimporte quoi, assez long pour un en-tête')]))).toThrow(/trame MP3 attendue à l'octet 192/);
     expect(() => parseMp3(Buffer.concat([frames(2), frame({ version: 'mpeg1', bitrate: 64 })]))).toThrow(/format de trame changeant/);
@@ -91,5 +116,7 @@ describe('durée', () => {
     expect(formatDuration(5.4)).toBe('0:05');
     expect(formatDuration(3725)).toBe('62:05');
     expect(formatDuration(-1)).toBe('0:00');
+    expect(formatDuration(NaN)).toBe('0:00');
+    expect(formatDuration(Infinity)).toBe('0:00');
   });
 });

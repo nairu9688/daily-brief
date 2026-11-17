@@ -82,8 +82,10 @@ export function id3v2Size(b: Uint8Array): number {
 /** Vrai si la trame porte une étiquette Xing, Info (après les informations annexes) ou VBRI (à 36 octets). */
 function isInfoFrame(frame: Uint8Array, h: FrameHeader): boolean {
   const side = h.version === 'mpeg1' ? (h.mono ? 17 : 32) : h.mono ? 9 : 17;
+  // Bit de protection à 0 : un CRC de 2 octets suit l'en-tête, l'étiquette est 2 octets plus loin.
+  const crc = (frame[1] & 1) === 0 ? 2 : 0;
   const tag = (at: number) => String.fromCharCode(...frame.subarray(at, at + 4));
-  const xing = tag(4 + side);
+  const xing = tag(4 + crc + side);
   return xing === 'Xing' || xing === 'Info' || tag(36) === 'VBRI';
 }
 
@@ -94,13 +96,20 @@ function isInfoFrame(frame: Uint8Array, h: FrameHeader): boolean {
  */
 export function parseMp3(bytes: Uint8Array): ParsedMp3 {
   let end = bytes.length;
-  if (end >= 128 && bytes[end - 128] === 0x54 && bytes[end - 127] === 0x41 && bytes[end - 126] === 0x47) end -= 128;
   let at = id3v2Size(bytes);
+  // ID3v1 : « TAG » à 128 octets de la fin ne compte que si une frontière de trame y tombe exactement
+  // (sinon ces trois octets sont du contenu audio).
+  if (end - 128 >= at && bytes[end - 128] === 0x54 && bytes[end - 127] === 0x41 && bytes[end - 126] === 0x47) {
+    let p = at;
+    for (let h = readFrameHeader(bytes, p); h && p < end - 128; h = readFrameHeader(bytes, p)) p += h.length;
+    if (p === end - 128) end -= 128;
+  }
   const frames: Uint8Array[] = [];
   let first: FrameHeader | null = null;
   let infoFrame = false;
   let samples = 0;
   while (at < end) {
+    if (end - at < 4) break; // quelques octets de fin, plus courts qu'un en-tête : ignorés
     const h = readFrameHeader(bytes, at);
     if (!h) throw new Mp3FormatError(`trame MP3 attendue à l'octet ${at}`);
     if (at + h.length > end) break; // dernière trame tronquée
@@ -123,8 +132,8 @@ export function parseMp3(bytes: Uint8Array): ParsedMp3 {
 /** Durée en secondes d'un MP3 (somme des trames audio). */
 export const mp3Seconds = (bytes: Uint8Array): number => parseMp3(bytes).seconds;
 
-/** Durée au format m:ss (« 3:24 »), arrondie à la seconde. */
+/** Durée au format m:ss (« 3:24 »), arrondie à la seconde ; une valeur négative ou non finie donne « 0:00 ». */
 export function formatDuration(seconds: number): string {
-  const s = Math.max(0, Math.round(seconds));
+  const s = Number.isFinite(seconds) ? Math.max(0, Math.round(seconds)) : 0;
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }

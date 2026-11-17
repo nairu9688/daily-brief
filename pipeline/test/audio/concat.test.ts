@@ -1,18 +1,24 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 import { concatFrames, concatMp3, concatWithFfmpeg, findFfmpeg } from '../../audio/concat';
 import { parseMp3, readFrameHeader } from '../../audio/mp3';
 import { looksLikeMp3 } from '../../publish/files';
 import { apiLikeMp3, frame, frames, id3v1, xingFrame } from './mp3';
 
 const FFMPEG = findFfmpeg();
+const tmpDirs: string[] = [];
+afterAll(() => {
+  for (const d of tmpDirs) rmSync(d, { recursive: true, force: true });
+});
 
 /** Vrai MP3 produit par ffmpeg : sinusoïde mono à 24 kHz, 32 kb/s (proche de la sortie de Google TTS). */
 function realMp3(seconds: number, hz: number): Buffer {
-  const out = join(mkdtempSync(join(tmpdir(), 'mp3-')), 'tone.mp3');
+  const dir = mkdtempSync(join(tmpdir(), 'mp3-'));
+  tmpDirs.push(dir);
+  const out = join(dir, 'tone.mp3');
   execFileSync(FFMPEG!, ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', `sine=frequency=${hz}:duration=${seconds}`, '-ac', '1', '-ar', '24000', '-c:a', 'libmp3lame', '-b:a', '32k', out]);
   return readFileSync(out);
 }
@@ -41,6 +47,10 @@ describe('concatFrames (sans ffmpeg)', () => {
 });
 
 describe('concatMp3', () => {
+  it('si le repli sur les trames échoue aussi, l’erreur garde la raison de ffmpeg', async () => {
+    await expect(concatMp3([frame(), Buffer.from('pas un mp3')], '/chemin/inexistant/ffmpeg')).rejects.toThrow(/morceau 2 : .*\(ffmpeg : .+\)$/);
+  });
+
   it('sans ffmpeg : concaténation des trames', async () => {
     const r = await concatMp3([frames(4), frames(4)], null);
     expect([r.method, r.bytes.length, r.warnings]).toEqual(['frames', 8 * 96, []]);

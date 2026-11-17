@@ -55,6 +55,8 @@ const headers = (apiKey: string) => ({ 'x-goog-api-key': apiKey, 'content-type':
  * TtsAudioError ou une erreur réseau ; le message ne contient jamais la clé.
  */
 export async function synthesize(text: string, voice: TtsVoice, audio: TtsAudio, client: TtsClient): Promise<Buffer> {
+  if (!text.trim()) throw new Error('texte vide : rien à synthétiser');
+  if (!voice.name.startsWith(voice.languageCode)) throw new Error(`voix ${voice.name} incompatible avec la langue ${voice.languageCode}`);
   if (utf8Bytes(text) > TTS_MAX_REQUEST_BYTES) throw new Error(`morceau de ${utf8Bytes(text)} octets, au-dessus de la limite de l'API`);
   const body = JSON.stringify({
     input: { text },

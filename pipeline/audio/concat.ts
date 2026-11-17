@@ -98,7 +98,12 @@ export async function concatMp3(chunks: Uint8Array[], ffmpeg: string | null, opt
       return await concatWithFfmpeg(chunks, ffmpeg, opts);
     } catch (e) {
       if (opts.signal?.aborted) throw e;
-      const r = concatFrames(chunks);
+      let r: ConcatResult;
+      try {
+        r = concatFrames(chunks);
+      } catch (e2) {
+        throw new Error(`${(e2 as Error).message} (ffmpeg : ${ffmpegError(e)})`);
+      }
       return { ...r, warnings: [`ffmpeg en échec (${ffmpegError(e)}) : trames concaténées sans réencodage`] };
     }
   }
