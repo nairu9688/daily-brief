@@ -48,6 +48,8 @@ export type SupabaseClient = {
   download(bucket: string, path: string, opts?: CallOptions): Promise<Buffer | null>;
   /** Supprime des fichiers d'un bucket (les fichiers absents sont ignorés). */
   remove(bucket: string, paths: string[], opts?: CallOptions): Promise<void>;
+  /** Une page du contenu d'un dossier d'un bucket (`prefix` vide : la racine). Un dossier n'a pas d'id. */
+  list(bucket: string, prefix: string, page: { limit: number; offset: number }, opts?: CallOptions): Promise<{ name: string; folder: boolean }[]>;
   readonly breaker: Breaker;
 };
 
@@ -65,6 +67,7 @@ const FATAL_STATUS = new Set([401, 402, 403, 429]);
 class ResponseError extends Error {}
 
 const ErrorBody = z.object({ code: z.string().optional(), message: z.string().optional(), error: z.string().optional(), statusCode: z.union([z.string(), z.number()]).optional() });
+const ListBody = z.array(z.object({ name: z.string(), id: z.string().nullable().optional() }).loose());
 const NAME = /^[a-z][a-z0-9_]*$/;
 /** Segment de chemin sûr : pas de « .. », pas de barre oblique, caractères simples seulement. */
 const SEGMENT = /^(?!\.+$)[A-Za-z0-9._-]+$/;
@@ -194,6 +197,26 @@ export function createSupabaseClient(config: SupabaseConfig, fetch: SupabaseFetc
         },
         [400, 404],
       );
+    },
+
+    async list(bucket, prefix, page, opts) {
+      if (prefix !== '') objectPath(bucket, prefix);
+      const init: SupabaseInit = {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', accept: 'application/json' },
+        body: JSON.stringify({ prefix, limit: page.limit, offset: page.offset, sortBy: { column: 'name', order: 'asc' } }),
+      };
+      return call(`Supabase Storage (liste de ${bucket})`, `${config.url}/storage/v1/object/list/${encodeURIComponent(bucket)}`, init, opts, RPC_TIMEOUT_MS, async (res) => {
+        let data: unknown;
+        try {
+          data = JSON.parse(new TextDecoder().decode(await readCapped(res, MAX_RPC_BYTES)));
+        } catch {
+          throw new ResponseError('réponse non JSON');
+        }
+        const parsed = ListBody.safeParse(data);
+        if (!parsed.success) throw new ResponseError('réponse inattendue');
+        return parsed.data.map((e) => ({ name: e.name, folder: e.id == null }));
+      });
     },
 
     async remove(bucket, paths, opts) {

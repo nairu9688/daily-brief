@@ -222,6 +222,22 @@ describe('client Supabase', () => {
     expect(fake.calls).toEqual([]);
   });
 
+  it('list : une page de dossiers et de fichiers, triée ; un préfixe douteux est refusé sans rien envoyer', async () => {
+    const fake = fakeSupabase();
+    const client = createSupabaseClient(config, fake.fetch);
+    for (const p of ['2026-10-01/fr.mp3', '2026-10-01/en.mp3', '2026-10-02/fr.mp3']) await client.upload('audio', p, PDF, 'audio/mpeg');
+    expect(await client.list('audio', '', { limit: 1, offset: 0 })).toEqual([{ name: '2026-10-01', folder: true }]);
+    expect(await client.list('audio', '', { limit: 5, offset: 1 })).toEqual([{ name: '2026-10-02', folder: true }]);
+    expect(await client.list('audio', '2026-10-01', { limit: 5, offset: 0 })).toEqual([
+      { name: 'en.mp3', folder: false },
+      { name: 'fr.mp3', folder: false },
+    ]);
+    expect(fake.calls.at(-1)).toMatchObject({ method: 'POST', path: '/storage/v1/object/list/audio', body: expect.stringContaining('"prefix":"2026-10-01"') });
+    const before = fake.calls.length;
+    await expect(client.list('audio', '../pdf', { limit: 5, offset: 0 })).rejects.toThrow('chemin de stockage refusé');
+    expect(fake.calls).toHaveLength(before);
+  });
+
   it('remove : un seul DELETE avec la liste des chemins ; rien à envoyer pour une liste vide', async () => {
     const fake = fakeSupabase();
     const client = createSupabaseClient(config, fake.fetch);

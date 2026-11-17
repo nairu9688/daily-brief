@@ -166,6 +166,24 @@ describe('runPublish', () => {
     expect(server.hits.filter((h) => h.method === 'POST').slice(-3).map((h) => JSON.parse(h.body).date)).toEqual([DAY, DAY, '2026-11-07']);
   });
 
+  it('un vieux dépôt en échec ne bloque pas le dépôt du jour : la relance a son propre disjoncteur', async () => {
+    const old = '2026-11-05';
+    const oldFiles = [pdfFile(old), mp3File(old, 'fr'), mp3File(old, 'en')];
+    for (const f of oldFiles) fake.files.set(`${f.bucket}/${f.path}`, { bytes: f.bucket === 'pdf' ? PDF_BYTES : MP3_BYTES, contentType: f.mimeType });
+    await db.query(`insert into public.drive_pending (date, files, attempts) values ($1, $2, 1)`, [old, JSON.stringify(oldFiles)]);
+    // Apps Script refuse les trois fichiers du vieux dépôt (3 erreurs 500 : le disjoncteur de la relance se coupe), pas ceux du jour.
+    const driveFetch: HttpFetch = async (url, init) => {
+      server.state.mode = init?.body?.includes(`"date":"${old}"`) ? 'http-500' : 'ok';
+      return (fetch as unknown as HttpFetch)(url, init);
+    };
+    const r = await publish({}, { driveFetch });
+    expect(r.exitCode).toBe(0);
+    expect(r.report.drive.retried.failed).toEqual([old]);
+    expect(r.report.drive).toMatchObject({ status: 'sent', sent: ['Daily Brief 2026-11-06.pdf'] });
+    expect(server.google.tree()).toEqual(TREE);
+    expect(server.hits.filter((h) => h.method === 'POST')).toHaveLength(4);
+  });
+
   it('relancer une date dont le dépôt était en attente le solde sans passer par la relance', async () => {
     server.state.mode = 'http-500';
     const first = await publish();

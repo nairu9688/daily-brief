@@ -34,25 +34,53 @@ as $$
   select jsonb_build_object('deleted', (select count(*) from gone));
 $$;
 
--- Nouvel échec du dépôt de p_date : une tentative de plus, et seuls les fichiers restants sont gardés.
--- p_attempts_at_least, s'il est donné, abandonne le dépôt (plus jamais retenté, mais toujours visible).
+-- Échec du dépôt de p_date : on note l'erreur et on ne garde que les fichiers restants. La tentative
+-- est déjà comptée (drive_pending_claim). p_attempts_at_least, s'il est donné, abandonne le dépôt
+-- (plus jamais retenté, mais toujours visible).
 create or replace function public.drive_pending_fail(p_date date, p_error text, p_files jsonb, p_attempts_at_least integer default null) returns jsonb
 language sql security invoker set search_path = ''
 as $$
   with upd as (
     update public.drive_pending d
-    set attempts = greatest(d.attempts + 1, coalesce(p_attempts_at_least, 0)), last_error = p_error, files = coalesce(p_files, d.files), updated_at = now()
+    set attempts = greatest(d.attempts, coalesce(p_attempts_at_least, 0)), last_error = p_error, files = coalesce(p_files, d.files), updated_at = now()
     where d.date = p_date
     returning d.attempts
   )
   select jsonb_build_object('attempts', (select attempts from upd));
 $$;
 
--- Chemins des MP3 d'éditions de plus de p_days jours avant p_date (purge à 30 jours, spec §6.2).
+-- Prend en charge le dépôt de p_date AVANT de le traiter : la tentative est comptée d'avance, donc une
+-- panne en cours de route ne l'efface pas. Rend la ligne (date, files, attempts), ou null s'il n'y en a
+-- plus ou si le plafond est atteint.
+create or replace function public.drive_pending_claim(p_date date, p_max_attempts integer default 5) returns jsonb
+language sql security invoker set search_path = ''
+as $$
+  with c as (
+    update public.drive_pending d set attempts = d.attempts + 1, updated_at = now()
+    where d.date = p_date and d.attempts < p_max_attempts
+    returning d.date, d.files, d.attempts
+  )
+  select (select jsonb_build_object('date', c.date::text, 'files', c.files, 'attempts', c.attempts) from c);
+$$;
+
+-- Supprime les dépôts abandonnés (au moins p_max_attempts tentatives) dont la date a plus de p_days jours
+-- avant p_today ; rend les dates supprimées.
+create or replace function public.drive_pending_expire(p_today date, p_days integer default 30, p_max_attempts integer default 5) returns jsonb
+language sql security invoker set search_path = ''
+as $$
+  with gone as (
+    delete from public.drive_pending d
+    where d.attempts >= p_max_attempts and d.date < p_today - p_days
+    returning d.date
+  )
+  select coalesce(jsonb_agg(g.date::text order by g.date), '[]'::jsonb) from gone g;
+$$;
+
+-- Date et chemin des MP3 d'éditions de plus de p_days jours avant p_date (purge à 30 jours, spec §6.2).
 create or replace function public.audio_expired(p_date date, p_days integer default 30) returns jsonb
 language sql stable security invoker set search_path = ''
 as $$
-  select coalesce(jsonb_agg(e.audio_path order by e.audio_path), '[]'::jsonb)
+  select coalesce(jsonb_agg(jsonb_build_object('date', e.date::text, 'path', e.audio_path) order by e.audio_path), '[]'::jsonb)
   from public.editions e
   where e.audio_path is not null and e.date < p_date - p_days;
 $$;
@@ -80,6 +108,8 @@ begin
     'drive_pending_list(integer, integer)',
     'drive_pending_resolve(date)',
     'drive_pending_fail(date, text, jsonb, integer)',
+    'drive_pending_claim(date, integer)',
+    'drive_pending_expire(date, integer, integer)',
     'audio_expired(date, integer)',
     'audio_clear(jsonb)'
   ]

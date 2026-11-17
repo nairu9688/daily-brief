@@ -75,6 +75,20 @@ export function fakeSupabase(db?: TestDb): FakeSupabase {
         }
       }
 
+      const listed = /^\/storage\/v1\/object\/list\/([a-z]+)$/.exec(path)?.[1];
+      if (listed && call.method === 'POST') {
+        const { prefix, limit, offset } = JSON.parse(String(init?.body ?? '{}')) as { prefix: string; limit: number; offset: number };
+        const base = prefix ? `${listed}/${prefix}/` : `${listed}/`;
+        const entries = new Map<string, boolean>();
+        for (const key of fake.files.keys()) {
+          if (!key.startsWith(base)) continue;
+          const [first, ...rest] = key.slice(base.length).split('/');
+          entries.set(first, rest.length > 0 || entries.get(first) === true);
+        }
+        const page = [...entries].sort(([a], [b]) => (a < b ? -1 : 1)).slice(offset, offset + limit);
+        return json(200, page.map(([name, folder]) => ({ name, id: folder ? null : `id-${name}` })));
+      }
+
       const object = /^\/storage\/v1\/object\/(.+)$/.exec(path)?.[1];
       if (object) {
         const key = object.split('/').map(decodeURIComponent).join('/');

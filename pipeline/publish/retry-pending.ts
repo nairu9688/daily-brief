@@ -16,6 +16,10 @@ const ListSchema = z.object({
   rows: z.array(z.object({ date: IsoDateSchema, files: z.unknown(), attempts: z.number().int().min(0) })),
   abandoned: z.number().int().min(0),
 });
+const Claimed = z.object({ date: IsoDateSchema, files: z.unknown(), attempts: z.number().int().min(0) }).nullable();
+const Dates = z.array(z.string());
+/** Un dépôt abandonné est supprimé de `drive_pending` après ce nombre de jours. */
+export const ABANDONED_KEEP_DAYS = 30;
 const Ack = z.object({}).loose();
 
 /** Met en attente le dépôt Drive de `date` : ces fichiers seront relus dans Storage au passage suivant. */
@@ -50,6 +54,13 @@ export async function retryPending(client: SupabaseClient, drive: DriveClient, t
   const warn = (message: string) => out.issues.push({ level: 'warning', message });
   let list: z.infer<typeof ListSchema>;
   try {
+    // Les dépôts abandonnés depuis plus de 30 jours sortent de la table : une seule ligne d'avertissement.
+    try {
+      const expired = await client.rpc('drive_pending_expire', { p_today: today, p_days: ABANDONED_KEEP_DAYS, p_max_attempts: MAX_ATTEMPTS }, Dates);
+      if (expired.length > 0) warn(`${expired.length} dépôt(s) Drive abandonné(s) depuis plus de ${ABANDONED_KEEP_DAYS} jours supprimé(s) de drive_pending : ${expired.join(', ')}`);
+    } catch {
+      // Ménage facultatif : la relance continue.
+    }
     list = await client.rpc('drive_pending_list', { p_max_attempts: MAX_ATTEMPTS, p_limit: RETRY_LIMIT + 1 }, ListSchema);
   } catch (e) {
     warn(`dépôts Drive en attente illisibles : ${messageOf(e)}`);
@@ -58,8 +69,30 @@ export async function retryPending(client: SupabaseClient, drive: DriveClient, t
   out.abandoned = list.abandoned;
   if (list.abandoned > 0) warn(`${list.abandoned} dépôt(s) Drive abandonné(s) après ${MAX_ATTEMPTS} tentatives (table drive_pending)`);
 
-  for (const row of list.rows.filter((r) => r.date !== today).slice(0, RETRY_LIMIT)) {
+  for (const listed of list.rows.filter((r) => r.date !== today).slice(0, RETRY_LIMIT)) {
     if (drive.breaker.open || client.breaker.open) break;
+    // La tentative est comptée avant tout traitement : une panne en cours de ligne ne l'efface pas.
+    let row: { date: string; files: unknown; attempts: number };
+    try {
+      const claimed = await client.rpc('drive_pending_claim', { p_date: listed.date, p_max_attempts: MAX_ATTEMPTS }, Claimed);
+      if (!claimed) continue;
+      row = claimed;
+    } catch (e) {
+      out.failed.push(listed.date);
+      warn(`dépôt en attente du ${listed.date} : prise en charge impossible : ${messageOf(e)}`);
+      continue;
+    }
+    try {
+      await retryRow(row);
+    } catch (e) {
+      // Une ligne qui plante ne bloque pas les suivantes.
+      out.failed.push(row.date);
+      warn(`dépôt en attente du ${row.date} : erreur inattendue : ${messageOf(e)}`);
+    }
+  }
+  return out;
+
+  async function retryRow(row: { date: string; files: unknown; attempts: number }): Promise<void> {
     const parsed = z.array(z.unknown()).safeParse(row.files);
     const remaining: DayFile[] = [];
     /** Fichiers perdus : absents de Storage, au mauvais format ou incohérents. Ils ne sont jamais envoyés. */
@@ -120,12 +153,11 @@ export async function retryPending(client: SupabaseClient, drive: DriveClient, t
       } else {
         await client.rpc('drive_pending_fail', { p_date: row.date, p_error: lastError.slice(0, 500), p_files: remaining }, Ack);
         out.failed.push(row.date);
-        warn(`dépôt Drive du ${row.date} toujours en attente (tentative ${row.attempts + 1} sur ${MAX_ATTEMPTS}) : ${lastError}`);
+        warn(`dépôt Drive du ${row.date} toujours en attente (tentative ${row.attempts} sur ${MAX_ATTEMPTS}) : ${lastError}`);
       }
     } catch (e) {
       out.failed.push(row.date);
       warn(`dépôt en attente du ${row.date} : mise à jour impossible : ${messageOf(e)}`);
     }
   }
-  return out;
 }

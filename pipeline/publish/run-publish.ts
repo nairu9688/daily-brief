@@ -147,12 +147,17 @@ export async function runPublish(opts: RunPublishOptions): Promise<RunPublishRes
 
     let drive: DriveClient | null = null;
     const dr = driveConfig(opts.env, opts.driveHosts);
-    if (dr.ok) drive = createDriveClient(dr.config, opts.driveFetch, { signal: driveSignal, hosts: opts.driveHosts, timeoutMs: opts.driveTimeoutMs });
+    let retryDrive: DriveClient | null = null;
+    if (dr.ok) {
+      drive = createDriveClient(dr.config, opts.driveFetch, { signal: driveSignal, hosts: opts.driveHosts, timeoutMs: opts.driveTimeoutMs });
+      // La relance des vieux dépôts a son propre disjoncteur : un vieux fichier en échec ne bloque pas le dépôt du jour.
+      retryDrive = createDriveClient(dr.config, opts.driveFetch, { signal: driveSignal, hosts: opts.driveHosts, timeoutMs: opts.driveTimeoutMs });
+    }
     else issue(dr.error === MISSING_DRIVE ? 'warning' : 'error', `${dr.error} : dépôt Drive ignoré`);
 
     // 1. Dépôts Drive en attente des jours précédents.
-    if (client && drive) {
-      const retried = await retryPending(client, drive, opts.date);
+    if (client && retryDrive) {
+      const retried = await retryPending(client, retryDrive, opts.date);
       report.drive.retried = { resolved: retried.resolved, failed: retried.failed, abandoned: retried.abandoned };
       add(retried.issues);
     }

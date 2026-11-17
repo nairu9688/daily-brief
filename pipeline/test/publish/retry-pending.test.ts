@@ -151,8 +151,9 @@ describe('retryPending', () => {
     ]);
     expect(server.google.tree()).toEqual(['Daily Brief/2026/10 - Octobre/Daily Brief 2026-10-01.pdf']);
     expect(await pending()).toEqual([{ date: '2026-10-01', files: [mp3File('2026-10-01', 'es')], attempts: MAX_ATTEMPTS, last_error: 'fichier(s) introuvable(s) dans Storage : Daily Brief 2026-10-01 ES.mp3' }]);
-    // Abandonné : plus retenté, mais toujours compté au passage suivant.
-    expect((await retryPending(client, drive, TODAY)).abandoned).toBe(1);
+    // Abandonné : plus retenté ; plus de 30 jours après sa date, il quitte la table au passage suivant.
+    expect((await retryPending(client, drive, TODAY)).abandoned).toBe(0);
+    expect(await pending()).toEqual([]);
   });
 
   it('tous les fichiers perdus : rien n’est envoyé et le dépôt est abandonné, pas soldé', async () => {
@@ -211,6 +212,54 @@ describe('retryPending', () => {
     expect((await pending()).map((p) => p.date)).toEqual(['2026-10-06', '2026-10-07']);
   });
 
+  it('la tentative est comptée avant le traitement : une panne en cours de ligne ne l’efface pas', async () => {
+    await queuePending(client, '2026-11-06', [stored(pdfFile('2026-11-06'))], 'x');
+    server.state.mode = 'http-500';
+    // La mise à jour finale échoue aussi : seul le décompte posé d'avance survit.
+    fake.intercept = (c) => (c.path.endsWith('/drive_pending_fail') ? { status: 500, json: {} } : undefined);
+    const r = await retryPending(client, drive, TODAY);
+    expect(r.failed).toEqual(['2026-11-06']);
+    expect(r.issues.at(-1)!.message).toBe('dépôt en attente du 2026-11-06 : mise à jour impossible : Supabase drive_pending_fail : HTTP 500');
+    expect((await pending())[0].attempts).toBe(2);
+  });
+
+  it('prise en charge impossible : cette ligne est sautée, les suivantes sont traitées', async () => {
+    await queuePending(client, '2026-10-01', [stored(pdfFile('2026-10-01'))], 'x');
+    await queuePending(client, '2026-10-02', [stored(pdfFile('2026-10-02'))], 'x');
+    let claims = 0;
+    fake.intercept = (c) => (c.path.endsWith('/drive_pending_claim') && claims++ === 0 ? { status: 500, json: {} } : undefined);
+    const r = await retryPending(client, drive, TODAY);
+    expect(r.resolved).toEqual(['2026-10-02']);
+    expect(r.failed).toEqual(['2026-10-01']);
+    expect(r.issues.map((i) => i.message)).toEqual(['dépôt en attente du 2026-10-01 : prise en charge impossible : Supabase drive_pending_claim : HTTP 500']);
+    expect((await pending()).map((p) => [p.date, p.attempts])).toEqual([['2026-10-01', 1]]);
+  });
+
+  it('claim : une tentative de plus, la ligne rendue ; rien au-delà du plafond ni sans ligne', async () => {
+    await queuePending(client, '2026-11-06', [pdfFile('2026-11-06')], 'x');
+    expect(await rpc(db, 'drive_pending_claim', { p_date: '2026-11-06' })).toEqual({ date: '2026-11-06', files: [pdfFile('2026-11-06')], attempts: 2 });
+    expect(await rpc(db, 'drive_pending_claim', { p_date: '2026-11-01' })).toBeNull();
+    await db.query(`update public.drive_pending set attempts = 5`);
+    expect(await rpc(db, 'drive_pending_claim', { p_date: '2026-11-06' })).toBeNull();
+    for (const role of ['anon', { email: ALLOWED_EMAIL }] as const) {
+      await expect(rpc(db, 'drive_pending_claim', { p_date: '2026-11-06' }, role)).rejects.toThrow(/permission denied/);
+      await expect(rpc(db, 'drive_pending_expire', { p_today: TODAY }, role)).rejects.toThrow(/permission denied/);
+    }
+  });
+
+  it('dépôts abandonnés depuis plus de 30 jours : supprimés de drive_pending, une seule ligne d’avertissement', async () => {
+    for (const [date, attempts] of [['2026-09-01', 5], ['2026-09-15', 7], ['2026-09-20', 2], ['2026-10-20', 5]] as const) {
+      await db.query(`insert into public.drive_pending (date, files, attempts) values ($1, '[]', $2)`, [date, attempts]);
+    }
+    const r = await retryPending(client, drive, TODAY);
+    expect(r.issues.map((i) => i.message)).toEqual([
+      '2 dépôt(s) Drive abandonné(s) depuis plus de 30 jours supprimé(s) de drive_pending : 2026-09-01, 2026-09-15',
+      '1 dépôt(s) Drive abandonné(s) après 5 tentatives (table drive_pending)',
+      'dépôt Drive du 2026-09-20 abandonné : fichier(s) introuvable(s) dans Storage : aucun fichier à déposer',
+    ]);
+    expect((await pending()).map((p) => p.date)).toEqual(['2026-09-20', '2026-10-20']);
+  });
+
   it('Supabase illisible : un avertissement, aucun envoi', async () => {
     fake.intercept = () => ({ status: 500, json: {} });
     const r = await retryPending(client, drive, TODAY);
@@ -242,7 +291,7 @@ describe('purgeExpiredAudio', () => {
     // Second passage : plus rien à faire, aucun appel à Storage.
     const before = fake.calls.length;
     expect(await purgeExpiredAudio(client, TODAY)).toEqual({ removed: 0, issues: [] });
-    expect(fake.calls.slice(before).map((c) => c.path)).toEqual(['/rest/v1/rpc/audio_expired']);
+    expect(fake.calls.slice(before).map((c) => c.path)).toEqual(['/rest/v1/rpc/audio_expired', '/storage/v1/object/list/audio']);
   });
 
   it('suppression en échec : avertissement, audio_path intact (rattrapé au passage suivant)', async () => {
@@ -257,7 +306,38 @@ describe('purgeExpiredAudio', () => {
     await edition('2026-10-01', 'fr', '../pdf/2026-10-01/daily-brief-2026-10-01.pdf');
     await edition('2026-10-02', 'fr', '2026-10-02/fr.mp3');
     const r = await purgeExpiredAudio(client, TODAY);
-    expect(r).toEqual({ removed: 1, issues: [{ level: 'warning', message: 'purge audio : 1 chemin(s) inattendu(s) ignoré(s)' }] });
+    expect(r).toEqual({ removed: 1, issues: [{ level: 'warning', message: 'purge audio : 1 chemin(s) inattendu(s) retiré(s) de editions.audio_path (aucun fichier supprimé pour eux)' }] });
     expect(fake.calls.find((c) => c.method === 'DELETE')!.body).toBe('{"prefixes":["2026-10-02/fr.mp3"]}');
+    // Le chemin douteux est vidé : le prochain passage ne le signale plus.
+    expect(await audioPaths()).toEqual([['2026-10-01', null], ['2026-10-02', null]]);
+    expect(await purgeExpiredAudio(client, TODAY)).toEqual({ removed: 0, issues: [] });
+  });
+
+  it('un chemin dont la date n’est pas celle de l’édition n’est jamais supprimé : il est vidé et signalé une fois', async () => {
+    await edition('2026-10-01', 'fr', '2026-11-07/fr.mp3');
+    await edition('2026-10-01', 'en', '2026-10-01/en.mp3');
+    fake.files.set('audio/2026-11-07/fr.mp3', { bytes: MP3_BYTES, contentType: 'audio/mpeg' });
+    fake.files.set('audio/2026-10-01/en.mp3', { bytes: MP3_BYTES, contentType: 'audio/mpeg' });
+    const r = await purgeExpiredAudio(client, TODAY);
+    expect(r.removed).toBe(1);
+    expect(r.issues).toHaveLength(1);
+    expect([...fake.files.keys()]).toEqual(['audio/2026-11-07/fr.mp3']);
+    expect(await audioPaths()).toEqual([['2026-10-01', null], ['2026-10-01', null]]);
+  });
+
+  it('MP3 orphelins : supprimés d’après leur dossier daté, sans ligne d’édition, listage paginé sur deux pages', async () => {
+    for (const p of ['2026-08-30/es.mp3', '2026-09-01/fr.mp3', '2026-09-01/en.mp3', '2026-09-01/es.mp3', '2026-09-01/notes.txt', '2026-10-09/fr.mp3', '2026-11-08/fr.mp3']) {
+      fake.files.set(`audio/${p}`, { bytes: MP3_BYTES, contentType: 'audio/mpeg' });
+    }
+    fake.files.set('audio/divers/fr.mp3', { bytes: MP3_BYTES, contentType: 'audio/mpeg' });
+    const r = await purgeExpiredAudio(client, TODAY, { pageSize: 2 });
+    expect(r).toEqual({ removed: 4, issues: [] });
+    expect([...fake.files.keys()].sort()).toEqual(['audio/2026-09-01/notes.txt', 'audio/2026-10-09/fr.mp3', 'audio/2026-11-08/fr.mp3', 'audio/divers/fr.mp3']);
+    const lists = fake.calls.filter((c) => c.path === '/storage/v1/object/list/audio').map((c) => JSON.parse(String(c.body)) as { prefix: string; offset: number; limit: number });
+    // Racine : 5 entrées en 3 pages de 2 ; dossier du 2026-09-01 : 4 entrées en 3 pages ; 2026-08-30 : 1 page.
+    expect(lists.filter((l) => l.prefix === '').map((l) => l.offset)).toEqual([0, 2, 4]);
+    expect(lists.filter((l) => l.prefix === '2026-09-01').map((l) => l.offset)).toEqual([0, 2, 4]);
+    expect(lists.every((l) => l.limit === 2)).toBe(true);
+    expect(fake.calls.filter((c) => c.method === 'DELETE')).toHaveLength(1);
   });
 });
