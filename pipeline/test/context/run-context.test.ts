@@ -7,10 +7,15 @@ import { MemoryContextStore, type StoredThread } from '../../context/memory-stor
 import { runContext } from '../../context/run-context';
 import { selectStore } from '../../context/select-store';
 import { EmptyContextStore, type ContextStore } from '../../context/store';
+import type { SupabaseFetch } from '../../supabase/client';
 
 const DAY = '2026-11-06';
 const NOW = new Date('2026-11-06T04:13:00Z');
 const read = (p: string) => JSON.parse(readFileSync(p, 'utf8'));
+/** Aucun appel réseau n'est attendu dans ces tests. */
+const noFetch: SupabaseFetch = async () => {
+  throw new Error('appel réseau inattendu');
+};
 
 const thread = (id: string, lang: 'fr' | 'en' | 'es', updatedAt: string, events: string[]): StoredThread => ({
   id,
@@ -66,12 +71,24 @@ describe('runContext', () => {
 
   it('store vide : contexte vide écrit avec l’avertissement, code 0', async () => {
     const { outDir, dayDir } = setup();
-    const { store, warning } = selectStore({});
-    const r = await runContext({ outDir, date: DAY, store, warnings: [warning], now: NOW });
+    const { store, warnings } = selectStore({}, { allowEmpty: true, fetch: noFetch });
+    const r = await runContext({ outDir, date: DAY, store, warnings, now: NOW });
     expect(r.exitCode).toBe(0);
     expect(read(join(dayDir, 'context.json'))).toEqual({ date: DAY, openThreads: [], yesterdayTopics: [] });
     expect(r.report.issues).toEqual([{ level: 'warning', message: 'SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY absente : contexte vide (aucun Thread ouvert, aucun sujet de la veille)' }]);
-    expect(selectStore({ SUPABASE_URL: 'https://x.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'k' }).warning).toBe('store Supabase pas encore disponible (lot 4) : contexte vide');
+  });
+
+  it('sans configuration Supabase ni --allow-empty : pas de context.json, rapport écrit, code 2', async () => {
+    const { outDir, dayDir } = setup();
+    mkdirSync(dayDir, { recursive: true });
+    writeFileSync(join(dayDir, 'context.json'), '{"périmé":true}');
+    const { store, warnings } = selectStore({}, { fetch: noFetch });
+    const r = await runContext({ outDir, date: DAY, store, warnings, now: NOW });
+    expect(r.exitCode).toBe(2);
+    expect(existsSync(join(dayDir, 'context.json'))).toBe(false);
+    expect(read(join(dayDir, 'context-report.json')).issues).toEqual([
+      { level: 'error', message: 'store indisponible : SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY absente (--allow-empty pour un contexte vide en développement local)' },
+    ]);
   });
 
   it('retire les doublons, Threads fermés et sujets invalides avec un avertissement', async () => {

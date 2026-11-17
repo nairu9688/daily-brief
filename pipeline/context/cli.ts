@@ -2,6 +2,7 @@ import { parseArgs } from 'node:util';
 import { parisToday } from '../lib/date';
 import { loadEnv } from '../lib/env';
 import { redactText } from '../lib/redact';
+import type { SupabaseFetch } from '../supabase/client';
 import { runContext } from './run-context';
 import { selectStore } from './select-store';
 import { readSupabaseEnv } from './supabase-env';
@@ -10,15 +11,15 @@ const SECRET_ENV = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
 
 try {
   loadEnv(SECRET_ENV);
-  const { values } = parseArgs({ options: { date: { type: 'string' }, out: { type: 'string', default: 'out' } } });
+  const { values } = parseArgs({ options: { date: { type: 'string' }, out: { type: 'string', default: 'out' }, 'allow-empty': { type: 'boolean', default: false } } });
   const date = values.date ?? parisToday();
   const { url, serviceKey } = readSupabaseEnv(process.env);
-  const { store, warning } = selectStore({ SUPABASE_URL: url, SUPABASE_SERVICE_ROLE_KEY: serviceKey });
+  const { store, warnings } = selectStore({ SUPABASE_URL: url, SUPABASE_SERVICE_ROLE_KEY: serviceKey }, { allowEmpty: values['allow-empty'], fetch: fetch as SupabaseFetch });
   const { exitCode, report } = await runContext({
     outDir: values.out!,
     date,
     store,
-    warnings: [warning],
+    warnings,
     secrets: [serviceKey],
   });
   console.log(`brief:context ${date} (store ${report.store})`);
