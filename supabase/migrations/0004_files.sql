@@ -35,12 +35,13 @@ as $$
 $$;
 
 -- Nouvel échec du dépôt de p_date : une tentative de plus, et seuls les fichiers restants sont gardés.
-create or replace function public.drive_pending_fail(p_date date, p_error text, p_files jsonb) returns jsonb
+-- p_attempts_at_least, s'il est donné, abandonne le dépôt (plus jamais retenté, mais toujours visible).
+create or replace function public.drive_pending_fail(p_date date, p_error text, p_files jsonb, p_attempts_at_least integer default null) returns jsonb
 language sql security invoker set search_path = ''
 as $$
   with upd as (
     update public.drive_pending d
-    set attempts = d.attempts + 1, last_error = p_error, files = coalesce(p_files, d.files), updated_at = now()
+    set attempts = greatest(d.attempts + 1, coalesce(p_attempts_at_least, 0)), last_error = p_error, files = coalesce(p_files, d.files), updated_at = now()
     where d.date = p_date
     returning d.attempts
   )
@@ -78,7 +79,7 @@ begin
     'drive_pending_put(date, jsonb, text)',
     'drive_pending_list(integer, integer)',
     'drive_pending_resolve(date)',
-    'drive_pending_fail(date, text, jsonb)',
+    'drive_pending_fail(date, text, jsonb, integer)',
     'audio_expired(date, integer)',
     'audio_clear(jsonb)'
   ]

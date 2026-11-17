@@ -119,7 +119,7 @@ export function createDriveClient(config: DriveConfig, fetch: HttpFetch, options
       try {
         const parsed = ResponseSchema.safeParse(await exchange(body, signal));
         if (!parsed.success) throw new DriveError('réponse inattendue');
-        if (!parsed.data.ok) throw new DriveError(`refus d’Apps Script (${parsed.data.error.slice(0, 40)})`, parsed.data.error === 'unauthorized');
+        if (!parsed.data.ok) throw new DriveError(`refus d’Apps Script (${clean(parsed.data.error).slice(0, 40)})`, parsed.data.error === 'unauthorized');
         const id = parsed.data.ids[file.name];
         if (!id) throw new DriveError('réponse sans l’id du fichier envoyé');
         breaker.success();

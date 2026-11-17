@@ -273,6 +273,50 @@ describe('runPublish', () => {
     expect(await count('drive_pending')).toBe(0);
   });
 
+  it('un MP3 refusé par Storage rend le passage dégradé, même si le PDF et Drive passent', async () => {
+    fake.intercept = (c) => (c.path.startsWith('/storage/v1/object/audio/') ? { status: 500, json: {} } : undefined);
+    const r = await publish({ audio: ['fr'] });
+    expect(r.exitCode).toBe(0);
+    expect(r.report.status).toBe('degraded');
+    expect(r.report.files.map((f) => [f.bucket, f.stored])).toEqual([['pdf', true], ['audio', false]]);
+    expect(r.report.drive.status).toBe('sent');
+    expect((await runsRow()).status).toBe('degraded');
+  });
+
+  it('Drive muet jusqu’à l’échéance : éditions publiées, PDF mis en attente, ligne runs écrite', async () => {
+    server.state.mode = 'hang';
+    const started = Date.now();
+    // Drive est coupé 1 s après le début ; l'échéance globale tombe à 4 s.
+    const r = await publish({}, { deadlineMs: 4_000, driveReserveMs: 3_000, driveTimeoutMs: 60_000 });
+    expect(Date.now() - started).toBeLessThan(10_000);
+    expect(r.exitCode).toBe(0);
+    expect(r.report.status).toBe('degraded');
+    expect(r.report.runSaved).toBe(true);
+    expect(r.report.drive).toMatchObject({ status: 'pending', pending: ['Daily Brief 2026-11-06.pdf'] });
+    expect((await rows<{ date: string }>(db, 'select date::text as date from public.drive_pending')).map((x) => x.date)).toEqual([DAY]);
+    expect((await runsRow()).status).toBe('degraded');
+  });
+
+  it('échéance globale déjà passée : la mise en attente et la ligne runs ont leur propre délai', async () => {
+    server.state.mode = 'hang';
+    const r = await publish({}, { deadlineMs: 2_500, driveReserveMs: 0, driveTimeoutMs: 60_000 });
+    expect(r.exitCode).toBe(0);
+    expect(r.report.runSaved).toBe(true);
+    expect(r.report.drive.status).toBe('pending');
+    expect(await count('drive_pending')).toBe(1);
+  });
+
+  it('mise en attente impossible : le message le dit, sans accuser Storage', async () => {
+    server.state.mode = 'http-500';
+    fake.intercept = (c) => (c.path.endsWith('/drive_pending_put') ? { status: 500, json: {} } : undefined);
+    const r = await publish();
+    expect(r.report.drive.status).toBe('failed');
+    const messages = r.report.issues.map((i) => i.message);
+    expect(messages).toContain('mise en attente Drive impossible : Supabase drive_pending_put : HTTP 500');
+    expect(messages.some((m) => m.includes('absent(s) de Supabase Storage'))).toBe(false);
+    expect(messages).toContain('Drive : Daily Brief 2026-11-06.pdf ni déposé(s) ni mis en attente (mise en attente impossible)');
+  });
+
   it('purge les MP3 de plus de 30 jours après une publication réussie', async () => {
     await db.query(`insert into public.editions (date, lang, region, headline, morning_brief, generated_at, audio_path) values ('2026-10-01', 'fr', 'r', 'h', '[]', now(), '2026-10-01/fr.mp3')`);
     fake.files.set('audio/2026-10-01/fr.mp3', { bytes: MP3_BYTES, contentType: 'audio/mpeg' });

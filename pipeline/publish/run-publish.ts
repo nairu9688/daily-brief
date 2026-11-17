@@ -28,6 +28,10 @@ export type RunPublishOptions = {
   driveTimeoutMs?: number;
   /** Échéance globale, en ms (15 min par défaut) : au-delà, tout appel restant est interrompu. */
   deadlineMs?: number;
+  /** Marge gardée avant l'échéance globale pour la mise en attente et la ligne `runs` (60 s par défaut) : Drive est coupé avant. */
+  driveReserveMs?: number;
+  /** Délai propre de la mise en attente Drive et de la ligne `runs`, indépendant de l'échéance globale (30 s par défaut). */
+  bookkeepingMs?: number;
   now?: Date;
   /** Horloge des durées (ms), remplaçable dans les tests. */
   clock?: () => number;
@@ -117,7 +121,13 @@ export async function runPublish(opts: RunPublishOptions): Promise<RunPublishRes
     return { exitCode: report.exitCode, report, reportWritten };
   };
 
-  const global = AbortSignal.timeout(opts.deadlineMs ?? 15 * 60_000);
+  const deadlineMs = opts.deadlineMs ?? 15 * 60_000;
+  const global = AbortSignal.timeout(deadlineMs);
+  // Drive s'arrête avant l'échéance globale : il reste de quoi mettre en attente et écrire `runs`.
+  const driveSignal = AbortSignal.any([global, AbortSignal.timeout(Math.max(1, deadlineMs - (opts.driveReserveMs ?? 60_000)))]);
+  let sbConfig: Extract<ReturnType<typeof supabaseConfig>, { ok: true }>['config'] | null = null;
+  /** Client des écritures de suivi (`drive_pending`, `runs`) : son délai ne dépend pas de l'échéance globale. */
+  const bookClient = (): SupabaseClient => (client?.breaker.open ? client : createSupabaseClient(sbConfig!, opts.supabaseFetch, { signal: AbortSignal.timeout(opts.bookkeepingMs ?? 30_000) }));
   let client: SupabaseClient | null = null;
   let summary: ReturnType<typeof summarizeReports> | null = null;
   const driveErrors: string[] = [];
@@ -129,12 +139,15 @@ export async function runPublish(opts: RunPublishOptions): Promise<RunPublishRes
     const local: LocalFile[] = [...(inputs.pdf ? [inputs.pdf] : []), ...inputs.audio];
 
     const sb = supabaseConfig(opts.env);
-    if (sb.ok) client = createSupabaseClient(sb.config, opts.supabaseFetch, { signal: global });
+    if (sb.ok) {
+      sbConfig = sb.config;
+      client = createSupabaseClient(sb.config, opts.supabaseFetch, { signal: global });
+    }
     else issue('error', `${sb.error} : rien n’est publié dans Supabase`);
 
     let drive: DriveClient | null = null;
     const dr = driveConfig(opts.env, opts.driveHosts);
-    if (dr.ok) drive = createDriveClient(dr.config, opts.driveFetch, { signal: global, hosts: opts.driveHosts, timeoutMs: opts.driveTimeoutMs });
+    if (dr.ok) drive = createDriveClient(dr.config, opts.driveFetch, { signal: driveSignal, hosts: opts.driveHosts, timeoutMs: opts.driveTimeoutMs });
     else issue(dr.error === MISSING_DRIVE ? 'warning' : 'error', `${dr.error} : dépôt Drive ignoré`);
 
     // 1. Dépôts Drive en attente des jours précédents.
@@ -177,23 +190,25 @@ export async function runPublish(opts: RunPublishOptions): Promise<RunPublishRes
       }
       if (failed.length === 0) {
         report.drive.status = 'sent';
-        if (client) await resolvePending(client, opts.date).catch((e) => issue('warning', `dépôt en attente du ${opts.date} non soldé : ${messageOf(e)}`));
+        if (client) await resolvePending(bookClient(), opts.date).catch((e) => issue('warning', `dépôt en attente du ${opts.date} non soldé : ${messageOf(e)}`));
       } else {
         const queueable = failed.filter((f) => stored.some((s) => s.path === f.path && s.bucket === f.bucket)).map(({ bytes: _bytes, lang: _lang, ...f }) => f);
         let queued = false;
+        let queueFailed = false;
         if (client && queueable.length > 0) {
           try {
-            await queuePending(client, opts.date, queueable, driveErrors.at(-1) ?? '');
+            await queuePending(bookClient(), opts.date, queueable, clean(driveErrors.at(-1) ?? ''));
             queued = true;
             report.drive.pending = queueable.map((f) => f.name);
           } catch (e) {
-            issue('error', `dépôt Drive non mis en attente : ${messageOf(e)}`);
+            queueFailed = true;
+            issue('error', `mise en attente Drive impossible : ${messageOf(e)}`);
           }
         }
         report.drive.status = queued ? 'pending' : 'failed';
         const lost = failed.filter((f) => !report.drive.pending.includes(f.name)).map((f) => f.name);
         issue('warning', `Drive : ${failed.length} fichier(s) non déposé(s) (${driveErrors[0]})${queued ? ' — mis en attente, retentés au prochain passage' : ''}`);
-        if (lost.length > 0) issue('error', `Drive : ${lost.join(', ')} ni déposé(s) ni mis en attente (absent(s) de Supabase Storage)`);
+        if (lost.length > 0) issue('error', `Drive : ${lost.join(', ')} ni déposé(s) ni mis en attente (${queueFailed ? 'mise en attente impossible' : 'absent(s) de Supabase Storage'})`);
       }
     }
 
@@ -208,8 +223,9 @@ export async function runPublish(opts: RunPublishOptions): Promise<RunPublishRes
     issue('error', `erreur inattendue : ${messageOf(e)}`);
   }
 
-  const pdfMissing = !report.files.some((f) => f.bucket === 'pdf' && f.stored);
-  report.status = published().length === 0 ? 'failed' : report.issues.some((i) => i.level === 'error') || pdfMissing || report.drive.status === 'pending' || report.drive.status === 'failed' ? 'degraded' : 'ok';
+  // Un fichier du jour absent de Storage (le PDF comme un MP3) rend le passage dégradé.
+  const filesMissing = !report.files.some((f) => f.bucket === 'pdf' && f.stored) || report.files.some((f) => !f.stored);
+  report.status = published().length === 0 ? 'failed' : report.issues.some((i) => i.level === 'error') || filesMissing || report.drive.status === 'pending' || report.drive.status === 'failed' ? 'degraded' : 'ok';
 
   // 6. Ligne `runs` du jour : bilan de chaque étape, pour la page Santé.
   if (client && summary) {
@@ -232,7 +248,8 @@ export async function runPublish(opts: RunPublishOptions): Promise<RunPublishRes
     };
     const notes = `${published().length} édition(s) publiée(s) : ${published().map((e) => e.lang.toUpperCase()).join(', ') || 'aucune'} ; Drive : ${report.drive.status}`;
     try {
-      await client.rpc('save_run', { p_date: opts.date, p_status: report.status, p_steps: JSON.parse(stripSecrets(JSON.stringify(steps), secrets)), p_notes: notes }, Ack);
+      // Avec au moins une édition publiée, l'écriture a son propre délai ; sinon elle suit l'échéance globale.
+      await (published().length > 0 ? bookClient() : client).rpc('save_run', { p_date: opts.date, p_status: report.status, p_steps: JSON.parse(stripSecrets(JSON.stringify(steps), secrets)), p_notes: notes }, Ack);
       report.runSaved = true;
     } catch (e) {
       issue('warning', `ligne runs non écrite : ${messageOf(e)}`);

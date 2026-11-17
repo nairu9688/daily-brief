@@ -62,11 +62,19 @@ export async function retryPending(client: SupabaseClient, drive: DriveClient, t
     if (drive.breaker.open || client.breaker.open) break;
     const parsed = z.array(z.unknown()).safeParse(row.files);
     const remaining: DayFile[] = [];
+    /** Fichiers perdus : absents de Storage, au mauvais format ou incohérents. Ils ne sont jamais envoyés. */
+    const dropped: string[] = [];
+    let incoherent = 0;
+    let sent = 0;
     let lastError = '';
+    if (!parsed.success) {
+      dropped.push('liste de fichiers illisible');
+    }
     for (const raw of parsed.success ? parsed.data : []) {
       const f = FileSchema.safeParse(raw);
       if (!f.success || !isDayFile(f.data, row.date)) {
         warn(`dépôt en attente du ${row.date} : fichier incohérent ignoré`);
+        incoherent++;
         continue;
       }
       const file = f.data;
@@ -80,20 +88,33 @@ export async function retryPending(client: SupabaseClient, drive: DriveClient, t
         const bytes = await client.download(file.bucket, file.path);
         if (bytes === null) {
           warn(`${file.name} n’existe plus dans Supabase Storage : dépôt Drive abandonné`);
+          dropped.push(file.name);
+          remaining.push(file);
           continue;
         }
         if (!looksLike(file, bytes)) {
           warn(`${file.name} relu dans Supabase Storage n’a pas le bon format : dépôt Drive abandonné`);
+          dropped.push(`${file.name} (format invalide)`);
+          remaining.push(file);
           continue;
         }
         await drive.send(row.date, file, bytes);
+        sent++;
       } catch (e) {
         lastError = messageOf(e);
         remaining.push(file);
       }
     }
+    if (incoherent > 0) dropped.push(`${incoherent} entrée(s) incohérente(s)`);
+    if (dropped.length === 0 && remaining.length === 0 && sent === 0) dropped.push('aucun fichier à déposer');
     try {
-      if (remaining.length === 0) {
+      if (dropped.length > 0) {
+        // Un fichier perdu ne se retrouvera jamais : le dépôt est abandonné, mais reste visible.
+        const reason = `fichier(s) introuvable(s) dans Storage : ${dropped.join(', ')}`;
+        await client.rpc('drive_pending_fail', { p_date: row.date, p_error: reason.slice(0, 500), p_files: remaining, p_attempts_at_least: MAX_ATTEMPTS }, Ack);
+        out.abandoned++;
+        warn(`dépôt Drive du ${row.date} abandonné : ${reason}`);
+      } else if (remaining.length === 0 && sent > 0) {
         await resolvePending(client, row.date);
         out.resolved.push(row.date);
       } else {

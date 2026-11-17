@@ -122,6 +122,13 @@ describe('client Drive contre un faux Apps Script local (302)', () => {
     expect(calls).toEqual(['https://script.google.com/macros/s/x/exec']);
   });
 
+  it('refus d’Apps Script : le jeton cité dans l’erreur est masqué avant la coupe à 40 caractères', async () => {
+    const f: HttpFetch = async () => new Response(JSON.stringify({ ok: false, error: `bad: ${DRIVE_TOKEN} (fin)` }), { status: 200 }) as unknown as Awaited<ReturnType<HttpFetch>>;
+    const e = await failure(createDriveClient({ url: 'https://script.google.com/macros/s/x/exec', token: DRIVE_TOKEN }, f).send(DAY, pdfFile(DAY), PDF_BYTES));
+    expect(e.message).toMatch(/^Drive Daily Brief 2026-11-06\.pdf : refus d’Apps Script \(bad: \*\*\*/);
+    for (let i = 0; i + 6 <= DRIVE_TOKEN.length; i++) expect(e.message).not.toContain(DRIVE_TOKEN.slice(i, i + 6));
+  });
+
   it('délai dépassé pendant le GET de la redirection : coupe Drive', async () => {
     let n = 0;
     const f: HttpFetch = (url, init) => {

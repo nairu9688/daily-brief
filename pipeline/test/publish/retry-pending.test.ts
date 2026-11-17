@@ -140,13 +140,28 @@ describe('retryPending', () => {
     expect(last).toEqual({ resolved: [], failed: [], abandoned: 1, issues: [{ level: 'warning', message: '1 dépôt(s) Drive abandonné(s) après 5 tentatives (table drive_pending)' }] });
   });
 
-  it('fichier purgé de Storage : abandonné avec un avertissement, la ligne est soldée', async () => {
+  it('fichier purgé de Storage : le dépôt est abandonné et reste visible, jamais soldé comme une réussite', async () => {
     await queuePending(client, '2026-10-01', [stored(pdfFile('2026-10-01')), mp3File('2026-10-01', 'es')], 'x');
     const r = await retryPending(client, drive, TODAY);
-    expect(r.resolved).toEqual(['2026-10-01']);
-    expect(r.issues).toEqual([{ level: 'warning', message: 'Daily Brief 2026-10-01 ES.mp3 n’existe plus dans Supabase Storage : dépôt Drive abandonné' }]);
+    expect(r.resolved).toEqual([]);
+    expect(r.abandoned).toBe(1);
+    expect(r.issues).toEqual([
+      { level: 'warning', message: 'Daily Brief 2026-10-01 ES.mp3 n’existe plus dans Supabase Storage : dépôt Drive abandonné' },
+      { level: 'warning', message: 'dépôt Drive du 2026-10-01 abandonné : fichier(s) introuvable(s) dans Storage : Daily Brief 2026-10-01 ES.mp3' },
+    ]);
     expect(server.google.tree()).toEqual(['Daily Brief/2026/10 - Octobre/Daily Brief 2026-10-01.pdf']);
-    expect(await pending()).toEqual([]);
+    expect(await pending()).toEqual([{ date: '2026-10-01', files: [mp3File('2026-10-01', 'es')], attempts: MAX_ATTEMPTS, last_error: 'fichier(s) introuvable(s) dans Storage : Daily Brief 2026-10-01 ES.mp3' }]);
+    // Abandonné : plus retenté, mais toujours compté au passage suivant.
+    expect((await retryPending(client, drive, TODAY)).abandoned).toBe(1);
+  });
+
+  it('tous les fichiers perdus : rien n’est envoyé et le dépôt est abandonné, pas soldé', async () => {
+    await queuePending(client, '2026-10-01', [pdfFile('2026-10-01')], 'x');
+    const r = await retryPending(client, drive, TODAY);
+    expect(r.resolved).toEqual([]);
+    expect(r.abandoned).toBe(1);
+    expect((await pending())[0]).toMatchObject({ attempts: MAX_ATTEMPTS, last_error: 'fichier(s) introuvable(s) dans Storage : Daily Brief 2026-10-01.pdf' });
+    expect(server.hits).toEqual([]);
   });
 
   it('ligne altérée : fichier d’une autre date, chemin étranger ou contenu qui n’est pas un PDF — jamais envoyé', async () => {
@@ -155,14 +170,23 @@ describe('retryPending', () => {
     const files = [pdfFile('2026-11-06'), { ...pdfFile('2026-11-06'), path: 'secret/autre.pdf' }, pdfFile('2026-11-05'), { name: 42 }, 'x'];
     await db.query(`insert into public.drive_pending (date, files, attempts) values ('2026-11-06', $1, 1), ('2026-11-05', '{"pas":"une liste"}', 1)`, [JSON.stringify(files)]);
     const r = await retryPending(client, drive, TODAY);
-    expect(r.resolved).toEqual(['2026-11-05', '2026-11-06']);
+    // Rien d'exploitable n'a été envoyé : les deux dépôts sont abandonnés et restent visibles, jamais soldés.
+    expect(r.resolved).toEqual([]);
+    expect(r.abandoned).toBe(2);
     expect(r.issues.map((i) => i.message)).toEqual([
+      'dépôt Drive du 2026-11-05 abandonné : fichier(s) introuvable(s) dans Storage : liste de fichiers illisible',
       'Daily Brief 2026-11-06.pdf relu dans Supabase Storage n’a pas le bon format : dépôt Drive abandonné',
       'dépôt en attente du 2026-11-06 : fichier incohérent ignoré',
       'dépôt en attente du 2026-11-06 : fichier incohérent ignoré',
       'dépôt en attente du 2026-11-06 : fichier incohérent ignoré',
       'dépôt en attente du 2026-11-06 : fichier incohérent ignoré',
+      'dépôt Drive du 2026-11-06 abandonné : fichier(s) introuvable(s) dans Storage : Daily Brief 2026-11-06.pdf (format invalide), 4 entrée(s) incohérente(s)',
     ]);
+    expect((await pending()).map((p) => [p.date, p.attempts])).toEqual([
+      ['2026-11-05', MAX_ATTEMPTS],
+      ['2026-11-06', MAX_ATTEMPTS],
+    ]);
+    expect((await pending())[0].last_error).toBe('fichier(s) introuvable(s) dans Storage : liste de fichiers illisible');
     expect(server.hits).toEqual([]);
     expect(fake.calls.filter((c) => c.method === 'GET').map((c) => c.path)).toEqual(['/storage/v1/object/pdf/2026-11-06/daily-brief-2026-11-06.pdf']);
   });
