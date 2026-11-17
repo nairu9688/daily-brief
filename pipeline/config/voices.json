@@ -1,0 +1,7 @@
+{
+  "_note": "Voix par défaut, à confirmer par voices.list : lancer `npm run audio:samples`, écouter out/voice-samples/ et remplacer les noms par ceux choisis (spec §9 et §14).",
+  "confirmed": false,
+  "fr": { "languageCode": "fr-FR", "name": "fr-FR-Chirp3-HD-Aoede" },
+  "en": { "languageCode": "en-US", "name": "en-US-Chirp3-HD-Charon" },
+  "es": { "languageCode": "es-ES", "name": "es-ES-Chirp3-HD-Kore" }
+}
