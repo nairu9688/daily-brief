@@ -147,6 +147,7 @@ Ces points ne peuvent pas être vérifiés hors ligne. Ils sont à cocher au pre
 - [ ] **Fichier absent.** Storage répond 404, ou 400 avec `statusCode` 404, `not_found` ou « Object not found », pour un fichier absent : la relance des dépôts en attente le traite comme « absent ». Tout autre 400 (droits, requête mal formée) est une erreur, pas une absence ; vérifier que la réponse réelle de Storage pour un objet inexistant est bien reconnue.
 - [ ] **Purge.** Après 31 jours, les MP3 anciens disparaissent du bucket `audio` (par l'API Storage, sans pg_cron) et `editions.audio_path` est vide pour ces dates. Vérifier aussi que le listage des dossiers du bucket (balayage des MP3 orphelins) renvoie bien les dossiers datés.
 - [ ] **Apps Script.** Le POST reçoit bien une redirection 302 vers `script.googleusercontent.com`, et un PDF réel de quelques Mo passe en moins de 3 minutes.
+- [ ] **Nouveau dépôt du même nom.** Relancer `brief:publish` pour la même date : dans Drive, l'ancien fichier est à la corbeille, un seul fichier de ce nom reste dans le dossier du mois et aucun doublon n'apparaît.
 - [ ] **Fuseau.** `select (now() at time zone 'Europe/Paris')::date;` renvoie la date de Paris.
 - [ ] **Version de Postgres.** Les tests tournent sur Postgres 18 (PGlite) ; le projet hébergé peut être en version 15 ou 17. Les migrations n'utilisent que du SQL courant, mais c'est leur application réelle qui fait foi.
 

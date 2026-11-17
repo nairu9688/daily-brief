@@ -143,9 +143,9 @@ function decodeAll(files) {
  * Dépose un fichier en remplaçant tout fichier de même nom : le nouveau est créé d'abord, puis les
  * anciens (tous les ids sauf le nouveau) vont à la corbeille. Une création en échec laisse l'ancien.
  */
-function replaceFile(folder, blob) {
+function replaceFile(folder, blob, name) {
   var id = folder.createFile(blob).getId();
-  var old = folder.getFilesByName(blob.name);
+  var old = folder.getFilesByName(name);
   while (old.hasNext()) {
     var f = old.next();
     if (f.getId() !== id) f.setTrashed(true);
@@ -171,7 +171,7 @@ function handle(payload, props) {
   try {
     var folder = monthFolder(props, checked.date);
     var ids = {};
-    for (var i = 0; i < blobs.length; i++) ids[blobs[i].name] = replaceFile(folder, blobs[i]);
+    for (var i = 0; i < blobs.length; i++) ids[checked.files[i].name] = replaceFile(folder, blobs[i], checked.files[i].name);
     return { ok: true, ids: ids };
   } catch (err) {
     return { ok: false, error: isQuotaError(err) ? 'drive-quota' : 'drive-error' };

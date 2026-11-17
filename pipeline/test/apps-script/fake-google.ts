@@ -5,6 +5,9 @@ import { repoPath } from '../helpers';
 export type FakeFile = { id: string; name: string; mimeType: string; bytes: Buffer; trashed: boolean };
 export type FakeFolder = { id: string; name: string; trashed: boolean; folders: FakeFolder[]; files: FakeFile[] };
 
+/** Un Blob d'Apps Script n'expose que des méthodes : aucune propriété `name`, `mimeType` ou `bytes`. */
+type FakeBlob = { getName(): string; getContentType(): string; getBytes(): Buffer };
+
 const iterator = <T>(items: T[]) => {
   let i = 0;
   return { hasNext: () => i < items.length, next: () => items[i++] };
@@ -57,11 +60,12 @@ export function loadCodeGs(properties: Record<string, string> = {}) {
             },
           })),
       ),
-    createFile: (blob: { name: string; mimeType: string; bytes: Buffer }) => {
+    // Comme le vrai Blob d'Apps Script : lu par ses méthodes seulement.
+    createFile: (blob: FakeBlob) => {
       if (state.failCreateFile) throw new Error(state.failMessage);
-      const file: FakeFile = { id: nextId('file'), name: blob.name, mimeType: blob.mimeType, bytes: blob.bytes, trashed: false };
+      const file: FakeFile = { id: nextId('file'), name: blob.getName(), mimeType: blob.getContentType(), bytes: blob.getBytes(), trashed: false };
       f.files.push(file);
-      state.creations.push(`fichier ${blob.name}`);
+      state.creations.push(`fichier ${file.name}`);
       return { getId: () => file.id };
     },
   });
@@ -102,17 +106,25 @@ export function loadCodeGs(properties: Record<string, string> = {}) {
         if (bytes.toString('base64') !== s) throw new Error('Caractères non valides');
         return bytes;
       },
-      newBlob: (bytes: Buffer, mimeType: string, name: string) => ({ bytes, mimeType, name }),
+      newBlob: (bytes: Buffer, mimeType: string, name: string): FakeBlob => ({ getName: () => name, getContentType: () => mimeType, getBytes: () => bytes }),
     },
     ContentService: {
       MimeType: { JSON: 'application/json' },
       createTextOutput: (text: string) => {
-        const out = { text, mime: 'text/plain', setMimeType: (m: string) => ((out.mime = m), out) };
+        // Comme TextOutput : méthodes seulement (le contenu et le type ne sont pas des propriétés).
+        let mime = 'text/plain';
+        const out = { setMimeType: (m: string) => ((mime = m), out), getContent: () => text, getMimeType: () => mime };
         return out;
       },
     },
   };
   vm.runInNewContext(readFileSync(repoPath('apps-script/Code.gs'), 'utf8'), sandbox, { filename: 'Code.gs' });
+  // Les tests lisent `{ text, mime }` : on relève la sortie par les méthodes du TextOutput.
+  const rawDoPost = sandbox.doPost as (e: unknown) => { getContent(): string; getMimeType(): string };
+  sandbox.doPost = (e: unknown) => {
+    const out = rawDoPost(e);
+    return { text: out.getContent(), mime: out.getMimeType() };
+  };
 
   /** Arborescence lisible : « Daily Brief/2026/11 - Novembre/Daily Brief 2026-11-06.pdf ». */
   const tree = (f: FakeFolder = root, prefix = ''): string[] => [

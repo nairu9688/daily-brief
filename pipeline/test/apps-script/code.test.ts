@@ -116,6 +116,16 @@ describe('Code.gs : doPost', () => {
     expect(files.filter((f) => !f.trashed).map((f) => f.bytes.toString())).toEqual(['%PDF-1.7 v2']);
   });
 
+  it('un nouveau dépôt du même nom : l’ancien va à la corbeille, un seul fichier de ce nom reste', () => {
+    const g = loadCodeGs({ TOKEN });
+    g.post(body());
+    g.post(body({ files: [{ ...PDF, base64: Buffer.from('%PDF-1.7 v2').toString('base64') }] }));
+    g.post(body({ files: [{ ...PDF, base64: Buffer.from('%PDF-1.7 v3').toString('base64') }] }));
+    const files = g.root.folders[0].folders[0].folders[0].files;
+    expect(files.filter((f) => f.name === PDF.name && !f.trashed).map((f) => f.bytes.toString())).toEqual(['%PDF-1.7 v3']);
+    expect(files.filter((f) => f.name === PDF.name && f.trashed)).toHaveLength(2);
+  });
+
   it('un base64 indécodable : bad-content avant toute mise à la corbeille', () => {
     const g = loadCodeGs({ TOKEN });
     g.post(body());
