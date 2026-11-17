@@ -53,6 +53,9 @@ export type SupabaseClient = {
   readonly breaker: Breaker;
 };
 
+/** Réponse d'une fonction SQL dont on n'attend que la réussite (objet, contenu ignoré). */
+export const Ack = z.object({}).loose();
+
 export const RPC_TIMEOUT_MS = 30_000;
 export const STORAGE_TIMEOUT_MS = 120_000;
 /** Taille maximale d'une réponse de fonction SQL (octets). */
@@ -89,11 +92,6 @@ export function createSupabaseClient(config: SupabaseConfig, fetch: SupabaseFetc
   const clean = (m: string) => stripSecrets(m, [config.serviceKey]);
   const auth = { apikey: config.serviceKey, authorization: `Bearer ${config.serviceKey}` };
 
-  /**
-   * Un appel : en-têtes d'authentification, délai, disjoncteur. `read` lit le corps sous le même
-   * délai. Une erreur SQL ou de données (4xx hors 401, 402, 403 et 429) ne compte pas pour le
-   * disjoncteur : elle ne dit rien de la santé de Supabase.
-   */
   /** Erreur HTTP d'une réponse : code et détail masqués AVANT d'être tronqués (une clé coupée ne se reconnaît plus). */
   async function errorOf(res: HttpResponse, what: string): Promise<SupabaseError> {
     const info = await errorInfo(res);
@@ -111,6 +109,11 @@ export function createSupabaseClient(config: SupabaseConfig, fetch: SupabaseFetc
     }
   }
 
+  /**
+   * Un appel : en-têtes d'authentification, délai, disjoncteur. `read` lit le corps sous le même
+   * délai. Une erreur SQL ou de données (4xx hors 401, 402, 403 et 429) ne compte pas pour le
+   * disjoncteur : elle ne dit rien de la santé de Supabase.
+   */
   async function call<T>(what: string, url: string, init: SupabaseInit, opts: CallOptions | undefined, defaultTimeout: number, read: (res: HttpResponse) => Promise<T>, okStatuses: number[] = []): Promise<T> {
     if (breaker.open) throw new SupabaseDownError(breaker.reason!);
     const parents = [base.signal, opts?.signal].filter((s): s is AbortSignal => !!s);

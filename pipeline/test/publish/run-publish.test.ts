@@ -239,10 +239,18 @@ describe('runPublish', () => {
   it('Supabase muet : interrompu au délai, code 2, jamais bloqué', async () => {
     fake.intercept = () => ({ hang: true });
     const started = Date.now();
-    const r = await publish({}, { deadlineMs: 300 });
+    const r = await publish({}, { deadlineMs: 300, bookkeepingMs: 300 });
     expect(Date.now() - started).toBeLessThan(5_000);
     expect(r.exitCode).toBe(2);
     expect(r.reportWritten).toBe(true);
+  });
+
+  it('échéance atteinte sans édition publiée : la ligne runs est quand même écrite, en échec', async () => {
+    fake.intercept = (c) => (c.path.endsWith('/publish_edition') ? { hang: true } : undefined);
+    const r = await publish({}, { deadlineMs: 300 });
+    expect(r.exitCode).toBe(2);
+    expect(r.report.runSaved).toBe(true);
+    expect((await runsRow()).status).toBe('failed');
   });
 
   it('une édition invalide n’empêche pas les autres ; statut dégradé', async () => {

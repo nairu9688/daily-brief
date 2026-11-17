@@ -1,11 +1,10 @@
 import { mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { z } from 'zod';
 import { IsoDateSchema, type Lang } from '@daily-brief/schema';
 import { messageOf, type HttpFetch } from '../collect/http';
 import { writeAtomic } from '../lib/fs';
 import { redactText, stripSecrets } from '../lib/redact';
-import { createSupabaseClient, type SupabaseClient, type SupabaseFetch } from '../supabase/client';
+import { Ack, createSupabaseClient, type SupabaseClient, type SupabaseFetch } from '../supabase/client';
 import { supabaseConfig } from '../supabase/config';
 import { purgeExpiredAudio } from './audio-purge';
 import { createDriveClient, driveConfig, MISSING_DRIVE, type DriveClient } from './drive';
@@ -58,7 +57,6 @@ export type PublishReport = {
 
 export type RunPublishResult = { exitCode: 0 | 2; report: PublishReport; /** Faux si publish-report.json n'a pas pu être écrit. */ reportWritten: boolean };
 
-const Ack = z.object({}).loose();
 
 /**
  * `brief:publish` : publie ce que `brief:render` a produit pour `date`.
@@ -127,7 +125,7 @@ export async function runPublish(opts: RunPublishOptions): Promise<RunPublishRes
   const driveSignal = AbortSignal.any([global, AbortSignal.timeout(Math.max(1, deadlineMs - (opts.driveReserveMs ?? 60_000)))]);
   let sbConfig: Extract<ReturnType<typeof supabaseConfig>, { ok: true }>['config'] | null = null;
   /** Client des écritures de suivi (`drive_pending`, `runs`) : son délai ne dépend pas de l'échéance globale. */
-  const bookClient = (): SupabaseClient => (client?.breaker.open ? client : createSupabaseClient(sbConfig!, opts.supabaseFetch, { signal: AbortSignal.timeout(opts.bookkeepingMs ?? 30_000) }));
+  const bookClient = (): SupabaseClient => (client?.breaker.open && client.breaker.reason !== 'délai dépassé' ? client : createSupabaseClient(sbConfig!, opts.supabaseFetch, { signal: AbortSignal.timeout(opts.bookkeepingMs ?? 30_000) }));
   let client: SupabaseClient | null = null;
   let summary: ReturnType<typeof summarizeReports> | null = null;
   const driveErrors: string[] = [];
@@ -253,8 +251,8 @@ export async function runPublish(opts: RunPublishOptions): Promise<RunPublishRes
     };
     const notes = `${published().length} édition(s) publiée(s) : ${published().map((e) => e.lang.toUpperCase()).join(', ') || 'aucune'} ; Drive : ${report.drive.status}`;
     try {
-      // Avec au moins une édition publiée, l'écriture a son propre délai ; sinon elle suit l'échéance globale.
-      await (published().length > 0 ? bookClient() : client).rpc('save_run', { p_date: opts.date, p_status: report.status, p_steps: JSON.parse(stripSecrets(JSON.stringify(steps), secrets)), p_notes: notes }, Ack);
+      // L'écriture a son propre délai, même sans édition publiée : un passage en échec à l'échéance est noté.
+      await bookClient().rpc('save_run', { p_date: opts.date, p_status: report.status, p_steps: JSON.parse(stripSecrets(JSON.stringify(steps), secrets)), p_notes: notes }, Ack);
       report.runSaved = true;
     } catch (e) {
       issue('warning', `ligne runs non écrite : ${messageOf(e)}`);

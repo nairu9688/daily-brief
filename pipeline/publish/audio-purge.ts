@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { IsoDateSchema } from '@daily-brief/schema';
 import { messageOf } from '../collect/http';
-import type { SupabaseClient } from '../supabase/client';
+import { Ack, type SupabaseClient } from '../supabase/client';
 import type { PublishIssue } from './inputs';
 
 /** Les MP3 sont gardés 30 jours (spec §6.2). */
@@ -20,7 +20,6 @@ const AUDIO_PATH = /^(\d{4}-\d{2}-\d{2})\/(fr|en|es)\.mp3$/;
 const DATED_FOLDER = /^\d{4}-\d{2}-\d{2}$/;
 const MP3_NAME = /^(fr|en|es)\.mp3$/;
 const Expired = z.array(z.object({ date: IsoDateSchema, path: z.string() }));
-const Ack = z.object({}).loose();
 
 /** Jour limite : les dossiers et éditions strictement antérieurs ont plus de 30 jours. */
 function cutoffOf(date: string): string {
@@ -62,7 +61,15 @@ export async function purgeExpiredAudio(client: SupabaseClient, date: string, op
       const cutoff = cutoffOf(date);
       const folders = (await listAll(client, '', pageSize)).filter((e) => e.folder && DATED_FOLDER.test(e.name) && e.name < cutoff).slice(0, MAX_FOLDERS);
       for (const folder of folders) {
-        for (const entry of await listAll(client, folder.name, pageSize)) if (!entry.folder && MP3_NAME.test(entry.name)) paths.add(`${folder.name}/${entry.name}`);
+        let found = 0;
+        for (const entry of await listAll(client, folder.name, pageSize)) {
+          if (!entry.folder && MP3_NAME.test(entry.name)) {
+            paths.add(`${folder.name}/${entry.name}`);
+            found++;
+          }
+        }
+        // Un dossier échu sans MP3 (autres fichiers, dossier vide) n'est jamais touché : on le signale.
+        if (found === 0) issues.push({ level: 'warning', message: `purge audio : dossier ${folder.name} de plus de ${AUDIO_RETENTION_DAYS} jours sans MP3, laissé en place` });
       }
     } catch (e) {
       issues.push({ level: 'warning', message: `purge audio : listage du bucket impossible : ${messageOf(e)}` });

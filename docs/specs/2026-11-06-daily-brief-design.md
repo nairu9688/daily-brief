@@ -153,7 +153,7 @@ type MapSpec = { projection: 'conic-france' | 'conic-europe' | 'conic-spain' | '
 | runs | id, date, status, steps jsonb (durée, compteurs, erreurs par étape), notes |
 | drive_pending | id, date, files jsonb, attempts, last_error |
 
-Stockage : bucket privé `audio` (MP3, purge après 30 jours) et bucket privé `pdf`. RLS : lecture réservée à l'utilisateur authentifié dont l'email correspond à `ALLOWED_EMAIL` (par défaut nanigeek@gmail.com) ; écriture seulement avec la clé service (pipeline). L'application peut écrire `vocab_items.selected` et `threads.followed`.
+Stockage : bucket privé `audio` (MP3, purge après 30 jours) et bucket privé `pdf`. RLS : lecture réservée à l'utilisateur authentifié dont l'email correspond à `ALLOWED_EMAIL` (par défaut nanigeek@gmail.com) ; écriture seulement avec la clé service (pipeline). L'application peut écrire `vocab_items.selected`, `vocab_items.anki_status` et `threads.followed`, et aucune autre colonne.
 
 ### 6.3 Secrets
 

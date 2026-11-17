@@ -146,14 +146,30 @@ describe('retryPending', () => {
     expect(r.resolved).toEqual([]);
     expect(r.abandoned).toBe(1);
     expect(r.issues).toEqual([
-      { level: 'warning', message: 'Daily Brief 2026-10-01 ES.mp3 n’existe plus dans Supabase Storage : dépôt Drive abandonné' },
-      { level: 'warning', message: 'dépôt Drive du 2026-10-01 abandonné : fichier(s) introuvable(s) dans Storage : Daily Brief 2026-10-01 ES.mp3' },
+      { level: 'warning', message: 'Daily Brief 2026-10-01 ES.mp3 n’existe plus dans Supabase Storage : fichier retiré du dépôt Drive' },
+      { level: 'warning', message: 'dépôt Drive du 2026-10-01 abandonné : introuvable dans Storage : Daily Brief 2026-10-01 ES.mp3' },
     ]);
     expect(server.google.tree()).toEqual(['Daily Brief/2026/10 - Octobre/Daily Brief 2026-10-01.pdf']);
-    expect(await pending()).toEqual([{ date: '2026-10-01', files: [mp3File('2026-10-01', 'es')], attempts: MAX_ATTEMPTS, last_error: 'fichier(s) introuvable(s) dans Storage : Daily Brief 2026-10-01 ES.mp3' }]);
+    expect(await pending()).toEqual([{ date: '2026-10-01', files: [mp3File('2026-10-01', 'es')], attempts: MAX_ATTEMPTS, last_error: 'introuvable dans Storage : Daily Brief 2026-10-01 ES.mp3' }]);
     // Abandonné : plus retenté ; plus de 30 jours après sa date, il quitte la table au passage suivant.
     expect((await retryPending(client, drive, TODAY)).abandoned).toBe(0);
     expect(await pending()).toEqual([]);
+  });
+
+  it('un fichier perdu n’abandonne pas la ligne : le PDF en délai dépassé reste en attente et repart au passage suivant', async () => {
+    await queuePending(client, '2026-11-06', [mp3File('2026-11-06', 'fr'), stored(pdfFile('2026-11-06'))], 'x');
+    server.state.mode = 'hang';
+    const slow = createDriveClient({ url: server.url, token: DRIVE_TOKEN }, fetch as unknown as HttpFetch, { hosts: [server.host], timeoutMs: 100 });
+    const r = await retryPending(client, slow, TODAY);
+    expect([r.resolved, r.failed, r.abandoned]).toEqual([[], ['2026-11-06'], 0]);
+    const [row] = await pending();
+    expect([row.files, row.attempts]).toEqual([[pdfFile('2026-11-06')], 2]);
+    expect(row.last_error).toContain('délai dépassé');
+    expect(row.last_error).toContain('introuvable dans Storage : Daily Brief 2026-11-06 FR.mp3');
+    server.state.mode = 'ok';
+    const again = await retryPending(client, drive, TODAY);
+    expect([again.resolved, again.failed, again.abandoned]).toEqual([['2026-11-06'], [], 0]);
+    expect(server.google.tree()).toEqual(['Daily Brief/2026/11 - Novembre/Daily Brief 2026-11-06.pdf']);
   });
 
   it('tous les fichiers perdus : rien n’est envoyé et le dépôt est abandonné, pas soldé', async () => {
@@ -161,7 +177,7 @@ describe('retryPending', () => {
     const r = await retryPending(client, drive, TODAY);
     expect(r.resolved).toEqual([]);
     expect(r.abandoned).toBe(1);
-    expect((await pending())[0]).toMatchObject({ attempts: MAX_ATTEMPTS, last_error: 'fichier(s) introuvable(s) dans Storage : Daily Brief 2026-10-01.pdf' });
+    expect((await pending())[0]).toMatchObject({ attempts: MAX_ATTEMPTS, last_error: 'introuvable dans Storage : Daily Brief 2026-10-01.pdf' });
     expect(server.hits).toEqual([]);
   });
 
@@ -175,19 +191,19 @@ describe('retryPending', () => {
     expect(r.resolved).toEqual([]);
     expect(r.abandoned).toBe(2);
     expect(r.issues.map((i) => i.message)).toEqual([
-      'dépôt Drive du 2026-11-05 abandonné : fichier(s) introuvable(s) dans Storage : liste de fichiers illisible',
-      'Daily Brief 2026-11-06.pdf relu dans Supabase Storage n’a pas le bon format : dépôt Drive abandonné',
+      'dépôt Drive du 2026-11-05 abandonné : liste de fichiers illisible',
+      'Daily Brief 2026-11-06.pdf relu dans Supabase Storage n’a pas le bon format : fichier retiré du dépôt Drive',
       'dépôt en attente du 2026-11-06 : fichier incohérent ignoré',
       'dépôt en attente du 2026-11-06 : fichier incohérent ignoré',
       'dépôt en attente du 2026-11-06 : fichier incohérent ignoré',
       'dépôt en attente du 2026-11-06 : fichier incohérent ignoré',
-      'dépôt Drive du 2026-11-06 abandonné : fichier(s) introuvable(s) dans Storage : Daily Brief 2026-11-06.pdf (format invalide), 4 entrée(s) incohérente(s)',
+      'dépôt Drive du 2026-11-06 abandonné : format invalide : Daily Brief 2026-11-06.pdf ; entrée incohérente : 4',
     ]);
     expect((await pending()).map((p) => [p.date, p.attempts])).toEqual([
       ['2026-11-05', MAX_ATTEMPTS],
       ['2026-11-06', MAX_ATTEMPTS],
     ]);
-    expect((await pending())[0].last_error).toBe('fichier(s) introuvable(s) dans Storage : liste de fichiers illisible');
+    expect((await pending())[0].last_error).toBe('liste de fichiers illisible');
     expect(server.hits).toEqual([]);
     expect(fake.calls.filter((c) => c.method === 'GET').map((c) => c.path)).toEqual(['/storage/v1/object/pdf/2026-11-06/daily-brief-2026-11-06.pdf']);
   });
@@ -255,7 +271,7 @@ describe('retryPending', () => {
     expect(r.issues.map((i) => i.message)).toEqual([
       '2 dépôt(s) Drive abandonné(s) depuis plus de 30 jours supprimé(s) de drive_pending : 2026-09-01, 2026-09-15',
       '1 dépôt(s) Drive abandonné(s) après 5 tentatives (table drive_pending)',
-      'dépôt Drive du 2026-09-20 abandonné : fichier(s) introuvable(s) dans Storage : aucun fichier à déposer',
+      'dépôt Drive du 2026-09-20 abandonné : aucun fichier à déposer',
     ]);
     expect((await pending()).map((p) => p.date)).toEqual(['2026-09-20', '2026-10-20']);
   });
@@ -323,6 +339,13 @@ describe('purgeExpiredAudio', () => {
     expect(r.issues).toHaveLength(1);
     expect([...fake.files.keys()]).toEqual(['audio/2026-11-07/fr.mp3']);
     expect(await audioPaths()).toEqual([['2026-10-01', null], ['2026-10-01', null]]);
+  });
+
+  it('un dossier daté de plus de 30 jours sans MP3 est signalé, et ses fichiers laissés en place', async () => {
+    fake.files.set('audio/2026-09-02/notes.txt', { bytes: MP3_BYTES, contentType: 'text/plain' });
+    const r = await purgeExpiredAudio(client, TODAY);
+    expect(r).toEqual({ removed: 0, issues: [{ level: 'warning', message: 'purge audio : dossier 2026-09-02 de plus de 30 jours sans MP3, laissé en place' }] });
+    expect([...fake.files.keys()]).toEqual(['audio/2026-09-02/notes.txt']);
   });
 
   it('MP3 orphelins : supprimés d’après leur dossier daté, sans ligne d’édition, listage paginé sur deux pages', async () => {
