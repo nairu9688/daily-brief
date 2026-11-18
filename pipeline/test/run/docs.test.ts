@@ -148,3 +148,36 @@ describe('revue du lot 7 : documents', () => {
     expect(r).toMatch(/requireDmarc/);
   });
 });
+
+describe('clôture du lot 7', () => {
+  it('env-from-vault.md : la commande de clonage est la seule exception à « jamais une valeur dans une commande »', () => {
+    expect(read('pipeline/run/env-from-vault.md')).toMatch(/seule exception/);
+  });
+
+  it('setup.md, étape 13 : le compte et le dépôt GitHub sont écrits dans le prompt Cowork', () => {
+    expect(read('docs/setup.md')).toMatch(/^13\. .*compte et le dépôt GitHub.*prompt/m);
+  });
+
+  it('ROUTINE.md : node_modules/ (npm ci) et, en Cowork, le dossier du clone peuvent être écrits', () => {
+    const interdits = /^Interdits : (.*)$/m.exec(read('ROUTINE.md'))?.[1] ?? '';
+    expect(interdits).toContain('`node_modules/`');
+    expect(interdits).toMatch(/dossier du clone/);
+  });
+
+  it('plan du lot 7 : partie B alignée sur les 15 étapes de setup.md, écarts après exécution', () => {
+    const plan = read('docs/superpowers/plans/2026-11-06-phase-1-lot-7-redaction-routine-lancement.md');
+    const partB = plan.slice(plan.indexOf('# Partie B'), plan.indexOf('## Couverture du lot'));
+    expect([...partB.matchAll(/^\| B(\d+) \|/gm)].map((m) => Number(m[1]))).toEqual(Array.from({ length: 15 }, (_, i) => i + 1));
+    expect(partB).toContain('7 newsletters actives');
+    expect(partB).not.toMatch(/jamais en spam|dépôt public|public sans secret/);
+    expect(partB).toContain('`GITHUB_READ_TOKEN`');
+    expect(partB).toContain('requireDmarc');
+    expect(plan).toContain('## Écarts après exécution (revues de code)');
+  });
+
+  it('feuille de route : lot 7 partie A terminée, bilan de la phase 1, requireDmarc en suite', () => {
+    const r = read('docs/superpowers/plans/2026-11-06-phase-1-roadmap.md');
+    expect(r).toMatch(/### Lot 7 — Rédaction, routine et lancement ✅ partie A terminée \(\d+ tests\) ; partie B \(lancement\) avec Naïm/);
+    expect(r).toContain('**Phase 1 : bilan.**');
+  });
+});

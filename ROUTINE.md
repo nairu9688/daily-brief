@@ -33,7 +33,7 @@ Règles générales :
 8. **Fin : audio, rendu, publication.** Lance `npm run brief:finish -- --date D`. Il enchaîne `brief:audio` → `brief:render` → `brief:publish`, chacun quoi qu'il arrive au précédent, puis affiche en dernière ligne le message final. Ne relance pas ces étapes une à une. Code 0 : brief prêt ; code 2 : brief incomplet.
 9. **Message final.** Termine par la dernière ligne affichée par `brief:finish` (ou par `brief:notify`), recopiée telle quelle : « Brief du jour prêt : N sujets, M médias » ou « Brief incomplet : <raison> », avec entre parenthèses ce qui manque. Ajoute une seconde ligne courte seulement pour un incident que les rapports ne voient pas (Gmail inaccessible, contrôle encore en code 1 après trois essais).
 
-Interdits : afficher ou recopier un secret ou `.env` ; commiter, pousser ou modifier un fichier hors de `out/` et `.env` ; relancer `brief:collect` dans un nouveau conteneur le même jour (le registre d'usage de TheNewsAPI, `out/thenewsapi-usage.json`, ne protège que le conteneur courant).
+Interdits : afficher ou recopier un secret ou `.env` ; commiter, pousser ou modifier un fichier hors de `out/`, `.env`, `node_modules/` (écrit par `npm ci`) et, en routine Cowork, du dossier du clone lors du clonage ; relancer `brief:collect` dans un nouveau conteneur le même jour (le registre d'usage de TheNewsAPI, `out/thenewsapi-usage.json`, ne protège que le conteneur courant).
 
 ## Codes de sortie, en un coup d'œil
 

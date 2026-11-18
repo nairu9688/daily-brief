@@ -4,7 +4,7 @@ Procédure suivie par la routine (`ROUTINE.md`, étape 2) et, au besoin, à la m
 
 ## Règles
 
-- **Ne jamais afficher une valeur** : ni dans un message, ni dans une commande, ni dans un journal. Ne jamais lancer `cat .env`, `env`, `printenv` ni `echo $…` sur une variable secrète.
+- **Ne jamais afficher une valeur** : ni dans un message, ni dans une commande, ni dans un journal. Ne jamais lancer `cat .env`, `env`, `printenv` ni `echo $…` sur une variable secrète. La seule exception est la commande de clonage de la routine Cowork (dernière section), qui porte `GITHUB_READ_TOKEN` dans son URL : elle apparaît dans le journal de la session, et le jeton est retiré de la configuration git juste après.
 - **Limite connue : les valeurs passent par le transcript de la session.** Le connecteur Supabase rend les valeurs déchiffrées à Claude, puis Claude les écrit dans `.env` : elles figurent donc dans le transcript de la session de la routine, même si elles ne sont jamais affichées dans une réponse. Ne jamais partager une session de la routine (lien, export, capture). Si une session a été partagée, ou peut l'avoir été, faire tourner (régénérer) toutes les clés de Vault, puis les y remplacer.
 - **`.env` ne quitte pas le conteneur** : il est dans `.gitignore` ; on ne le commite pas et on ne le copie nulle part.
 - Seuls les noms ci-dessous sont lus. Un autre secret de Vault n'est jamais demandé.
@@ -51,7 +51,7 @@ La routine s'arrête : sans `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY`, ni le
 
 ## Routine Cowork : jeton GitHub en lecture seule
 
-En routine Cowork (`docs/setup.md`, étape 13), le dépôt privé se clone avec `GITHUB_READ_TOKEN`, un jeton GitHub *fine-grained* limité au dépôt `daily-brief`, droit *Contents : Read-only*, rangé dans Vault comme les autres secrets. Il se lit avant le clonage, par une requête de même forme limitée à ce nom (`where name = 'GITHUB_READ_TOKEN'`), et ne s'écrit **jamais** dans `.env`. Clonage, puis retrait du jeton de la configuration git :
+En routine Cowork (`docs/setup.md`, étape 13), le dépôt privé se clone avec `GITHUB_READ_TOKEN`, un jeton GitHub *fine-grained* limité au dépôt `daily-brief`, droit *Contents : Read-only*, rangé dans Vault comme les autres secrets. Il se lit avant le clonage, par une requête de même forme limitée à ce nom (`where name = 'GITHUB_READ_TOKEN'`), et ne s'écrit **jamais** dans `.env`. Clonage (la seule commande autorisée à porter une valeur, voir les règles), puis retrait du jeton de la configuration git. `<compte>` est le compte GitHub écrit dans le prompt de la routine Cowork (`docs/setup.md`, étape 13) ; ne jamais le deviner :
 
 ```bash
 git clone "https://x-access-token:<jeton>@github.com/<compte>/daily-brief.git" daily-brief

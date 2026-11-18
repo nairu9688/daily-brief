@@ -34,11 +34,11 @@ Aucun test n'appelle Supabase, Google, Vercel ni Internet ; Supabase est le Post
 |---|---|---|
 | `newsletters/*.md` écrits mot pour mot depuis Gmail par une étape mécanique, jamais réécrits par la rédaction | lot 1 | tâche 4 (`brief:newsletters`), tâche 10 (étape 5 de `ROUTINE.md`) |
 | `brief:verify` relancé jusqu'à 3 fois ; code 1 : publier les `.verified.json` ; code 2 : ne pas publier l'édition concernée, notifier « Brief incomplet » (`editions[].written`) | lot 1, feuille de route §1 | tâche 10 (étape 7), tâche 6 (message), tâche 8 (répétition) |
-| `check:thenewsapi` dès que la clé existe ; code 1 : `"primary": "exa"` | lot 3 | partie B, étape B6 ; `docs/setup.md` étape 6 |
+| `check:thenewsapi` dès que la clé existe ; code 1 : `"primary": "exa"` | lot 3 | partie B, étape B7 ; `docs/setup.md` étape 7 |
 | `brief:collect` code 2 : notifier « Brief incomplet » ; `brief:context` code 2 : rédiger sans Thread et le signaler | lot 3 | tâche 10 (étapes 3 et 4), tâche 6 (« collecte impossible », « contexte indisponible ») |
 | Collecte dégradée (`degraded: true`) : continuer, le dire dans la notification | lot 3 | tâche 6 (« collecte dégradée ») |
 | Affiner `rubriques.json` | lot 3 | tâche 5 |
-| `SUPABASE_URL` fournie explicitement à la routine | lots 3 et 4 | tâche 7 (rangée dans Vault, `env:check`), tâche 11 (`docs/setup.md` étape 5) |
+| `SUPABASE_URL` fournie explicitement à la routine | lots 3 et 4 | tâche 7 (rangée dans Vault, `env:check`), tâche 11 (`docs/setup.md` étape 6) |
 | Redirection apex vers `www` des 10 domaines `full` à vérifier au premier passage | lot 3 | partie B, étape B12 |
 | Groupes de plus de 25 membres : un même événement sous plusieurs `groupId` | lot 3 | tâche 9 (`PROMPT.md` §1) |
 | Registre d'usage TheNewsAPI non persisté : ne pas relancer la collecte dans un conteneur neuf le même jour | lots 3 et 4 | tâche 10 (interdits de `ROUTINE.md`) ; persistance écartée (voir décisions) |
@@ -3085,26 +3085,27 @@ git commit -m "docs: mise en place unifiée, newsletters et filtre Gmail, README
 
 # Partie B — lancement, avec Naïm
 
-Ces étapes **ne sont pas exécutées par des sous-agents**. Elles demandent les comptes de Naïm (Supabase, Google, Vercel, Gmail, fournisseurs de clés) et, pour celles que Claude peut faire, son accord explicite au moment de les faire. Elles sont rédigées pour Naïm, dans le même ordre et avec les mêmes numéros, dans `docs/setup.md` (tâche 11). « Claude, avec accord » : Claude décrit l'action exacte, Naïm l'accepte, Claude la fait par un connecteur ou une commande. Aucun secret ne transite par la conversation.
+Ces étapes **ne sont pas exécutées par des sous-agents**. Elles demandent les comptes de Naïm (Supabase, Google, Vercel, Gmail, GitHub, fournisseurs de clés) et, pour celles que Claude peut faire, son accord explicite au moment de les faire. **`docs/setup.md` fait foi** : ses 15 étapes sont rédigées pour Naïm, et les numéros B1 à B15 ci-dessous sont les siens (Bn = étape n de `docs/setup.md`). « Claude, avec accord » : Claude décrit l'action exacte, Naïm l'accepte, Claude la fait par un connecteur ou une commande. Aucun secret ne transite par la conversation.
 
 | Étape | Qui | Quoi | Débloque | Guide |
 |---|---|---|---|---|
-| B1 | Claude, avec accord (connecteur Supabase) ; sinon Naïm | Projet `daily-brief` en `eu-west-3`, migrations `0001` à `0004` dans l'ordre, email autorisé, réglages d'authentification | base, Vault, appli, B5, B9, B10 | `docs/setup-supabase.md` §1–3 |
-| B2 | Naïm | Clés gratuites TheNewsAPI, Exa, Webz.io, Pexels | collecte, photos ; B6 | `docs/setup.md` étape 2 |
-| B3 | Naïm | Projet Google Cloud, Text-to-Speech, facturation, clé restreinte | audio ; B7 | `docs/setup-audio.md` §1–2 |
-| B4 | Naïm | `Code.gs` dans Apps Script, jeton (32 caractères ou plus), déploiement en application web | dépôt Drive | `docs/setup-supabase.md` §5 |
-| B5 | Naïm (tableau de bord) | Vault : `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `THENEWSAPI_KEY`, `EXA_API_KEY`, `WEBZ_TOKEN`, `PEXELS_API_KEY`, `GOOGLE_TTS_API_KEY`, `APPS_SCRIPT_URL`, `APPS_SCRIPT_TOKEN` | `.env` de la routine (`env-from-vault.md`, `env:check`) ; B6, B7, B12 | `docs/setup-supabase.md` §4 |
-| B6 | Claude, avec accord | `npm run check:thenewsapi` (vérification §16) ; code 1 : `"primary": "exa"` dans `collect.json`, commit | découverte principale | README, lot 3 |
-| B7 | Claude, avec accord (échantillons) ; Naïm (choix) | `npm run audio:samples`, écoute, `voices.json` avec `confirmed: true`, commit (vérification §16 : noms des voix Chirp 3 HD) | audio sans avertissement | `docs/setup-audio.md` §5 |
-| B8 | Naïm | Abonnements aux 8 newsletters actives, filtre Gmail vers `Daily Brief` (archiver, jamais en spam) | textes lus des newsletters | `docs/setup-newsletters.md` |
-| B9 | Naïm (import, variables) ; Claude, avec accord, pour vérifier par le connecteur Vercel | Projet Vercel `apps/web`, Node 22, variables `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `ALLOWED_EMAIL`, `SITE_URL` (jamais la clé de service ni `FIXTURE`), *URL Configuration* et modèles *Magic Link* et *Confirm signup* ; avant : `web:build`, `web:e2e`, `web:check-bundle` | lecture du brief | `docs/setup-web.md` |
+| B1 | Claude, avec accord (connecteur Supabase) ; sinon Naïm | Projet `daily-brief` en `eu-west-3`, migrations `0001` à `0004` dans l'ordre, email autorisé, réglages d'authentification | base, Vault, appli ; B6, B9, B10 | `docs/setup-supabase.md` §1–3 |
+| B2 | Naïm, dès le début | Abonnements aux 7 newsletters actives, chaque inscription confirmée, puis filtre Gmail vers `Daily Brief` (archiver) | textes lus des newsletters ; le contrôle « aucun expéditeur hors liste » de B12 | `docs/setup-newsletters.md` |
+| B3 | Naïm | Clés gratuites TheNewsAPI, Exa, Webz.io, Pexels | collecte, photos ; B7 | `docs/setup.md` étape 3 |
+| B4 | Naïm | Projet Google Cloud, Text-to-Speech, facturation, clé restreinte | audio ; B8 | `docs/setup-audio.md` §1–2 |
+| B5 | Naïm | `Code.gs` dans Apps Script, jeton (32 caractères ou plus), déploiement en application web | dépôt Drive | `docs/setup-supabase.md` §5 |
+| B6 | Naïm (tableau de bord) | Vault : `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `THENEWSAPI_KEY`, `EXA_API_KEY`, `WEBZ_TOKEN`, `PEXELS_API_KEY`, `GOOGLE_TTS_API_KEY`, `APPS_SCRIPT_URL`, `APPS_SCRIPT_TOKEN` ; `GITHUB_READ_TOKEN` (jeton *fine-grained*, lecture seule, dépôt `daily-brief` seul) pour une routine Cowork | `.env` de la routine (`env-from-vault.md`, `env:check`) ; B7, B8, B12, B13 | `docs/setup-supabase.md` §4 |
+| B7 | Claude, avec accord | `npm run check:thenewsapi` (vérification §16) ; code 1 : `"primary": "exa"` dans `collect.json`, commit | découverte principale | README, lot 3 |
+| B8 | Claude, avec accord (échantillons) ; Naïm (choix) | `npm run audio:samples`, écoute, `voices.json` avec `confirmed: true`, commit (vérification §16 : noms des voix Chirp 3 HD) | audio sans avertissement | `docs/setup-audio.md` §5 |
+| B9 | Claude, avec accord (`web:build`, `web:e2e`, `web:check-bundle`) ; Naïm (import, variables) ; Claude, avec accord, pour vérifier par le connecteur Vercel | Projet Vercel `apps/web`, Node 22, variables `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `ALLOWED_EMAIL`, `SITE_URL` (jamais la clé de service ni `FIXTURE`), *URL Configuration* et modèles *Magic Link* et *Confirm signup* | lecture du brief | `docs/setup-web.md` |
 | B10 | Claude, avec accord (connecteur Supabase) | Générer les types TypeScript du projet réel et les comparer aux schémas zod de `apps/web/lib/data/rows.ts` ; corriger seulement en cas d'écart | confiance dans la lecture de l'appli | consignes des lots 4 et 6 |
 | B11 | Claude, avec accord | Vérifications §16 : Gmail et Supabase disponibles comme connecteurs d'une tâche planifiée Claude Code ; Chromium et Playwright présents ; ffmpeg (facultatif) | choix routine Claude Code / Cowork (B13) | spec §16 |
-| B12 | Claude, avec accord ; Naïm contrôle | Premier passage manuel de bout en bout selon `ROUTINE.md`. Contrôles : site (connexion, trois langues, lecteur, PDF, case cochée, Thread suivi, Santé avec l'étape `audio`), Drive (PDF et trois MP3), sections « À contrôler » des trois guides, textes lus des 10 domaines `full` (redirection apex → `www`), `newsletters-report.json` sans « expéditeur hors liste », **quota Claude** consommé (avant et après) | activation de l'horaire | `docs/setup.md` étape 12 |
-| B13 | Claude, avec accord | Tâche planifiée `CRON_TZ=Europe/Paris 13 5 * * *`, notification push, prompt de `ROUTINE.md`, connecteurs Gmail et Supabase. Si B11 a échoué : routine **Cowork**, accès en lecture au dépôt (public sans secret, ou jeton GitHub en lecture seule dans Vault) | brief de chaque matin | spec §11, `ROUTINE.md` |
+| B12 | Claude, avec accord ; Naïm contrôle | Premier passage manuel de bout en bout selon `ROUTINE.md`. Contrôles : site (connexion, trois langues, lecteur, PDF, case cochée, Thread suivi, Santé avec l'étape `audio`), Drive (PDF et trois MP3), sections « À contrôler » des trois guides, textes lus des 10 domaines `full` (redirection apex → `www`), `newsletters-report.json` sans « expéditeur hors liste » et avec ou sans « expéditeur non authentifié » (si l'en-tête `Authentication-Results` est enregistré : passer `requireDmarc` à `true`), **quota Claude** consommé (avant et après) | activation de l'horaire | `docs/setup.md` étape 12 |
+| B13 | Claude, avec accord | Tâche planifiée `CRON_TZ=Europe/Paris 13 5 * * *`, notification push, prompt de `ROUTINE.md`, connecteurs Gmail et Supabase. Si B11 a échoué : routine **Cowork** ; le dépôt reste privé et se clone avec `GITHUB_READ_TOKEN` lu dans Vault (`env-from-vault.md`, « Routine Cowork »), le compte et le dépôt GitHub étant écrits dans le prompt | brief de chaque matin | spec §11, `ROUTINE.md` |
 | B14 | Naïm | Le lendemain : notification reçue, page Santé à jour ; sinon, raison dans la notification et `routine-report.json` | fin de la phase 1 | `docs/setup.md` étape 14 |
+| B15 | Claude, avec accord | Après une ou deux semaines : affiner `rubriques.json`, resserrer le filtre Gmail aux adresses exactes | brief mieux ciblé | `docs/setup.md` étape 15 |
 
-**Ordre et dépendances.** B1 avant B5, B9 et B10 ; B2 et B3 avant B5 ; B5 avant B6, B7 et B12 ; B8 au moins un jour avant B12 (pour que des newsletters soient arrivées) ; B11 avant B13 ; B12 réussi avant B13. Les étapes B2, B3, B4 et B8 se font en parallèle.
+**Ordre et dépendances.** B1 avant B6, B9 et B10 ; B3 et B4 avant B6 ; B6 avant B7, B8, B12 et B13 ; B2 au moins quelques jours avant B12 (pour que des newsletters soient arrivées) ; B11 avant B13 ; B12 réussi avant B13. Les étapes B2, B3, B4 et B5 se font en parallèle.
 
 **Si le quota Claude mesuré en B12 est trop élevé** (spec §15) : baisser `maxPerDay` dans `newsletters.json` (6 au lieu de 8), puis demander deux sujets par rubrique au lieu de trois dans `PROMPT.md` §8 ; refaire la mesure au passage suivant.
 ---
@@ -3113,9 +3114,9 @@ Ces étapes **ne sont pas exécutées par des sous-agents**. Elles demandent les
 
 | Exigence (spec, feuille de route, consignes) | Où |
 |---|---|
-| §4.3 liste vérifiée de newsletters matinales gratuites FR, EN (US/UK), ES (Espagne), 6 à 8 par jour, libellé `Daily Brief`, filtre qui archive | tâche 3 (`newsletters.json`, schéma, tests), tâche 11 (`setup-newsletters.md`), B8 |
+| §4.3 liste vérifiée de newsletters matinales gratuites FR, EN (US/UK), ES (Espagne), 6 à 8 par jour, libellé `Daily Brief`, filtre qui archive | tâche 3 (`newsletters.json`, schéma, tests), tâche 11 (`setup-newsletters.md`), B2 |
 | §4.2 R1 : newsletters comptées comme textes lus, mot pour mot ; recoupement avec la liste blanche et `inNewsletter` | tâches 3 et 4 |
-| §6.3 secrets lus dans Vault par le connecteur, écrits dans `.env`, jamais affichés ; `SUPABASE_URL` fournie | tâche 7, B5 |
+| §6.3 secrets lus dans Vault par le connecteur, écrits dans `.env`, jamais affichés ; `SUPABASE_URL` fournie | tâche 7, B6 |
 | §7 R1 à R12 dans les consignes de rédaction ; le contrôle reste `brief:verify` | tâche 9 |
 | §11 et annexe A : `ROUTINE.md`, `CRON_TZ=Europe/Paris 13 5 * * *`, notification push, Gmail et Supabase, repli Cowork | tâche 10, B11, B13 |
 | Boucle `brief:verify` : 3 essais, puis `.verified.json` ; code 2 : édition non publiée, « Brief incomplet » | tâches 6, 8 et 10 |
@@ -3128,7 +3129,7 @@ Ces étapes **ne sont pas exécutées par des sous-agents**. Elles demandent les
 | Consignes des lots 3 et 5 dans `PROMPT.md` : groupes de plus de 25 articles, script audio | tâche 9 |
 | §13 : un passage manuel de bout en bout, contrôle du site, du PDF et des MP3 dans Drive, mesure du quota Claude, puis horaire | tâche 8 (répétition hors ligne), B12, B13 |
 | §14 : mise en place guidée en une liste (clés, Google Cloud, newsletters, Apps Script, GitHub et Vercel, Supabase, voix) | tâche 11 (`docs/setup.md`), partie B |
-| §16 : TheNewsAPI temps réel, voix Chirp, connecteurs dans la routine, Chromium, ffmpeg | B6, B7, B11 |
+| §16 : TheNewsAPI temps réel, voix Chirp, connecteurs dans la routine, Chromium, ffmpeg | B7, B8, B11 |
 | Consignes des lots 4 et 6 : types de la base depuis le projet réel | B10 |
 | Description de Thread, registre TheNewsAPI persisté | écartés (décisions 6 et 7), consignes de phase 2 dans la feuille de route (tâche 11) |
 | Contraintes des exécutants : hors ligne, sans service ni MCP, sans clé, fichiers intouchables, commits par chemins, pas de push | contexte, chaque tâche |
@@ -3144,3 +3145,24 @@ Ces points sont repris, à cocher, dans `docs/setup.md` (étapes 11 et 12) et `d
 - **Connecteurs dans une tâche planifiée.** La présence de Gmail et de Supabase dans une routine Claude Code (§16) ne se vérifie qu'en créant la tâche (B11, B13).
 - **Lecture de Vault.** La forme exacte du résultat de `vault.decrypted_secrets` par l'outil SQL du connecteur, et le fait qu'il ne journalise pas les valeurs, sont à confirmer au premier passage.
 - **Quota Claude.** Non mesurable hors ligne (B12).
+
+
+## Écarts après exécution (revues de code)
+
+La partie A a été exécutée par sous-agents, avec une revue après chaque moitié du lot puis une revue finale. Les revues ont durci le code au-delà du texte ci-dessus. **Le dépôt fait foi** ; ce plan reste la trace de la conception initiale. Résultat final : 109 fichiers de test, 1069 tests Vitest (un fichier et 68 tests de plus que prévu, ajoutés par les revues), typage strict propre ; appli web inchangée (`web:build`, `web:check-bundle`, 44 tests Playwright réussis et 2 ignorés).
+
+| Zone | Écart par rapport au plan | Raison |
+|---|---|---|
+| Newsletters : liens | Seuls les `<a>` visibles deviennent des liens ; styles masquants (`display:none`, `visibility:hidden`, `mso-hide:all`, taille, hauteur ou opacité nulles) retirés avec leur sous-arbre ; URL nues retirées du texte ; crochets retirés des nœuds de texte et des titres (un faux `[x](url)` découpé en plusieurs nœuds ne se recompose pas) ; URL d'un texte de lien remplacée par le nom d'hôte ; parenthèses encodées | Un texte d'aperçu ou un lien caché ne fait plus compter une URL comme lue |
+| Newsletters : `cleanLink` | Déballage limité aux clés `u`, `url`, `q`, `redirect`, `target`, `dest`, et jamais vers un autre domaine depuis un hôte d'articles (éditeur ou liste blanche) | `lemonde.fr/a?url=…` reste l'article du Monde ; `?ref=` ne remplace plus un lien |
+| Newsletters : texte brut | `textToMarkdown` : chaque URL passe par `cleanLink` et devient `[url](url)` | Même nettoyage que le HTML (suivi, désinscription) |
+| Newsletters : expéditeur | Adresse à un seul `@` ; date au plus 36 h avant et 1 h après le passage ; `authenticationResults` contrôlé (`dmarc=pass` aligné, en-tête de `mx.google.com` analysé selon la RFC 8601, sans commentaires ni chaînes) ; interrupteur `requireDmarc` (faux par défaut) | Un message usurpé, ou un en-tête forgé dans l'adresse d'enveloppe, ne passe plus pour l'éditeur |
+| Newsletters : portée de R1 | En-tête `domain:` écrit par `brief:newsletters` ; `inNewsletter` ne compte que les liens `[texte](url)` vers ce domaine (s'il figure dans `newsletters.json`) ou vers la liste blanche | Une newsletter ne rend plus « lue » une URL arbitraire |
+| `lib/redact.ts` | Une valeur déjà masquée (`***`) n'est plus remasquée | Un second passage mangeait le texte qui suit |
+| `brief:finish` | `routine-report.json` masqué ; `--dry-run` sans aucun appel extérieur (audio sans clé, rendu sans Pexels ni réseau, pas de publication) | Répétition sûre, rapport sans secret |
+| Publication | `verify-report.json` illisible : MP3 ignorés ; une édition manquante rend le passage `degraded` dans `runs` | L'audio d'un autre passage n'est plus publié ; la page Santé ne dit plus « réussi » quand la notification dit « Brief incomplet » |
+| `brief:notify` | `--record` écrit la ligne `runs` en `failed` (collecte en code 2) ; messages précisés | La page Santé ne garde plus la ligne `running` jusqu'à « interrompu » |
+| `env:check` | Seuls les noms de la forme d'une variable sont affichés ; ligne inattendue signalée par son numéro ; droits du fichier contrôlés | Une valeur collée par erreur n'est jamais affichée |
+| Documentation | `ROUTINE.md` (budget de temps, codes inattendus traités comme 2, en-tête `Authentication-Results`), `PROMPT.md` (portée de `readFull`), `env-from-vault.md` (`git check-ignore`, `GITHUB_READ_TOKEN` jamais dans `.env`, limite du transcript), `setup.md` (ordre unique en 15 étapes, `requireDmarc`, quota Claude), `setup-newsletters.md`, feuille de route | Routine sans ambiguïté pour un modèle sans surveillance ; guide suivable sans connaître le code ; partie B alignée sur `setup.md` |
+
+Points laissés ouverts (mineurs) : un texte masqué par une classe CSS ou une très petite police reste lu (portée limitée à l'éditeur et à la liste blanche) ; un lien de suivi du site de l'éditeur vers un autre domaine de la liste blanche reste le lien de suivi ; l'audio en échec ne dégrade pas `runs.status` (décision du lot 5) ; le jeton GitHub de la routine Cowork passe par le transcript (régénérer si la session est partagée).

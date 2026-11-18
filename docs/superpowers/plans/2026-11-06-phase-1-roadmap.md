@@ -98,7 +98,7 @@ Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-6-appli-web.md`
 - Bandeaux « édition allégée » et « brief de la veille ».
 - Tests : composants clés avec Vitest et Testing Library ; captures Playwright à 390 px en clair et en sombre à partir de la fixture (mode `FIXTURE=1` qui lit `fixtures/` au lieu de Supabase).
 
-### Lot 7 — Rédaction, routine et lancement ✅ plan détaillé
+### Lot 7 — Rédaction, routine et lancement ✅ partie A terminée (1069 tests) ; partie B (lancement) avec Naïm
 
 Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-7-redaction-routine-lancement.md` (partie A dans le dépôt, partie B : lancement avec Naïm, suivi dans `docs/setup.md`).
 
@@ -222,7 +222,10 @@ Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-7-redaction-routine-lancem
 - **Phase 2** :
   - **Description de Thread.** `threads.description` reste absente : il faudrait changer le schéma `Edition`, une migration, `publish_edition` et l'appli.
   - **Registre TheNewsAPI.** Le persister dans Supabase seulement si un rattrapage doit relancer la collecte dans un conteneur neuf le même jour.
+  - **`requireDmarc`.** À passer à `true` dans `pipeline/config/newsletters.json` dès que le premier passage réel montre que la routine enregistre l'en-tête `Authentication-Results` (`docs/setup.md`, étape 12).
   - **PDF et ancien `audio.json`.** Dans le cas rare où `brief:audio` ne peut pas supprimer ses anciens fichiers, `brief:render` peut encore lire un `audio.json` périmé (encart audio du PDF) ; `brief:publish`, lui, ne publie plus que les MP3 annoncés.
 - **Phase 2 (consignes du lot 6)** :
   - **Anki.** La synchro lit `vocab_items` à `anki_status = 'queued'` et les passe à `sent` avec la clé de service ; l'appli ne rétrograde jamais un mot `sent`.
   - **Hors ligne.** Pas de service worker en phase 1 : la lecture hors ligne demandera un cache qui se vide à la déconnexion.
+
+**Phase 1 : bilan.** Les sept lots sont en place dans le dépôt. Le pipeline quotidien est complet : contexte, collecte, newsletters converties mécaniquement, rédaction selon `PROMPT.md`, contrôle `brief:verify` (R1 à R12), audio, rendu des cartes et du PDF, publication Supabase et dépôt Drive, notification et ligne `runs`. Une répétition hors ligne de toute la routine sur la fixture couvre ce pipeline. L'appli web est prête : Brief, Threads, Vocab, Archive et Santé, connexion privée, PWA. Au total, 109 fichiers et 1069 tests Vitest, et 44 tests Playwright. Il reste la partie B du lot 7, avec Naïm, dans l'ordre de `docs/setup.md` : comptes et clés, Vault, Vercel, vérifications §16, un premier passage manuel contrôlé avec la mesure du quota Claude, puis la tâche planifiée de 05:13, sans période d'essai. Les consignes de phase 2 sont réunies plus haut : description de Thread, registre TheNewsAPI persisté, Anki, lecture hors ligne et `requireDmarc` à activer.
