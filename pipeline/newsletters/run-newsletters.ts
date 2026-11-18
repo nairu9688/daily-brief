@@ -30,19 +30,63 @@ export const MAX_AGE_MS = 36 * 3600_000;
 /** Tolérance d'horloge : un message daté de plus d'une heure dans le futur est ignoré. */
 export const MAX_FUTURE_MS = 3600_000;
 
+/** Seul serveur d'authentification cru : celui de Gmail, qui ajoute le premier en-tête. */
+export const AUTHSERV_ID = 'mx.google.com';
+
+/** Retire les commentaires `(…)` (imbriqués) et vide les chaînes `"…"` d'un en-tête (RFC 8601 / RFC 5322). */
+function stripCommentsAndQuotes(header: string): string {
+  let out = '';
+  let depth = 0;
+  let quoted = false;
+  for (let i = 0; i < header.length; i++) {
+    const c = header[i];
+    if (c === '\\' && (depth > 0 || quoted)) {
+      i++;
+      continue;
+    }
+    if (quoted) {
+      if (c === '"') {
+        quoted = false;
+        out += '"';
+      }
+      continue;
+    }
+    if (c === '(') depth++;
+    else if (c === ')' && depth > 0) depth--;
+    else if (depth === 0) {
+      if (c === '"') quoted = true;
+      out += c;
+    }
+  }
+  return out;
+}
+
 /**
- * Vrai si Authentication-Results (le premier en-tête, ajouté par Gmail) dit `dmarc=pass` avec un
- * `header.from` couvert par les domaines d'expédition de la newsletter et aligné sur l'adresse From
- * (même domaine, ou From sur un sous-domaine de header.from).
+ * Vrai si Authentication-Results, lu selon la RFC 8601, dit `dmarc=pass` pour le domaine From :
+ * - seul le premier en-tête compte (premier élément d'un tableau ; dans un texte, rien après un
+ *   second en-tête ou un second authserv-id) ;
+ * - commentaires `(…)` et chaînes `"…"` retirés ; l'authserv-id (premier élément) doit être `mx.google.com` ;
+ * - seul un resinfo qui commence par `dmarc=` est lu, avec le résultat `pass` ;
+ * - `header.from` égal au domaine de l'adresse From, couvert par les domaines d'expédition de la newsletter.
  */
 export function dmarcAligned(results: string | string[], fromDomain: string, n: Newsletter): boolean {
   const first = Array.isArray(results) ? results[0] : results;
   if (!first) return false;
-  for (const m of first.matchAll(/\bdmarc\s*=\s*([a-z]+)\b[^;]*?\bheader\.from\s*=\s*"?([a-z0-9.-]+)/gi)) {
-    const hf = m[2].toLowerCase().replace(/\.$/, '');
-    if (m[1].toLowerCase() !== 'pass') continue;
-    const covered = n.senders.some((s) => hf === s || hf.endsWith(`.${s}`));
-    if (covered && (fromDomain === hf || fromDomain.endsWith(`.${hf}`))) return true;
+  const header = stripCommentsAndQuotes(first.split(/\r?\n(?=\S)|\bAuthentication-Results\s*:/i)[0]).replace(/\s+/g, ' ');
+  const [authserv, ...resinfos] = header.split(';').map((x) => x.trim());
+  const id = authserv.split(' ');
+  if (id[0]?.toLowerCase() !== AUTHSERV_ID || id.length > 2 || (id.length === 2 && !/^\d+$/.test(id[1]))) return false;
+  const covered = n.senders.some((s) => fromDomain === s || fromDomain.endsWith(`.${s}`));
+  for (const info of resinfos) {
+    if (!info) continue;
+    const tokens = info.split(' ');
+    // Un élément sans `=` (un autre authserv-id, du texte collé) marque la fin du premier en-tête.
+    if (tokens.some((t) => !t.includes('='))) return false;
+    const [method, result] = tokens[0].split('=');
+    if (method.toLowerCase() !== 'dmarc') continue;
+    if (result?.toLowerCase() !== 'pass') return false;
+    const props = new Map(tokens.slice(1).map((t) => [t.slice(0, t.indexOf('=')).toLowerCase(), t.slice(t.indexOf('=') + 1).toLowerCase().replace(/\.$/, '')]));
+    return covered && props.get('header.from') === fromDomain;
   }
   return false;
 }

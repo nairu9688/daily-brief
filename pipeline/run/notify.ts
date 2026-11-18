@@ -113,7 +113,9 @@ export function buildNotification(dayDir: string, date: string, opts: { dryRun?:
     if (lostMp3.length) notes.push(`MP3 non enregistré${lostMp3.length > 1 ? 's' : ''} dans Storage : ${lostMp3.join(', ')}`);
     if (DRIVE_NOTE[publish.drive.status]) notes.push(DRIVE_NOTE[publish.drive.status]);
     // Passage dégradé pour une autre raison (Thread refusé, purge, ligne runs…) : la première erreur du rapport.
-    if (publish.status === 'degraded' && notes.length === before) {
+    // Une édition manquante dégrade aussi le passage, mais le message le dit déjà (« édition ES manquante »).
+    const allPublished = LANGS.every((l) => publish.editions.some((e) => e.lang === l && e.published));
+    if (publish.status === 'degraded' && notes.length === before && allPublished) {
       const [first] = bounded(publish.issues.filter((i) => i.level === 'error').map((i) => (i.lang ? `${i.lang.toUpperCase()} : ${i.message}` : i.message)), secrets);
       notes.push(first ? `publication dégradée : ${first}` : 'publication dégradée');
     }

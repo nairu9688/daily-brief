@@ -91,6 +91,11 @@ describe('revue du lot 7 : documents', () => {
     expect(routine).toContain('npm run brief:notify -- --date D --record');
   });
 
+  it('ROUTINE.md : seul le premier en-tête Authentication-Results (mx.google.com), en chaîne, jamais joint aux autres', () => {
+    expect(routine).toContain('seulement le premier en-tête `Authentication-Results` (celui de `mx.google.com`)');
+    expect(routine).toMatch(/une seule chaîne, jamais jointe aux autres en-têtes/);
+  });
+
   it('ROUTINE.md renvoie à l’étape de docs/setup.md qui décrit le repli Cowork', () => {
     const n = Number(/docs\/setup\.md`, étape (\d+)/.exec(routine)?.[1]);
     expect(setupStep(n)).toMatch(/Cowork/);

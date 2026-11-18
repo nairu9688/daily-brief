@@ -79,6 +79,11 @@ describe('buildNotification (revue du lot 7)', () => {
     expect(buildNotification(mp3.dayDir, DAY).notes).toEqual(['MP3 non enregistré dans Storage : FR', 'Drive en attente']);
   });
 
+  it('publication dégradée par une édition manquante : pas de note « publication dégradée » en plus de « édition ES manquante »', () => {
+    const { dayDir } = cleanDay({ 'publish-report.json': publishReport(['fr', 'en'], 'sent', 0, { status: 'degraded', files: [], issues: [] }) });
+    expect(buildNotification(dayDir, DAY).message).toBe('Brief incomplet : édition ES manquante — 8 sujets, 16 médias');
+  });
+
   it('audio « invalid » parce qu’un ancien fichier n’a pas pu être supprimé : le message du lot 5', () => {
     const { dayDir } = cleanDay({ 'audio-report.json': audioReport(DAY, [], { exitCode: 2, status: 'invalid', issues: [{ level: 'error', message: `ancien fichier audio impossible à supprimer : Daily Brief ${DAY} FR.mp3 (EACCES)` }] }) });
     expect(buildNotification(dayDir, DAY).notes).toEqual(['audio : ancien fichier audio impossible à supprimer, éditions sans lecteur']);

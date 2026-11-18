@@ -1,6 +1,6 @@
 import { mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { IsoDateSchema, type Lang } from '@daily-brief/schema';
+import { IsoDateSchema, LANGS, type Lang } from '@daily-brief/schema';
 import { messageOf, type HttpFetch } from '../collect/http';
 import { writeAtomic } from '../lib/fs';
 import { redactText, stripSecrets } from '../lib/redact';
@@ -228,7 +228,8 @@ export async function runPublish(opts: RunPublishOptions): Promise<RunPublishRes
 
   // Un fichier du jour absent de Storage (le PDF comme un MP3) rend le passage dégradé.
   const filesMissing = !report.files.some((f) => f.bucket === 'pdf' && f.stored) || report.files.some((f) => !f.stored);
-  report.status = published().length === 0 ? 'failed' : report.issues.some((i) => i.level === 'error') || filesMissing || report.drive.status === 'pending' || report.drive.status === 'failed' ? 'degraded' : 'ok';
+  // Une édition manquante (non contrôlée ou non publiée) rend aussi le passage dégradé : la page Santé dit alors ce que dit la notification (« Brief incomplet »).
+  report.status = published().length === 0 ? 'failed' : published().length < LANGS.length || report.issues.some((i) => i.level === 'error') || filesMissing || report.drive.status === 'pending' || report.drive.status === 'failed' ? 'degraded' : 'ok';
 
   // 6. Ligne `runs` du jour : bilan de chaque étape, pour la page Santé.
   if (client && summary) {

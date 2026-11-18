@@ -2,8 +2,8 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFil
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { NEWSLETTERS_PATH } from '../../newsletters/config';
-import { runNewsletters } from '../../newsletters/run-newsletters';
+import { loadNewsletters, NEWSLETTERS_PATH } from '../../newsletters/config';
+import { dmarcAligned, runNewsletters } from '../../newsletters/run-newsletters';
 import { loadSourceTexts } from '../../verify/sources';
 import { runCli } from '../run-cli';
 
@@ -21,7 +21,7 @@ function day(messages: Msg[], extra: (dir: string) => void = () => {}) {
   return { outDir, dir: join(outDir, DAY, 'newsletters') };
 }
 const run = (outDir: string, configPath?: string) => runNewsletters({ outDir, date: DAY, now: NOW, configPath });
-const PASS = 'mx.google.com; dkim=pass header.i=@newsletter.eldiario.es; spf=pass smtp.mailfrom=newsletter.eldiario.es; dmarc=pass (p=REJECT) header.from=eldiario.es';
+const PASS = 'mx.google.com; dkim=pass header.i=@newsletter.eldiario.es; spf=pass smtp.mailfrom=newsletter.eldiario.es; dmarc=pass (p=REJECT) header.from=newsletter.eldiario.es';
 
 describe('runNewsletters', () => {
   it('convertit un message d’une newsletter active ; brief:verify compte l’article cité comme lu (R1)', () => {
@@ -164,5 +164,39 @@ describe('chaîne de confiance (revue du lot 7)', () => {
     const strict = run(outDir, cfg);
     expect(strict.report.written).toEqual([]);
     expect(strict.report.skipped).toEqual([{ file: 'a.json', reason: 'expéditeur non authentifié (pas d’Authentication-Results enregistré, requireDmarc)' }]);
+  });
+});
+
+describe('dmarcAligned : Authentication-Results lu selon la RFC 8601 (revue finale du lot 7)', () => {
+  const ps = loadNewsletters().newsletters.find((n) => n.id === 'publicsenat-quotidienne')!;
+  const ok = (h: string | string[], from = 'publicsenat.fr') => dmarcAligned(h, from, ps);
+
+  it('accepte dmarc=pass de mx.google.com avec header.from égal au domaine From', () => {
+    expect(ok('mx.google.com; dkim=pass header.i=@publicsenat.fr; spf=pass smtp.mailfrom=publicsenat.fr; dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=publicsenat.fr')).toBe(true);
+    expect(ok('mx.google.com;\r\n       dmarc=pass (p=REJECT) header.from=publicsenat.fr')).toBe(true);
+    expect(ok('mx.google.com; dmarc=pass header.from=info.publicsenat.fr', 'info.publicsenat.fr')).toBe(true);
+  });
+
+  it('refuse un dmarc=pass forgé dans l’adresse d’enveloppe (commentaire spf ou smtp.mailfrom)', () => {
+    expect(ok('mx.google.com; dkim=pass header.i=@attacker.com; spf=pass (google.com: domain of x-dmarc=pass-header.from=publicsenat.fr@attacker.com designates 1.2.3.4 as permitted sender) smtp.mailfrom="x-dmarc=pass-header.from=publicsenat.fr@attacker.com"; dmarc=fail (p=NONE sp=NONE dis=NONE) header.from=publicsenat.fr')).toBe(false);
+    expect(ok('mx.google.com; spf=pass smtp.mailfrom=x-dmarc=pass-header.from=publicsenat.fr@attacker.com; dmarc=fail header.from=publicsenat.fr')).toBe(false);
+  });
+
+  it('refuse un dmarc=pass caché dans un commentaire ou une propriété dkim', () => {
+    expect(ok('mx.google.com; dkim=pass header.i=@x.com header.s=dmarc=pass header.b=1 (dmarc=pass header.from=publicsenat.fr); dmarc=fail header.from=publicsenat.fr')).toBe(false);
+  });
+
+  it('plusieurs en-têtes : seul le premier compte, et il doit venir de mx.google.com', () => {
+    expect(ok('mx.google.com; dmarc=fail header.from=publicsenat.fr\nAuthentication-Results: evil; dmarc=pass header.from=publicsenat.fr')).toBe(false);
+    expect(ok('mx.google.com; dmarc=fail header.from=publicsenat.fr mx.google.com; dmarc=pass header.from=publicsenat.fr')).toBe(false);
+    expect(ok(['mx.google.com; dmarc=fail header.from=publicsenat.fr', 'evil; dmarc=pass header.from=publicsenat.fr'])).toBe(false);
+    expect(ok(['evil; dmarc=pass header.from=publicsenat.fr', 'mx.google.com; dmarc=fail header.from=publicsenat.fr'])).toBe(false);
+    expect(ok('evil.example; dmarc=pass header.from=publicsenat.fr')).toBe(false);
+  });
+
+  it('header.from différent du domaine From, ou hors des expéditeurs de la newsletter : refusé', () => {
+    expect(ok('mx.google.com; dmarc=pass header.from=evil.com')).toBe(false);
+    expect(ok('mx.google.com; dmarc=pass header.from=publicsenat.fr', 'news.publicsenat.fr')).toBe(false);
+    expect(ok('mx.google.com; dmarc=pass header.from=evil.com', 'evil.com')).toBe(false);
   });
 });

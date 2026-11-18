@@ -118,3 +118,14 @@ describe('plainLine (objet du message)', () => {
     expect(plainLine('Al día\n# https://evil.example/x  presupuestos\r\n')).toBe('Al día # presupuestos');
   });
 });
+
+describe('crochets hors liens (revue finale du lot 7)', () => {
+  it('un faux lien découpé en plusieurs nœuds de texte (span, commentaire) ne devient jamais [x](url)', () => {
+    const spans = htmlToMarkdown('<p>Résumé faux.<span>[x](https:/</span><span>/www.lemonde.fr/paywall)</span></p>');
+    const comment = htmlToMarkdown('<p>[x](https:/<!-- -->/www.lemonde.fr/paywall)</p>');
+    const heading = htmlToMarkdown('<h2>[y](https:/<!-- -->/evil.example/a)</h2>');
+    for (const md of [spans, comment, heading]) expect(md).not.toMatch(/\[[^\]]*\]\(/);
+    expect(spans).toBe('Résumé faux.x(https://www.lemonde.fr/paywall)');
+    expect(heading).toBe('## y(');
+  });
+});

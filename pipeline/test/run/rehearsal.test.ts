@@ -151,8 +151,9 @@ describe('répétition de la routine sur la fixture', () => {
     expect(finish.exitCode).toBe(2);
     expect(finish.report.notification.message).toMatch(/^Brief incomplet : édition ES manquante — 8 sujets, \d+ médias$/);
     expect(await rows(db, 'select lang from public.editions order by lang')).toEqual([{ lang: 'en' }, { lang: 'fr' }]);
-    // La ligne runs dit ce qui est publié ; l'étape verify y porte l'échec de l'édition ES.
-    const [run] = await rows<{ notes: string; steps: Record<string, { status: string; counters: Record<string, number> }> }>(db, 'select notes, steps from public.runs');
+    // La ligne runs est « degraded » (une édition manque) ; l'étape verify y porte l'échec de l'édition ES.
+    const [run] = await rows<{ status: string; notes: string; steps: Record<string, { status: string; counters: Record<string, number> }> }>(db, 'select status, notes, steps from public.runs');
+    expect(run.status).toBe('degraded');
     expect(run.notes).toMatch(/^2 édition\(s\) publiée\(s\) : FR, EN ;/);
     expect(run.steps.verify).toMatchObject({ status: 'failed', counters: { editions: 2 } });
   });

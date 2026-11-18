@@ -105,7 +105,8 @@ export function htmlToMarkdown(html: string, opts: CleanLinkOptions = {}): strin
     for (const child of node.childNodes) {
       if (child.nodeType === 3) {
         // Une URL nue n'est jamais un lien : elle est retirée du texte (seuls les <a> visibles comptent).
-        out.push(flat((child.textContent ?? '').replace(URL_IN_TEXT, ' ')));
+        // Les crochets aussi : un faux `[x](url)` découpé en plusieurs nœuds ne doit pas se recomposer.
+        out.push(flat((child.textContent ?? '').replace(URL_IN_TEXT, ' ').replace(/[[\]]/g, '')));
         continue;
       }
       if (child.nodeType !== 1) continue;
@@ -130,7 +131,7 @@ export function htmlToMarkdown(html: string, opts: CleanLinkOptions = {}): strin
       }
       const h = HEADING.exec(tag);
       if (h) {
-        const text = flat(inline(el).replace(URL_IN_TEXT, ' ')).trim();
+        const text = flat(inline(el).replace(URL_IN_TEXT, ' ').replace(/[[\]]/g, '')).trim();
         if (text) out.push(`\n\n${'#'.repeat(Math.min(Number(h[1]), 3))} ${text}\n\n`);
         continue;
       }

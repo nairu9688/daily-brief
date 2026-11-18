@@ -160,6 +160,7 @@ Ces points ne peuvent pas être vérifiés hors ligne. Ils sont à cocher au pre
 
 - `failed` : aucune édition publiée (code 2) ;
 - `degraded` : au moins une édition publiée, mais **l'une de ces conditions est vraie** :
+  - moins de trois éditions sont publiées (une édition manquante après `brief:verify` ou refusée par la base) : la notification dit alors « Brief incomplet », la page Santé « dégradé » ;
   - le rapport contient une entrée de niveau `error` (édition manquante ou invalide, Supabase coupé en cours de route, Drive mal configuré, fichier ni déposé ni mis en attente…) ;
   - le PDF n'est pas dans Supabase Storage ;
   - un fichier du jour (PDF ou MP3) n'est pas dans Supabase Storage ;

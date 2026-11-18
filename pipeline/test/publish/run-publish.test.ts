@@ -313,6 +313,14 @@ describe('runPublish', () => {
     expect(run.steps.audio.counters).toMatchObject({ mp3: 1, published: 0 });
   });
 
+  it('une édition manquante (ES non contrôlée) : passage « degraded », dans le rapport et dans runs', async () => {
+    const r = await publish({ langs: ['fr', 'en'], extra: stepReports() });
+    expect(r.exitCode).toBe(0);
+    expect(r.report.editions.map((e) => [e.lang, e.published])).toEqual([['fr', true], ['en', true]]);
+    expect(r.report.status).toBe('degraded');
+    expect((await runsRow()).status).toBe('degraded');
+  });
+
   it('étape audio de runs : compteur « published » des MP3 publiés', async () => {
     await publish({ audio: ['fr', 'en'], extra: stepReports() });
     expect((await runsRow()).steps.audio).toMatchObject({ status: 'ok', counters: { mp3: 2, characters: 4000, warnings: 0, published: 2 } });
