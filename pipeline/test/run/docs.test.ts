@@ -1,6 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { dirname, resolve } from 'node:path';
 import { RUBRIC_KEYS } from '@daily-brief/schema';
+import { gmailFilterQuery, loadNewsletters } from '../../newsletters/config';
 import { repoPath } from '../helpers';
 
 const read = (p: string) => readFileSync(repoPath(p), 'utf8');
@@ -48,7 +50,23 @@ describe('ROUTINE.md et pipeline/run/env-from-vault.md', () => {
   });
 
   it('chaque commande citée existe dans package.json', () => {
-    const docs = ['ROUTINE.md', 'pipeline/editorial/PROMPT.md', 'pipeline/run/env-from-vault.md'];
+    const docs = ['ROUTINE.md', 'pipeline/editorial/PROMPT.md', 'pipeline/run/env-from-vault.md', 'docs/setup.md', 'docs/setup-newsletters.md'];
     for (const doc of docs) for (const c of commandsIn(read(doc))) expect(scripts, `${doc} : npm run ${c}`).toContain(c);
+  });
+});
+
+describe('docs/setup.md et docs/setup-newsletters.md', () => {
+  it('chaque lien relatif de la liste de mise en place mène à un fichier du dépôt', () => {
+    const setup = read('docs/setup.md');
+    const links = [...setup.matchAll(/\]\(([^)#:]+)\)/g)].map((m) => m[1]);
+    expect(links.length).toBeGreaterThan(5);
+    for (const l of links) expect(existsSync(resolve(dirname(repoPath('docs/setup.md')), l)), l).toBe(true);
+  });
+
+  it('le guide des newsletters donne la requête du filtre Gmail et l’inscription de chaque newsletter active', () => {
+    const guide = read('docs/setup-newsletters.md');
+    const config = loadNewsletters();
+    expect(guide).toContain(gmailFilterQuery(config));
+    for (const n of config.newsletters.filter((x) => x.enabled)) expect(guide, n.id).toContain(n.signupUrl);
   });
 });

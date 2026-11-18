@@ -25,11 +25,15 @@ npm run schema:emit    # régénère packages/schema/edition.schema.json
 npm run brief:context -- --date AAAA-MM-JJ [--out out] [--allow-empty]
 npm run brief:collect -- --date AAAA-MM-JJ [--out out]
 npm run check:thenewsapi   # vérification §16 : TheNewsAPI est-elle en temps réel ?
+npm run brief:newsletters -- --date AAAA-MM-JJ [--out out]   # messages Gmail enregistrés → newsletters/*.md
 npm run brief:verify -- --date AAAA-MM-JJ [--out out]
 npm run brief:audio -- --date AAAA-MM-JJ [--out out] [--no-ffmpeg]
 npm run audio:samples -- [--out out] [--count 3]   # mise en place : échantillons de voix
 npm run brief:render -- --date AAAA-MM-JJ [--out out]
 npm run brief:publish -- --date AAAA-MM-JJ [--out out]
+npm run brief:finish -- --date AAAA-MM-JJ [--out out] [--dry-run] [--no-ffmpeg]   # audio → rendu → publication, message final
+npm run brief:notify -- --date AAAA-MM-JJ [--out out] [--dry-run]   # message final seul
+npm run env:check      # contrôle du .env (noms seulement, jamais les valeurs)
 npm run maps:preview   # aperçu des cartes de la fixture (out/maps-preview.html)
 npm run web:dev        # appli web (FIXTURE=1 : données de fixtures/, sans connexion)
 npm run web:build      # build de production de apps/web (hors ligne)
@@ -51,7 +55,7 @@ Le champ `degraded` de `collect-report.json` vaut `true` quand la collecte est m
 
 `brief:verify` contrôle `out/<date>/{fr,en,es}.json` selon les règles R1 à R12 de la spec. Il écrit `{lang}.verified.json` (conforme aux règles R1 à R12 détectables automatiquement) et `verify-report.json`. Code de sortie : 0 si propre, 1 si des corrections ont été appliquées, 2 en cas d’erreur : édition invalide ou absente, fichier d’entrée illisible, ou date incorrecte (l’édition doit alors être corrigée avant publication).
 
-`brief:audio` lit l'`audioScript` de chaque `{lang}.verified.json` et le fait lire par Google Cloud Text-to-Speech, avec la voix Chirp 3 HD de l'édition (`pipeline/config/voices.json`). Le texte est découpé en morceaux de 4 500 octets au plus (la limite de l'API est de 5 000), aux fins de phrase, sinon aux virgules, sinon entre les mots, sans jamais couper un mot. Les morceaux sont concaténés avec ffmpeg s'il est présent (MP3 64 kb/s mono, `FFMPEG_PATH` pour un autre chemin), sinon trame par trame, au débit de la source. Il écrit `Daily Brief <date> FR.mp3` (et `EN`, `ES`), `audio.json` (`{ "fr": { "duration": "3:24" } }`) et `audio-report.json`. Les anciens MP3 du jour sont supprimés d'abord, parce que `brief:publish` prend tout MP3 présent. La clé `GOOGLE_TTS_API_KEY` vient de l'environnement ou de `.env` ; elle part dans l'en-tête `x-goog-api-key`, jamais dans l'URL, et n'apparaît dans aucun message ni rapport. Chaque requête a un délai de 60 s, et le passage entier est borné à 10 minutes. Le service est coupé après un 401, un 403, un 429, un délai dépassé ou 3 échecs consécutifs ; une erreur 5xx ou réseau a droit à une seconde tentative. Les caractères sont plafonnés à 5 000 par édition et 15 000 par passage. L'audio ne bloque jamais la routine : une édition en échec est publiée sans lecteur. Codes de sortie de `brief:audio` :
+`brief:audio` lit l'`audioScript` de chaque `{lang}.verified.json` et le fait lire par Google Cloud Text-to-Speech, avec la voix Chirp 3 HD de l'édition (`pipeline/config/voices.json`). Le texte est découpé en morceaux de 4 500 octets au plus (la limite de l'API est de 5 000), aux fins de phrase, sinon aux virgules, sinon entre les mots, sans jamais couper un mot. Les morceaux sont concaténés avec ffmpeg s'il est présent (MP3 64 kb/s mono, `FFMPEG_PATH` pour un autre chemin), sinon trame par trame, au débit de la source. Il écrit `Daily Brief <date> FR.mp3` (et `EN`, `ES`), `audio.json` (`{ "fr": { "duration": "3:24" } }`) et `audio-report.json`. Les anciens MP3 du jour sont supprimés d'abord ; `brief:publish` ne prend de toute façon que les MP3 qu'annonce l'`audio-report.json` du passage. La clé `GOOGLE_TTS_API_KEY` vient de l'environnement ou de `.env` ; elle part dans l'en-tête `x-goog-api-key`, jamais dans l'URL, et n'apparaît dans aucun message ni rapport. Chaque requête a un délai de 60 s, et le passage entier est borné à 10 minutes. Le service est coupé après un 401, un 403, un 429, un délai dépassé ou 3 échecs consécutifs ; une erreur 5xx ou réseau a droit à une seconde tentative. Les caractères sont plafonnés à 5 000 par édition et 15 000 par passage. L'audio ne bloque jamais la routine : une édition en échec est publiée sans lecteur. Codes de sortie de `brief:audio` :
 
 - **0** : au moins un MP3 est écrit (`status` vaut `ok`, ou `degraded` s'il en manque un), ou l'audio est désactivé faute de clé (`disabled`, avec un avertissement) ;
 - **1** : la clé est présente mais aucun MP3 n'a été produit (`failed`) ;
@@ -66,11 +70,11 @@ Quel que soit ce code, la routine enchaîne sur `brief:render`, qui lit `audio.j
 `brief:publish` publie ce que `brief:render` a produit, dans cet ordre :
 
 1. il retente les dépôts Drive en attente des jours précédents : chaque ligne de `drive_pending` est prise en charge (tentative comptée) avant d'être traitée, au plus 5 lignes par passage, les plus anciennes d'abord ; après 5 tentatives, ou si un fichier a disparu de Storage, le dépôt est abandonné (il reste visible), et un dépôt abandonné depuis plus de 30 jours est supprimé de la table ;
-2. il dépose le PDF et les MP3 présents dans Supabase Storage (buckets privés `pdf` et `audio`) ;
+2. il dépose dans Supabase Storage (buckets privés `pdf` et `audio`) le PDF et les MP3 annoncés par `audio-report.json` : un MP3 présent mais absent de ce rapport, ou un rapport d'une autre date ou antérieur au dernier `brief:verify`, est ignoré avec un avertissement (l'édition part sans lecteur) ;
 3. il publie chaque édition listée dans `finals` de `render-report.json`, par un appel à la fonction SQL `publish_edition` : une transaction par édition, donc jamais d'édition à moitié écrite ;
 4. il dépose les fichiers dans Google Drive par l'application web Apps Script (`apps-script/Code.gs`), un fichier par requête ; `Code.gs` crée le nouveau fichier avant de mettre l'ancien à la corbeille, et signale un quota Google par `drive-quota` ; en cas d'échec, les fichiers présents dans Storage vont dans la table `drive_pending` ;
 5. il supprime les MP3 de plus de 30 jours par l'API Storage (sans pg_cron : une suppression en SQL laisserait le fichier orphelin), puis vide `editions.audio_path` ; il balaie aussi le bucket `audio` et supprime les dossiers datés de plus de 30 jours dont le MP3 n'a plus d'édition ;
-6. il écrit la ligne `runs` du jour (bilan de chaque étape, d'après les rapports `context`, `collect`, `verify` et `render`), puis `publish-report.json`.
+6. il écrit la ligne `runs` du jour (bilan de chaque étape, d'après les rapports `context`, `collect`, `verify`, `audio` et `render`), puis `publish-report.json`.
 
 Relancer une date remplace proprement ses données : mêmes éditions, sujets, sources et fichiers, sans doublon. Les mots cochés (`vocab_items.selected`, `anki_status`) et les Threads suivis (`threads.followed`) sont conservés. Variables : `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `APPS_SCRIPT_URL` et `APPS_SCRIPT_TOKEN` (environnement ou `.env`) ; aucune n'apparaît dans un message ni dans un rapport. Sans les variables Apps Script, le dépôt Drive est ignoré avec un avertissement. Codes de sortie de `brief:publish` :
 
@@ -82,5 +86,17 @@ La base est décrite par `supabase/migrations/` : tables et RLS (`0001_init.sql`
 `context.json`, `raw.json` et `newsletters/` sont facultatifs. Sans textes sources, toutes les citations et tous les chiffres sont retirés.
 
 L'application web (`apps/web`, Next.js 16) lit Supabase avec la clé publique et la session de l'utilisateur : la RLS ne laisse lire que l'adresse autorisée, et l'appli n'écrit que `vocab_items.selected`, `vocab_items.anki_status` (mise en file Anki) et `threads.followed`. La connexion se fait par lien magique, ou par le code du même courriel, envoyé seulement à `ALLOWED_EMAIL`. Le MP3 et le PDF passent par des URL signées de 10 minutes. Avec `FIXTURE=1`, l'appli lit `fixtures/` sans connexion ni réseau : c'est le mode des tests (Vitest et Testing Library dans `npm test`, Playwright dans `npm run web:e2e`), interdit sur Vercel. Mise en ligne : `docs/setup-web.md`.
+
+## Routine quotidienne
+
+La routine (`ROUTINE.md`, tâche planifiée à 05:13, heure de Paris) enchaîne `env:check`, `brief:context`, `brief:collect`, l'enregistrement des newsletters Gmail puis `brief:newsletters`, la rédaction (`pipeline/editorial/PROMPT.md`), `brief:verify` (trois essais au plus) et `brief:finish`.
+
+`brief:newsletters` lit les messages que la routine a enregistrés depuis le connecteur Gmail (`out/<date>/newsletters/gmail/<id>.json` : `id`, `from`, `subject`, `date`, `html`, `text`, copiés tels quels) et écrit `out/<date>/newsletters/<nn>-<newsletter>.md`, que `brief:verify` compte comme textes lus (R1). La conversion est mécanique et mot pour mot ; seuls les expéditeurs des newsletters actives de `pipeline/config/newsletters.json` sont gardés, une par média et 8 au plus ; aucun lien n'est suivi. Il écrit `newsletters-report.json`. Code 0 (même sans message), 2 si la date ou la configuration est inutilisable.
+
+`brief:finish` lance `brief:audio`, `brief:render` puis `brief:publish`, chacun quoi qu'il arrive au précédent, écrit `routine-report.json` et affiche en dernière ligne le message final : « Brief du jour prêt : N sujets, M médias » ou « Brief incomplet : <raison> », avec entre parenthèses ce qui manque (collecte dégradée, audio partiel, Drive en attente…). Code 0 : les trois éditions sont publiées ; 2 : brief incomplet. `--dry-run` s'arrête avant la publication. `brief:notify` affiche le même message à partir des rapports présents, quand la routine s'arrête plus tôt.
+
+`env:check` contrôle `.env` (écrit depuis Vault selon `pipeline/run/env-from-vault.md`) : chaque variable attendue est dite présente, vide ou absente, sans jamais afficher de valeur. Code 2 sans `SUPABASE_URL` ou `SUPABASE_SERVICE_ROLE_KEY`.
+
+Mise en place complète, dans l'ordre : `docs/setup.md`.
 
 Plans d'implémentation : `docs/superpowers/plans/`.
