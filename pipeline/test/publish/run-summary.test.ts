@@ -2,12 +2,12 @@ import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { capErrors, summarizeReports } from '../../publish/run-summary';
-import { DAY, makeDay, RENDERED_AT } from './day';
+import { audioReport, DAY, makeDay, RENDERED_AT } from './day';
 import { stepReports } from './reports';
 
 describe('summarizeReports', () => {
-  it('résume les quatre rapports : statut, fin, compteurs, erreurs', () => {
-    const { dayDir } = makeDay({ extra: stepReports() });
+  it('résume les cinq rapports : statut, fin, compteurs, erreurs', () => {
+    const { dayDir } = makeDay({ audio: ['fr', 'en', 'es'], extra: stepReports() });
     const r = summarizeReports(dayDir, DAY);
     expect(r.issues).toEqual([]);
     expect(r.steps).toEqual({
@@ -21,6 +21,7 @@ describe('summarizeReports', () => {
         perLang: { fr: { articles: 90, fullTexts: 31, light: false }, en: { articles: 70, fullTexts: 22, light: false }, es: { articles: 52, fullTexts: 9, light: true } },
       },
       verify: { status: 'degraded', finishedAt: '2026-11-06T04:31:00.000Z', durationMs: null, counters: { editions: 3, fixed: 1, warnings: 1, errors: 0 }, errors: [] },
+      audio: { status: 'ok', finishedAt: '2026-11-06T04:35:00.000Z', durationMs: null, counters: { mp3: 3, characters: 6000, warnings: 0 }, errors: [] },
       render: { status: 'ok', finishedAt: RENDERED_AT, durationMs: null, counters: { finals: 3, pdfEditions: 3, pdf: 1, warnings: 0 }, errors: [] },
     });
     expect(r.light).toEqual({ fr: false, en: false, es: true });
@@ -30,7 +31,7 @@ describe('summarizeReports', () => {
     const { dayDir } = makeDay();
     const r = summarizeReports(dayDir, DAY);
     const missing = { status: 'missing', finishedAt: null, durationMs: null, counters: {}, errors: [] };
-    expect([r.steps.context, r.steps.collect, r.steps.verify]).toEqual([missing, missing, missing]);
+    expect([r.steps.context, r.steps.collect, r.steps.verify, r.steps.audio]).toEqual([missing, missing, missing, missing]);
     expect(r.steps.render.status).toBe('ok');
     expect(r.light).toEqual({});
     expect(r.issues).toEqual([]);
@@ -62,6 +63,17 @@ describe('summarizeReports', () => {
     const report = { date: DAY, generatedAt: RENDERED_AT, exitCode: 0, pdf: 'Daily Brief 2026-11-06.pdf', langs: ['fr'], finals: ['fr'], issues: [{ level: 'error', lang: 'en', message: 'en.verified.json invalide' }] };
     writeFileSync(join(dayDir, 'render-report.json'), JSON.stringify(report));
     expect(summarizeReports(dayDir, DAY).steps.render).toMatchObject({ status: 'degraded', errors: ['en.verified.json invalide'] });
+  });
+
+  it.each([
+    ['degraded', 'degraded'],
+    ['disabled', 'degraded'],
+    ['failed', 'failed'],
+    ['invalid', 'failed'],
+  ])('audio « %s » : étape « %s », erreurs reprises du rapport', (status, expected) => {
+    const issues = [{ level: 'error', lang: 'es', message: 'HTTP 403 : édition publiée sans lecteur' }];
+    const { dayDir } = makeDay({ extra: { 'audio-report.json': audioReport(DAY, status === 'degraded' ? ['fr'] : [], { status, exitCode: status === 'invalid' ? 2 : status === 'failed' ? 1 : 0, issues }) } });
+    expect(summarizeReports(dayDir, DAY).steps.audio).toMatchObject({ status: expected, counters: { mp3: status === 'degraded' ? 1 : 0 }, errors: ['HTTP 403 : édition publiée sans lecteur'] });
   });
 
   it('capErrors : au plus 5 messages de 300 caractères', () => {

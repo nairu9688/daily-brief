@@ -31,13 +31,21 @@ const ContextReport = z.object({ ...Base, openThreads: z.number().int(), yesterd
 const LangStats = z.object({ articles: z.number().int(), fullTexts: z.number().int(), light: z.boolean() });
 const CollectReport = z.object({ ...Base, degraded: z.boolean(), articles: z.number().int(), groups: z.number().int(), perLang: z.object({ fr: LangStats, en: LangStats, es: LangStats }).partial() });
 const VerifyReport = z.object({ ...Base, editions: z.array(z.object({ lang: z.string(), written: z.boolean() })) });
+const AudioReport = z.object({
+  ...Base,
+  status: z.enum(['ok', 'degraded', 'disabled', 'failed', 'invalid']),
+  characters: z.object({ sent: z.number().int() }),
+  editions: z.array(z.object({ lang: z.string(), file: z.string().nullable() })),
+});
+/** `disabled` (clé absente) est un passage dégradé : les éditions partent sans lecteur. */
+const AUDIO_STEP: Record<z.infer<typeof AudioReport>['status'], StepStatus> = { ok: 'ok', degraded: 'degraded', disabled: 'degraded', failed: 'failed', invalid: 'failed' };
 const RenderReport = z.object({ ...Base, pdf: z.string().nullable(), langs: z.array(z.string()), finals: z.array(z.string()) });
 
 const errorsOf = (issues: z.infer<typeof Issues>) => capErrors(issues.filter((i) => i.level === 'error').map((i) => i.message));
 const countOf = (issues: z.infer<typeof Issues>, level: string) => issues.filter((i) => i.level === level).length;
 
 export type ReportsSummary = {
-  steps: Record<'context' | 'collect' | 'verify' | 'render', StepSummary>;
+  steps: Record<'context' | 'collect' | 'verify' | 'audio' | 'render', StepSummary>;
   /** Éditions allégées d'après la collecte (`perLang.<lang>.light`). */
   light: Partial<Record<Lang, boolean>>;
   issues: PublishIssue[];
@@ -45,7 +53,7 @@ export type ReportsSummary = {
 
 /**
  * Résume les rapports des étapes précédentes (`context-report.json`, `collect-report.json`,
- * `verify-report.json`, `render-report.json`) pour la ligne `runs` du jour. Un rapport absent donne
+ * `verify-report.json`, `audio-report.json`, `render-report.json`) pour la ligne `runs` du jour. Un rapport absent donne
  * `missing`, un rapport illisible ou d'une autre date `unreadable` avec un avertissement : jamais
  * d'exception. Ces rapports ne mesurent pas leur durée : `durationMs` vaut null.
  */
@@ -89,6 +97,11 @@ export function summarizeReports(dayDir: string, date: string): ReportsSummary {
     verify: step('verify-report.json', VerifyReport, (r) => ({
       status: r.exitCode === 0 ? 'ok' : r.exitCode === 1 ? 'degraded' : 'failed',
       counters: { editions: r.editions.filter((e) => e.written).length, fixed: countOf(r.issues, 'fixed'), warnings: countOf(r.issues, 'warning'), errors: countOf(r.issues, 'error') },
+      errors: errorsOf(r.issues),
+    })),
+    audio: step('audio-report.json', AudioReport, (r) => ({
+      status: AUDIO_STEP[r.status],
+      counters: { mp3: r.editions.filter((e) => e.file !== null).length, characters: r.characters.sent, warnings: countOf(r.issues, 'warning') },
       errors: errorsOf(r.issues),
     })),
     render: step('render-report.json', RenderReport, (r) => ({

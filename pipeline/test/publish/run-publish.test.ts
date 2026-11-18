@@ -95,7 +95,8 @@ describe('runPublish', () => {
     await publish({ extra: stepReports() });
     const run = await runsRow();
     expect([run.date, run.status, run.notes]).toEqual([DAY, 'ok', '3 édition(s) publiée(s) : FR, EN, ES ; Drive : sent']);
-    expect(Object.keys(run.steps).sort()).toEqual(['closedThreads', 'collect', 'context', 'drive', 'publish', 'render', 'verify']);
+    expect(Object.keys(run.steps).sort()).toEqual(['audio', 'closedThreads', 'collect', 'context', 'drive', 'publish', 'render', 'verify']);
+    expect(run.steps.audio).toEqual({ status: 'missing', finishedAt: null, durationMs: null, counters: {}, errors: [] });
     expect(run.steps.collect.perLang.es).toEqual({ articles: 52, fullTexts: 9, light: true });
     expect(run.steps.collect.status).toBe('degraded');
     expect(run.steps.verify.counters).toEqual({ editions: 3, fixed: 1, warnings: 1, errors: 0 });
