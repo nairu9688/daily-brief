@@ -7,14 +7,21 @@ export const THENEWSAPI_CATEGORIES = ['general', 'science', 'sports', 'business'
 
 const PerLang = <T extends z.ZodType>(t: T) => z.strictObject({ fr: t, en: t, es: t });
 
+/** De 1 à 10 mots-clés, sans doublon (casse ignorée) : le paramètre `search` reste court. */
+const Keywords = z
+  .array(z.string().min(1))
+  .min(1)
+  .max(10)
+  .refine((ks) => new Set(ks.map((k) => k.toLowerCase())).size === ks.length, 'mot-clé en double');
+
 const RubricSchema = z.strictObject({
   categories: z.array(z.enum(THENEWSAPI_CATEGORIES)).min(1),
   searchKeywords: z.boolean(),
-  keywords: PerLang(z.array(z.string().min(1)).min(1)),
+  keywords: PerLang(Keywords),
   exaQuery: PerLang(z.string().min(1)),
 });
 
-const RubriquesSchema = z.strictObject({
+export const RubriquesSchema = z.strictObject({
   note: z.string().optional(),
   rubrics: z.strictObject(Object.fromEntries(RUBRIC_KEYS.map((k) => [k, RubricSchema])) as Record<RubricKey, typeof RubricSchema>),
 });

@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { RUBRIC_KEYS } from '@daily-brief/schema';
 import { RequestBudget } from '../../collect/budget';
 import { CollectConfigSchema, loadCollectConfig } from '../../collect/config';
-import { loadRubriques, searchOf } from '../../collect/rubriques';
+import { loadRubriques, RubriquesSchema, searchOf } from '../../collect/rubriques';
 import { readDailyUsage, utcDay, writeDailyUsage } from '../../collect/usage-ledger';
 import { lookupDomain, loadWhitelist } from '../../lib/whitelist';
 import { repoPath, WHITELIST_PATH } from '../helpers';
@@ -45,6 +45,27 @@ describe('rubriques.json', () => {
     const r = loadRubriques(repoPath('pipeline/editorial/rubriques.json'));
     expect(Object.keys(r).sort()).toEqual([...RUBRIC_KEYS].sort());
     for (const k of RUBRIC_KEYS) for (const l of ['fr', 'en', 'es'] as const) expect(r[k].keywords[l].length).toBeGreaterThan(0);
+  });
+
+  it('R2 : chaque requête Exa nomme le périmètre de son édition (US et UK en EN, España en ES)', () => {
+    const r = loadRubriques(repoPath('pipeline/editorial/rubriques.json'));
+    for (const k of RUBRIC_KEYS) {
+      expect(r[k].exaQuery.en, k).toMatch(/\bUS and UK\b/);
+      expect(r[k].exaQuery.es, k).toMatch(/España/);
+    }
+  });
+
+  it('refuse plus de 10 mots-clés ou un mot-clé en double ; chaque paramètre search tient sous 300 caractères', () => {
+    const raw = JSON.parse(readFileSync(repoPath('pipeline/editorial/rubriques.json'), 'utf8'));
+    expect(RubriquesSchema.safeParse(raw).success).toBe(true);
+    const dup = structuredClone(raw);
+    dup.rubrics.eco.keywords.fr.push('Inflation');
+    expect(RubriquesSchema.safeParse(dup).error?.issues[0].message).toBe('mot-clé en double');
+    const long = structuredClone(raw);
+    long.rubrics.eco.keywords.fr = Array.from({ length: 11 }, (_, i) => `mot${i}`);
+    expect(RubriquesSchema.safeParse(long).success).toBe(false);
+    const r = loadRubriques(repoPath('pipeline/editorial/rubriques.json'));
+    for (const k of RUBRIC_KEYS) for (const l of ['fr', 'en', 'es'] as const) expect((searchOf(r[k], l) ?? '').length, `${k} ${l}`).toBeLessThan(300);
   });
 
   it('construit le paramètre search en OU, expressions entre guillemets', () => {

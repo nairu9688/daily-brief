@@ -1,13 +1,13 @@
 {
-  "note": "Correspondance rubriques → collecte (lot 3). categories : catégories TheNewsAPI ; searchKeywords : ajoute keywords au paramètre search de TheNewsAPI (OU logique) ; keywords : mots-clés par langue ; exaQuery : requête sémantique Exa par langue. Le lot 7 affine ces listes.",
+  "note": "Correspondance rubriques → collecte. categories : catégories TheNewsAPI ; searchKeywords : ajoute keywords au paramètre search de TheNewsAPI (OU logique) ; keywords : mots-clés par langue (10 au plus, sans doublon) ; exaQuery : requête sémantique Exa par langue, qui nomme le périmètre R2 (États-Unis et Royaume-Uni en EN, España en ES). Affiné au lot 7 (18/11/2026) pour le programme ECT : pouvoir d'achat, taux, droits de douane, emploi, grèves, COP.",
   "rubrics": {
     "pol": {
       "categories": ["politics"],
       "searchKeywords": false,
       "keywords": {
-        "fr": ["gouvernement", "Assemblée nationale", "Sénat", "Premier ministre", "réforme", "société"],
-        "en": ["Congress", "White House", "Parliament", "Downing Street", "election", "policy"],
-        "es": ["Gobierno", "Congreso", "Moncloa", "elecciones", "partido", "sociedad"]
+        "fr": ["gouvernement", "Assemblée nationale", "Sénat", "Premier ministre", "réforme", "société", "Matignon"],
+        "en": ["Congress", "White House", "Parliament", "Downing Street", "election", "policy", "Prime Minister"],
+        "es": ["Gobierno", "Congreso", "Moncloa", "elecciones", "partido", "sociedad", "Cortes"]
       },
       "exaQuery": {
         "fr": "actualité politique et société en France aujourd'hui",
@@ -25,7 +25,7 @@
       },
       "exaQuery": {
         "fr": "actualité internationale et géopolitique",
-        "en": "world news and geopolitics",
+        "en": "world news and geopolitics from US and UK media",
         "es": "actualidad internacional y geopolítica desde España"
       }
     },
@@ -33,9 +33,9 @@
       "categories": ["business"],
       "searchKeywords": true,
       "keywords": {
-        "fr": ["inflation", "croissance", "chômage", "budget", "BCE", "dette"],
-        "en": ["inflation", "economy", "jobs", "Federal Reserve", "Bank of England", "budget"],
-        "es": ["inflación", "economía", "paro", "presupuestos", "BCE", "deuda"]
+        "fr": ["inflation", "croissance", "chômage", "budget", "BCE", "dette", "pouvoir d'achat", "taux d'intérêt"],
+        "en": ["inflation", "economy", "jobs", "Federal Reserve", "Bank of England", "budget", "interest rates", "tariffs"],
+        "es": ["inflación", "economía", "paro", "presupuestos", "BCE", "deuda", "IPC", "tipos de interés"]
       },
       "exaQuery": {
         "fr": "actualité économique en France et en Europe",
@@ -47,13 +47,13 @@
       "categories": ["business", "tech"],
       "searchKeywords": true,
       "keywords": {
-        "fr": ["entreprise", "PDG", "rachat", "résultats", "salariés", "start-up"],
-        "en": ["company", "CEO", "merger", "earnings", "workers", "startup"],
-        "es": ["empresa", "consejero delegado", "fusión", "resultados", "plantilla", "startup"]
+        "fr": ["entreprise", "PDG", "rachat", "résultats", "salariés", "start-up", "grève", "licenciements"],
+        "en": ["company", "CEO", "merger", "earnings", "workers", "startup", "layoffs", "strike"],
+        "es": ["empresa", "consejero delegado", "fusión", "resultados", "plantilla", "startup", "huelga", "ERE"]
       },
       "exaQuery": {
         "fr": "actualité des entreprises et du management",
-        "en": "business and corporate management news",
+        "en": "US and UK business and corporate management news",
         "es": "actualidad de empresas y gestión en España"
       }
     },
@@ -81,21 +81,21 @@
       },
       "exaQuery": {
         "fr": "actualité tech et intelligence artificielle",
-        "en": "technology and artificial intelligence news",
-        "es": "actualidad de tecnología e inteligencia artificial"
+        "en": "technology and artificial intelligence news in the US and UK",
+        "es": "actualidad de tecnología e inteligencia artificial en España"
       }
     },
     "env": {
       "categories": ["science"],
       "searchKeywords": true,
       "keywords": {
-        "fr": ["climat", "énergie", "nucléaire", "pollution", "sécheresse", "biodiversité"],
-        "en": ["climate", "energy", "emissions", "pollution", "drought", "renewables"],
-        "es": ["clima", "energía", "emisiones", "contaminación", "sequía", "renovables"]
+        "fr": ["climat", "énergie", "nucléaire", "pollution", "sécheresse", "biodiversité", "COP"],
+        "en": ["climate", "energy", "emissions", "pollution", "drought", "renewables", "COP"],
+        "es": ["clima", "energía", "emisiones", "contaminación", "sequía", "renovables", "COP"]
       },
       "exaQuery": {
         "fr": "actualité environnement, climat et énergie",
-        "en": "environment, climate and energy news",
+        "en": "environment, climate and energy news in the US and UK",
         "es": "actualidad de medio ambiente, clima y energía en España"
       }
     },
