@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { IsoDateSchema, LANGS, LangSchema, parseEdition, type Edition, type Lang } from '@daily-brief/schema';
 import { messageOf } from '../collect/http';
 import { pdfFileName } from '../render/issue';
-import { looksLike, mp3File, pdfFile, type DayFile } from './files';
+import { looksLike, mp3File, mp3FileName, pdfFile, type DayFile } from './files';
 
 export type PublishIssue = { level: 'error' | 'warning'; lang?: Lang; message: string };
 
@@ -14,7 +14,7 @@ export type LocalFile = DayFile & { bytes: Buffer; lang?: Lang };
 export type PublishInputs = {
   editions: Edition[];
   pdf: LocalFile | null;
-  /** MP3 présents (le lot 5 les produit) : au plus un par édition publiable. */
+  /** MP3 annoncés par audio-report.json et présents : au plus un par édition publiable. */
   audio: LocalFile[];
   /** Horodatage du rendu, ou null si render-report.json est inutilisable. */
   renderedAt: string | null;
@@ -27,6 +27,54 @@ const RenderReport = z.object({
   pdf: z.string().nullable(),
   finals: z.array(LangSchema),
 });
+
+/** Ce que `brief:publish` lit de audio-report.json et de verify-report.json. */
+const AudioReport = z.object({
+  date: IsoDateSchema,
+  generatedAt: z.iso.datetime({ offset: true }),
+  status: z.enum(['ok', 'degraded', 'disabled', 'failed', 'invalid']),
+  editions: z.array(z.object({ lang: LangSchema, file: z.string().nullable() })),
+});
+const Stamp = z.object({ date: IsoDateSchema, generatedAt: z.iso.datetime({ offset: true }) });
+
+/**
+ * Langues dont le MP3 est annoncé par l'audio-report.json **de ce passage** : même date, statut
+ * `ok` ou `degraded`, pas antérieur au dernier verify-report.json, et nom de fichier attendu.
+ * Un MP3 présent mais non annoncé (ancien passage dont la suppression a échoué, rapport absent ou
+ * périmé) n'est jamais publié : l'édition part sans lecteur, avec un avertissement.
+ */
+export function announcedMp3(dayDir: string, date: string): { langs: Set<Lang>; issues: PublishIssue[] } {
+  const langs = new Set<Lang>();
+  const issues: PublishIssue[] = [];
+  const path = join(dayDir, 'audio-report.json');
+  if (!existsSync(path)) return { langs, issues };
+  let report: z.infer<typeof AudioReport>;
+  try {
+    report = AudioReport.parse(readJson(path));
+  } catch (e) {
+    issues.push({ level: 'warning', message: `audio-report.json illisible (${e instanceof z.ZodError ? `${e.issues.length} champs invalides` : messageOf(e)}) : MP3 ignorés` });
+    return { langs, issues };
+  }
+  if (report.date !== date) {
+    issues.push({ level: 'warning', message: `audio-report.json est celui du ${report.date} : MP3 ignorés` });
+    return { langs, issues };
+  }
+  const verifyPath = join(dayDir, 'verify-report.json');
+  if (existsSync(verifyPath)) {
+    try {
+      const verify = Stamp.parse(readJson(verifyPath));
+      if (Date.parse(report.generatedAt) < Date.parse(verify.generatedAt)) {
+        issues.push({ level: 'warning', message: 'audio-report.json est antérieur au dernier brief:verify (ancien passage) : MP3 ignorés' });
+        return { langs, issues };
+      }
+    } catch {
+      // verify-report.json illisible : la publication le signale déjà dans le bilan `runs`.
+    }
+  }
+  if (report.status !== 'ok' && report.status !== 'degraded') return { langs, issues };
+  for (const e of report.editions) if (e.file === mp3FileName(date, e.lang)) langs.add(e.lang);
+  return { langs, issues };
+}
 
 /** Taille maximale d'un PDF (octets) : sous la limite de Storage et de l'envoi à Apps Script. */
 export const MAX_PDF_BYTES = 30 * 1024 * 1024;
@@ -58,7 +106,7 @@ function readChecked(dayDir: string, file: DayFile, max: number): Buffer {
 
 /**
  * Lit ce que `brief:render` a produit pour `date` : les `{lang}.final.json` listés dans `finals` de
- * render-report.json, le PDF et, s'ils existent, les MP3. Chaque fichier est contrôlé contre son
+ * render-report.json, le PDF et les MP3 qu'annonce audio-report.json (`announcedMp3`). Chaque fichier est contrôlé contre son
  * nom et sa date ; un fichier absent, illisible ou incohérent devient un problème, jamais une
  * exception, et n'est pas publié.
  */
@@ -121,10 +169,20 @@ export function loadPublishInputs(dayDir: string, date: string): PublishInputs {
     }
   }
 
-  // MP3 : facultatifs (lot 5). Seuls ceux des éditions publiables sont pris.
+  // MP3 : facultatifs (lot 5). Seuls ceux des éditions publiables, annoncés par audio-report.json, sont pris.
+  const announced = announcedMp3(dayDir, date);
+  out.issues.push(...announced.issues);
   for (const ed of out.editions) {
     const file = mp3File(date, ed.lang);
-    if (!existsSync(join(dayDir, file.name))) continue;
+    const present = existsSync(join(dayDir, file.name));
+    if (!announced.langs.has(ed.lang)) {
+      if (present) issue('warning', `${file.name} : non annoncé par audio-report.json de ce passage — édition publiée sans lecteur`, ed.lang);
+      continue;
+    }
+    if (!present) {
+      issue('warning', `${file.name} : annoncé par audio-report.json mais absent — édition publiée sans lecteur`, ed.lang);
+      continue;
+    }
     try {
       out.audio.push({ ...file, lang: ed.lang, bytes: readChecked(dayDir, file, MAX_MP3_BYTES) });
     } catch (e) {

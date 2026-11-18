@@ -18,11 +18,19 @@ export type DayOptions = {
   pdf?: Buffer | null;
   /** Nom du PDF annoncé par le rendu (par défaut : le nom attendu, ou null sans PDF). */
   pdfName?: string | null;
+  /** MP3 écrits, et annoncés par un audio-report.json du passage (sauf `audioReport: false`). */
   audio?: Lang[];
+  audioReport?: boolean;
   edit?: (edition: Edition) => void;
   /** Autres fichiers du dossier du jour (rapports des étapes précédentes, par exemple). */
   extra?: Record<string, string>;
 };
+
+/** audio-report.json à la forme écrite par `brief:audio` : un MP3 pour chaque langue de `langs`. */
+export function audioReport(date: string, langs: Lang[], over: Record<string, unknown> = {}): string {
+  const editions = langs.map((lang) => ({ lang, voice: `${lang}-voix`, chunks: 1, characters: 2000, file: `Daily Brief ${date} ${lang.toUpperCase()}.mp3`, duration: '3:00', seconds: 180, bytes: 14, method: 'frames', error: null }));
+  return JSON.stringify({ date, generatedAt: `${date}T04:35:00.000Z`, exitCode: 0, status: 'ok', voicesConfirmed: true, ffmpeg: false, characters: { sent: 2000 * langs.length, maxPerEdition: 5000, maxPerRun: 15000 }, editions, issues: [], ...over }, null, 2) + '\n';
+}
 
 /** Édition de la fixture, redatée. */
 export function editionFor(lang: Lang, date: string = DAY, edit?: (e: Edition) => void): Edition {
@@ -44,6 +52,7 @@ export function makeDay(opts: DayOptions = {}): { outDir: string; dayDir: string
   const pdfName = `Daily Brief ${date}.pdf`;
   if (pdf) writeFileSync(join(dayDir, pdfName), pdf);
   for (const lang of opts.audio ?? []) writeFileSync(join(dayDir, `Daily Brief ${date} ${lang.toUpperCase()}.mp3`), MP3_BYTES);
+  if (opts.audio?.length && opts.audioReport !== false) writeFileSync(join(dayDir, 'audio-report.json'), audioReport(date, opts.audio));
   const report = { date, generatedAt: RENDERED_AT, exitCode: pdf ? 0 : 2, pdf: opts.pdfName === undefined ? (pdf ? pdfName : null) : opts.pdfName, langs: pdf ? langs : [], finals: opts.finals ?? langs, issues: [] };
   writeFileSync(join(dayDir, 'render-report.json'), JSON.stringify(report, null, 2) + '\n');
   for (const [name, text] of Object.entries(opts.extra ?? {})) writeFileSync(join(dayDir, name), text);
