@@ -53,6 +53,10 @@
     { "domain": "vozpopuli.com", "country": "ES", "status": "meta" },
     { "domain": "articulo14.es", "country": "ES", "status": "meta" },
     { "domain": "rtvc.es", "country": "ES", "status": "meta" },
-    { "domain": "yorkshireeveningpost.co.uk", "country": "GB", "status": "meta" }
+    { "domain": "yorkshireeveningpost.co.uk", "country": "GB", "status": "meta" },
+    { "domain": "publicsenat.fr", "country": "FR", "status": "meta" },
+    { "domain": "axios.com", "country": "US", "status": "meta" },
+    { "domain": "kloshletter.com", "country": "ES", "status": "meta" },
+    { "domain": "hugodecrypte.com", "country": "FR", "status": "meta" }
   ]
 }
