@@ -5,6 +5,7 @@ Procédure suivie par la routine (`ROUTINE.md`, étape 2) et, au besoin, à la m
 ## Règles
 
 - **Ne jamais afficher une valeur** : ni dans un message, ni dans une commande, ni dans un journal. Ne jamais lancer `cat .env`, `env`, `printenv` ni `echo $…` sur une variable secrète.
+- **Limite connue : les valeurs passent par le transcript de la session.** Le connecteur Supabase rend les valeurs déchiffrées à Claude, puis Claude les écrit dans `.env` : elles figurent donc dans le transcript de la session de la routine, même si elles ne sont jamais affichées dans une réponse. Ne jamais partager une session de la routine (lien, export, capture). Si une session a été partagée, ou peut l'avoir été, faire tourner (régénérer) toutes les clés de Vault, puis les y remplacer.
 - **`.env` ne quitte pas le conteneur** : il est dans `.gitignore` ; on ne le commite pas et on ne le copie nulle part.
 - Seuls les noms ci-dessous sont lus. Un autre secret de Vault n'est jamais demandé.
 
@@ -16,6 +17,7 @@ Procédure suivie par la routine (`ROUTINE.md`, étape 2) et, au besoin, à la m
 | `PEXELS_API_KEY` | non (photos sans image) | `brief:render` |
 | `GOOGLE_TTS_API_KEY` | non (éditions sans lecteur) | `brief:audio` |
 | `APPS_SCRIPT_URL`, `APPS_SCRIPT_TOKEN` | non (pas de dépôt Drive) | `brief:publish` |
+| `GITHUB_READ_TOKEN` | routine Cowork seulement, jamais écrit dans `.env` | clonage du dépôt privé (voir la dernière section) |
 
 ## Étapes
 
@@ -29,17 +31,31 @@ Procédure suivie par la routine (`ROUTINE.md`, étape 2) et, au besoin, à la m
 
    Si `SUPABASE_URL` manque, prendre l'URL du projet avec l'outil « URL du projet » du connecteur (ce n'est pas un secret).
 2. **Lire les valeurs** avec la même requête, en remplaçant `select name` par `select name, decrypted_secret`. Ne rien reformuler ni commenter du résultat.
-3. **Écrire `.env`** à la racine du clone, en une seule écriture de fichier, une ligne `NOM=valeur` par secret, sans guillemets ni espaces autour de `=`. Ne pas passer par une commande `echo` : la commande apparaîtrait dans le journal.
+3. **Écrire `.env`** à la racine du clone, en une seule écriture de fichier (outil d'écriture de fichier, jamais une commande `echo` ou `cat <<` : la commande apparaîtrait dans le journal), une ligne `NOM='valeur'` par secret, sans espace autour de `=`. Les guillemets simples gardent la valeur telle quelle pour `util.parseEnv` (un `#` n'y commence pas un commentaire). `parseEnv` ne connaît pas d'échappement : une valeur qui contient une apostrophe s'écrit entre guillemets doubles (`NOM="valeur"`) ; une valeur qui contient les deux, ou un saut de ligne, ne peut pas être écrite : s'arrêter et le signaler (« secret illisible : NOM »), sans afficher la valeur.
+   Le fichier est créé avec les droits par défaut (0644) puis restreint à l'étape 4 : cette courte fenêtre est acceptable dans le conteneur de la routine, qui n'a qu'un seul compte.
 4. **Restreindre et contrôler** :
 
    ```bash
    chmod 600 .env
-   git check-ignore -q .env && echo ".env ignoré par git"
+   git check-ignore -v .env
    npm run env:check
    ```
+
+   `git check-ignore -v .env` doit afficher la règle de `.gitignore` qui ignore `.env` ; pas de sortie de `git check-ignore` : s’arrêter (le fichier pourrait être commité), supprimer `.env` et terminer par « Brief incomplet : secrets indisponibles ».
 
    `npm run env:check` affiche chaque nom avec « présente », « vide » ou « absente », jamais une valeur. Code 0 : `.env` prêt. Code 2 : une variable obligatoire manque ; la routine s'arrête sur « Brief incomplet : secrets indisponibles ».
 
 ## Si le connecteur Supabase ne répond pas
 
-La routine s'arrête : sans `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY`, ni le contexte ni la publication ne sont possibles. La page Santé montrera la ligne `runs` du jour absente ; relancer la routine à la main quand le connecteur répond.
+La routine s'arrête : sans `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY`, ni le contexte ni la publication ne sont possibles, et aucune ligne `runs` ne peut être écrite. La page Santé montrera la ligne `runs` du jour absente ; relancer la routine à la main quand le connecteur répond.
+
+## Routine Cowork : jeton GitHub en lecture seule
+
+En routine Cowork (`docs/setup.md`, étape 13), le dépôt privé se clone avec `GITHUB_READ_TOKEN`, un jeton GitHub *fine-grained* limité au dépôt `daily-brief`, droit *Contents : Read-only*, rangé dans Vault comme les autres secrets. Il se lit avant le clonage, par une requête de même forme limitée à ce nom (`where name = 'GITHUB_READ_TOKEN'`), et ne s'écrit **jamais** dans `.env`. Clonage, puis retrait du jeton de la configuration git :
+
+```bash
+git clone "https://x-access-token:<jeton>@github.com/<compte>/daily-brief.git" daily-brief
+git -C daily-brief remote set-url origin "https://github.com/<compte>/daily-brief.git"
+```
+
+Le jeton passe lui aussi par le transcript (voir les règles) : même consigne, ne jamais partager la session, régénérer le jeton si elle l'a été.

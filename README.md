@@ -32,7 +32,7 @@ npm run audio:samples -- [--out out] [--count 3]   # mise en place : échantillo
 npm run brief:render -- --date AAAA-MM-JJ [--out out]
 npm run brief:publish -- --date AAAA-MM-JJ [--out out]
 npm run brief:finish -- --date AAAA-MM-JJ [--out out] [--dry-run] [--no-ffmpeg]   # audio → rendu → publication, message final
-npm run brief:notify -- --date AAAA-MM-JJ [--out out] [--dry-run]   # message final seul
+npm run brief:notify -- --date AAAA-MM-JJ [--out out] [--dry-run] [--record]   # message final seul ; --record : ligne runs « failed »
 npm run env:check      # contrôle du .env (noms seulement, jamais les valeurs)
 npm run maps:preview   # aperçu des cartes de la fixture (out/maps-preview.html)
 npm run web:dev        # appli web (FIXTURE=1 : données de fixtures/, sans connexion)
@@ -93,7 +93,7 @@ La routine (`ROUTINE.md`, tâche planifiée à 05:13, heure de Paris) enchaîne 
 
 `brief:newsletters` lit les messages que la routine a enregistrés depuis le connecteur Gmail (`out/<date>/newsletters/gmail/<id>.json` : `id`, `from`, `subject`, `date`, `html`, `text`, copiés tels quels) et écrit `out/<date>/newsletters/<nn>-<newsletter>.md`, que `brief:verify` compte comme textes lus (R1). La conversion est mécanique et mot pour mot ; seuls les expéditeurs des newsletters actives de `pipeline/config/newsletters.json` sont gardés, une par média et 8 au plus ; aucun lien n'est suivi. Il écrit `newsletters-report.json`. Code 0 (même sans message), 2 si la date ou la configuration est inutilisable.
 
-`brief:finish` lance `brief:audio`, `brief:render` puis `brief:publish`, chacun quoi qu'il arrive au précédent, écrit `routine-report.json` et affiche en dernière ligne le message final : « Brief du jour prêt : N sujets, M médias » ou « Brief incomplet : <raison> », avec entre parenthèses ce qui manque (collecte dégradée, audio partiel, Drive en attente…). Code 0 : les trois éditions sont publiées ; 2 : brief incomplet. `--dry-run` s'arrête avant la publication. `brief:notify` affiche le même message à partir des rapports présents, quand la routine s'arrête plus tôt.
+`brief:finish` lance `brief:audio`, `brief:render` puis `brief:publish`, chacun quoi qu'il arrive au précédent, écrit `routine-report.json` et affiche en dernière ligne le message final : « Brief du jour prêt : N sujets, M médias » ou « Brief incomplet : <raison> », avec entre parenthèses ce qui manque (collecte dégradée, audio partiel, Drive en attente…). Code 0 : les trois éditions sont publiées ; 2 : brief incomplet. `--dry-run` s'arrête avant la publication et ne fait aucun appel extérieur (audio désactivé, rendu sans Pexels). `brief:notify` affiche le même message à partir des rapports présents, quand la routine s'arrête plus tôt ; avec `--record`, il écrit aussi la ligne `runs` du jour en « failed ».
 
 `env:check` contrôle `.env` (écrit depuis Vault selon `pipeline/run/env-from-vault.md`) : chaque variable attendue est dite présente, vide ou absente, sans jamais afficher de valeur. Code 2 sans `SUPABASE_URL` ou `SUPABASE_SERVICE_ROLE_KEY`.
 

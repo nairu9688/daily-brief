@@ -70,3 +70,76 @@ describe('docs/setup.md et docs/setup-newsletters.md', () => {
     for (const n of config.newsletters.filter((x) => x.enabled)) expect(guide, n.id).toContain(n.signupUrl);
   });
 });
+
+describe('revue du lot 7 : documents', () => {
+  const routine = read('ROUTINE.md');
+  const setup = read('docs/setup.md');
+  /** Texte de l'étape numérotée n de docs/setup.md. */
+  const setupStep = (n: number) => new RegExp(`^${n}\\. (.*)$`, 'm').exec(setup)?.[1] ?? '';
+
+  it('ROUTINE.md : budget de temps, repli sur brief:finish ou brief:notify, tout autre code traité comme 2', () => {
+    expect(routine).toMatch(/Budget de temps/);
+    expect(routine).toContain('en cas d’imprévu ou de temps court, passer directement à `brief:finish` avec ce qui existe, ou `brief:notify` ; toujours terminer par l’un des deux');
+    expect(routine).toContain('tout autre code de sortie = traiter comme 2');
+    expect(routine).toMatch(/si le dossier courant n’est pas déjà la racine du dépôt/);
+  });
+
+  it('ROUTINE.md : newsletters cherchées hors spam, text tel quel, Authentication-Results, et arrêt précoce noté dans runs', () => {
+    expect(routine).toContain('-in:spam');
+    expect(routine).toContain('`authenticationResults`');
+    expect(routine).toMatch(/`text`.*`html` seulement si `text` est vide/);
+    expect(routine).toContain('npm run brief:notify -- --date D --record');
+  });
+
+  it('ROUTINE.md renvoie à l’étape de docs/setup.md qui décrit le repli Cowork', () => {
+    const n = Number(/docs\/setup\.md`, étape (\d+)/.exec(routine)?.[1]);
+    expect(setupStep(n)).toMatch(/Cowork/);
+  });
+
+  it('PROMPT.md : newsletter attribuée à son éditeur, chiffres tirés d’une source lue, vocab.title', () => {
+    const prompt = read('pipeline/editorial/PROMPT.md');
+    expect(prompt).toMatch(/attribué à son éditeur/);
+    expect(prompt).toMatch(/domaine inconnu.*« titre \+ lien »/);
+    expect(prompt).toMatch(/sources `readFull: true` du sujet/);
+    expect(prompt).toMatch(/un seul chiffre faux retire les quatre/);
+    expect(prompt).toMatch(/le paragraphe du lien et le précédent/);
+    expect(prompt).toContain('`{ title, items }`');
+  });
+
+  it('env-from-vault.md : transcript de session, guillemets simples, arrêt sans sortie de git check-ignore', () => {
+    const vault = read('pipeline/run/env-from-vault.md');
+    expect(vault).toMatch(/transcript/);
+    expect(vault).toContain("NOM='valeur'");
+    expect(vault).toContain('pas de sortie de `git check-ignore` : s’arrêter');
+    expect(vault).toMatch(/0644/);
+  });
+
+  it('setup-supabase.md §4 : SUPABASE_URL dans le tableau, renvoi à env-from-vault.md, plus de « lot 7 » ni « lot 5 »', () => {
+    const s = read('docs/setup-supabase.md');
+    const section = s.slice(s.indexOf('## 4.'), s.indexOf('## 5.'));
+    expect(section).toMatch(/\| `SUPABASE_URL` \|/);
+    expect(section).toContain('pipeline/run/env-from-vault.md');
+    expect(section).not.toMatch(/lot [57]/);
+  });
+
+  it('setup-newsletters.md : pas de « Ne jamais envoyer dans le spam », heure limite de 05:13', () => {
+    const g = read('docs/setup-newsletters.md');
+    expect(g).not.toContain('Ne jamais envoyer dans le spam');
+    expect(g).toContain('05:13');
+    expect(g).toMatch(/adresses exactes/);
+  });
+
+  it('setup.md : newsletters tôt, web:* par Claude avec accord, rubriques.json affinées après les premiers passages', () => {
+    const nl = [...setup.matchAll(/^(\d+)\. \*\*Newsletters/gm)].map((m) => Number(m[1]));
+    expect(nl).toHaveLength(1);
+    expect(nl[0]).toBeLessThanOrEqual(3);
+    expect(setup).toMatch(/`npm run web:build && npm run web:e2e` et `npm run web:check-bundle` — \*Claude, avec ton accord\*/);
+    expect(setup).toContain('pipeline/editorial/rubriques.json');
+  });
+
+  it('feuille de route : ligne vide avant les consignes du lot 7, modèle de confiance des newsletters', () => {
+    const r = read('docs/superpowers/plans/2026-11-06-phase-1-roadmap.md');
+    expect(r).toContain('\n\n### Consignes issues du lot 7');
+    expect(r).toMatch(/requireDmarc/);
+  });
+});

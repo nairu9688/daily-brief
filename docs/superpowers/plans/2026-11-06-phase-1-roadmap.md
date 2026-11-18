@@ -210,10 +210,15 @@ Plan : `docs/superpowers/plans/2026-11-06-phase-1-lot-7-redaction-routine-lancem
   - **Étape `audio` dans `runs`.** La page Santé affiche toute étape présente dans `runs.steps`, dans l'ordre `context`, `collect`, `verify`, `audio`, `render`, `publish`, `drive` : l'étape `audio` apparaîtra dès que `pipeline/publish/run-summary.ts` l'écrira (consigne du lot 5). Une ligne `running` de plus de 6 h (depuis `updated_at`) s'affiche « interrompu ».
   - **Notification.** Le site affiche de lui-même la veille avec un bandeau quand l'édition du jour manque, et le bandeau « édition allégée » quand `editions.status = 'light'` : la routine n'a rien à faire de plus pour eux.
   - **Description de Thread.** Colonne `threads.description` absente ; l'ajouter (migration + publish) si on la veut dans la frise, sinon la ligne reste vide.
+
 ### Consignes issues du lot 7
 
 - **Lancement (partie B du plan du lot 7)** : suivre `docs/setup.md` dans l'ordre ; ses étapes 11 à 13 décident entre routine Claude Code et routine Cowork.
 - **Newsletters** : après le premier envoi de chacune, confirmer le domaine de l'adresse From dans `senders` de `pipeline/config/newsletters.json` (et la requête du filtre Gmail), puis passer `confidence` à `verified` (`docs/setup-newsletters.md`, §3).
+- **Modèle de confiance des newsletters (limite connue).**
+  - *Copié par le modèle* : la routine (Claude) enregistre chaque message Gmail tel que le connecteur le donne (`newsletters/gmail/<id>.json` : `from`, `subject`, `date`, `text` ou `html`, `authenticationResults` si disponible). Rien ne prouve mécaniquement que cette copie est fidèle ; une erreur ou une injection à cette étape n'est pas détectable hors ligne.
+  - *Mécanique* : `brief:newsletters` ne garde que les expéditeurs actifs de `newsletters.json` (adresse à un seul `@`, date au plus 36 h avant et 1 h après le passage), ne convertit que les liens `<a>` visibles (styles masquants retirés avec leur sous-arbre, URL nues retirées), ne déballe que les clés de redirection connues et jamais vers un autre domaine depuis un hôte d'articles, retire les liens de désinscription, et écrit l'en-tête `domain:` de l'éditeur. `brief:verify` ne compte comme lus que les liens `[texte](url)` vers ce domaine ou la liste blanche, avec le paragraphe du lien et le précédent.
+  - *DMARC* : un `authenticationResults` présent doit dire `dmarc=pass` aligné sur l'expéditeur ; absent, le message est gardé avec l'avertissement « expéditeur non authentifié ». `requireDmarc` (faux par défaut) le rend obligatoire : à passer à `true` dès que le premier passage réel montre que le connecteur donne l'en-tête (`docs/setup-newsletters.md`, §3).
 - **Phase 2** :
   - **Description de Thread.** `threads.description` reste absente : il faudrait changer le schéma `Edition`, une migration, `publish_edition` et l'appli.
   - **Registre TheNewsAPI.** Le persister dans Supabase seulement si un rattrapage doit relancer la collecte dans un conteneur neuf le même jour.

@@ -19,8 +19,9 @@ Un même `groupId` réunit le même événement vu par plusieurs médias. Au-del
 
 ## 2. Accès au texte (R1, non négociable)
 
-- **Texte lu** = `text` non nul dans `raw.json` (domaine `full`), ou paragraphe d'une newsletter du jour où figure l'URL de l'article.
-- Une source a `readFull: true` seulement si son URL est d'un domaine `full` de `pipeline/config/whitelist.json`, ou si elle figure dans un fichier `newsletters/*.md` du jour. Sinon `readFull: false` : on n'en garde que le titre, le chapô fourni par l'API, l'URL, la date et le média (« titre + lien »).
+- **Texte lu** = `text` non nul dans `raw.json` (domaine `full`), ou paragraphe d'une newsletter du jour où figure, en lien `[texte](url)`, l'URL de l'article. Pour une newsletter, `brief:verify` lit le paragraphe du lien et le précédent : une citation ou un chiffre doit s'y trouver.
+- Une source a `readFull: true` seulement si son URL est d'un domaine `full` de `pipeline/config/whitelist.json`, ou si elle figure en lien dans un fichier `newsletters/*.md` du jour **et** que son domaine est celui de l'éditeur de la newsletter (en-tête `domain:` du fichier) ou un domaine de la liste blanche. Un lien vers un domaine inconnu reste « titre + lien » (`readFull: false`). Sinon aussi `readFull: false` : on n'en garde que le titre, le chapô fourni par l'API, l'URL, la date et le média (« titre + lien »).
+- Le texte d'une newsletter est attribué à son éditeur (Public Sénat, The Guardian…), jamais présenté comme celui d'un autre média. Pour une information lue dans une newsletter, la source est l'article dont l'URL figure dans la newsletter (`sourceUrl` des citations et des chiffres compris), avec le média de cet article.
 - Résumé, citations et chiffres ne viennent **que** des textes lus. Rien ne vient de ta mémoire, ni d'un article que tu n'as pas sous les yeux.
 
 ## 3. Périmètre et diversité
@@ -35,14 +36,14 @@ Un même `groupId` réunit le même événement vu par plusieurs médias. Au-del
 - `morningBrief` (**R8**) : **exactement cinq** infos `{ lead, text, rubric, storyId? }`, une ou deux phrases chacune, classées par importance (nombre de médias qui couvrent, poids pour la prépa) et équilibrées entre rubriques. `rubric` est le libellé traduit de la rubrique ; `storyId` désigne le sujet développé plus bas, s'il existe.
 - `sections` : dans l'ordre `pol`, `int`, `eco`, `ent`, `dro`, `tec`, `env`, `cul`, `spo`, avec les libellés traduits de `packages/schema/src/rubrics.ts`. Une rubrique sans actualité marquante est **omise**. Deux ou trois sujets par rubrique quand l'actualité le permet, puis `briefs` (« En bref ») : les sources « titre + lien » qui ne font pas un sujet.
 - Identifiant d'un sujet : `<date>-<lang>-<n>` (par exemple `2026-11-06-fr-3`), unique dans l'édition. `kicker` : lieu ou thème court ; `date` : `JJ.MM` de l'événement.
-- `vocab` (**R10**) : `null` en FR ; en EN et ES, **six** mots tirés des textes du jour, `{ term, pos, translation, example, sourceUrl? }`, traduction en français, phrase exemple issue du texte quand c'est possible (avec `sourceUrl`).
+- `vocab` (**R10**) : `null` en FR ; en EN et ES, un objet `{ title, items }` : `title` est le titre de l'encart, court et lié aux sujets du jour (par exemple « Midterms vocabulary », « Política y transporte »), `items` **six** mots tirés des textes du jour, `{ term, pos, translation, example, sourceUrl? }`, traduction en français, phrase exemple issue du texte quand c'est possible (avec `sourceUrl`).
 - Édition allégée (`light`) : garde les sujets qui ont un texte lu, mets le reste en brèves.
 
 ## 5. Un sujet (carte)
 
 - **R4. Résumé.** `summary` exige au moins une source `readFull: true` ; sinon le sujet devient une brève. Trois à cinq phrases neutres, d'après les sources citées (l'appli affiche « Résumé IA · d'après les sources citées »).
 - **R5. Citation.** `quote.text` est copié **mot pour mot** d'un texte lu, avec l'orateur nommé dans ce texte. Une paraphrase de journaliste n'est pas une citation (cas de la paraphrase PBS attribuée à J.D. Vance). Une citation dans une autre langue que l'édition garde son texte original et porte sa traduction dans `translation` ; sinon `translation: null`. `sourceUrl` : l'URL du texte où elle figure.
-- **R6. Chiffres.** `stats` : zéro ou **quatre** chiffres, chacun présent tel quel dans le texte de sa `sourceUrl` (seules les variantes de format sont tolérées : espaces fines, virgule ou point). Pas de calcul, pas d'arrondi.
+- **R6. Chiffres.** `stats` : zéro ou **quatre** chiffres, chacun présent tel quel dans le texte de sa `sourceUrl` (seules les variantes de format sont tolérées : espaces fines, virgule ou point). Pas de calcul, pas d'arrondi. La `sourceUrl` d'un chiffre est l'une des sources `readFull: true` du sujet ; un seul chiffre faux retire les quatre (le contrôle supprime toute la grille).
 - **R7. Divergences.** Seulement pour la même mesure sur le même périmètre, chiffrée par deux médias différents (contre-exemple : 130 rames hors Eurostar contre 160 rames avec Eurostar).
 - **R9. Lien prépa.** Seulement s'il existe un vrai rapport avec le programme ECT, avec un `subject` pris parmi les titres et alias de `pipeline/editorial/programme-ect.md` (deux matières : « Anglais LV1 · CG »). Sinon `prepa: null`.
 - **R11. Visuel.** Une carte (`type: 'map'`, `MapSpec`, codes ISO alpha-3) quand le lieu compte ; sinon une photo `{ type: 'photo', query }` dont la requête Pexels ne contient que des objets ou des lieux, **jamais un nom de personne**. Jamais de photo de presse ni de personnalité publique. Le crédit est ajouté par `brief:render`.

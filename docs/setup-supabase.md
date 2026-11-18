@@ -83,16 +83,17 @@ Dans le tableau de bord : *Project Settings* → *Vault* → *Add new secret*. L
 
 | Nom | Valeur | Utilisé par |
 |---|---|---|
+| `SUPABASE_URL` | URL du projet, `https://<référence>.supabase.co` (*Project Settings* → *API* ; pas un secret, rangée ici pour que la routine la trouve avec les autres) | `brief:context`, `brief:publish` |
 | `SUPABASE_SERVICE_ROLE_KEY` | Clé de service du projet (*Project Settings* → *API Keys* : clé `service_role`, ou clé secrète `sb_secret_…`) | `brief:context`, `brief:publish` |
 | `APPS_SCRIPT_URL` | URL de l'application web Apps Script (§5 ci-dessous), qui finit par `/exec` | `brief:publish` |
 | `APPS_SCRIPT_TOKEN` | Le jeton choisi au §5 | `brief:publish` |
 | `THENEWSAPI_KEY`, `EXA_API_KEY`, `WEBZ_TOKEN` | Clés de collecte | `brief:collect` |
 | `PEXELS_API_KEY` | Clé Pexels | `brief:render` |
-| `GOOGLE_TTS_API_KEY` | Clé Text-to-Speech | lot 5 |
+| `GOOGLE_TTS_API_KEY` | Clé Text-to-Speech | `brief:audio` |
 
 La clé de service contourne la RLS : elle ne doit jamais se retrouver dans l'application web, dans Vercel ni dans le dépôt. L'application n'utilise que la clé publique (`anon` ou `sb_publishable_…`).
 
-`SUPABASE_URL` n'est pas un secret : la routine l'écrit dans `.env` avec l'URL du projet. La procédure qui lit Vault (`vault.decrypted_secrets`) et écrit `.env` sans rien afficher arrive au lot 7.
+La routine lit ces secrets avec le connecteur Supabase (`vault.decrypted_secrets`) et écrit `.env` sans rien afficher : procédure `pipeline/run/env-from-vault.md`, contrôlée ensuite par `npm run env:check` (chaque nom avec « présente », « vide » ou « absente », jamais une valeur).
 
 Pour un essai à la main, depuis la racine du dépôt, créer `.env` :
 
