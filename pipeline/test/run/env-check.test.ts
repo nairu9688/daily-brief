@@ -35,6 +35,13 @@ describe('checkEnvFile', () => {
     ]));
   });
 
+  it('un nom hors de la forme ^[A-Z][A-Z0-9_]*$ n’est jamais affiché : « ligne N inattendue »', () => {
+    const r = checkEnvFile(envFile(`SUPABASE_URL=https://abcdefgh.supabase.co\nSUPABASE_SERVICE_ROLE_KEY=${SECRET}\nsk_live_TEMOIN=1\n# commentaire\nexport  BAD-NAME=2\nOTHER_NAME=3\n`));
+    expect(r.exitCode).toBe(0);
+    expect(r.lines).toEqual(expect.arrayContaining(['avertissement ligne 3 inattendue', 'avertissement ligne 5 inattendue', 'avertissement OTHER_NAME : variable inconnue du pipeline']));
+    expect(r.lines.join('\n')).not.toMatch(/sk_live|BAD-NAME/);
+  });
+
   it('fichier absent : code 2', () => {
     expect(checkEnvFile(join(tmpdir(), 'inexistant', '.env'))).toEqual({ exitCode: 2, lines: [expect.stringMatching(/absent : suivre pipeline\/run\/env-from-vault\.md$/)] });
   });

@@ -58,6 +58,11 @@ describe('utilitaires partagés', () => {
     expect(redactText('https://a/x?api_token=abc&b=1', [])).toBe('https://a/x?api_token=***&b=1');
   });
 
+  it('redactText : un second passage sur un texte déjà masqué ne mange pas ce qui suit', () => {
+    const once = 'webz : HTTP 429 (https://api.webz.io/newsApiLite?token=***) — source coupée';
+    expect(redactText(once, [])).toBe(once);
+  });
+
   it('cmp et langRank : ordre binaire, FR < EN < ES < autres', () => {
     expect(['b', 'a', 'B'].sort(cmp)).toEqual(['B', 'a', 'b']);
     expect(['es', 'xx', 'fr', 'en'].sort((a, b) => langRank(a) - langRank(b))).toEqual(['fr', 'en', 'es', 'xx']);

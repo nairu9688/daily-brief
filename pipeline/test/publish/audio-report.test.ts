@@ -42,6 +42,13 @@ describe('MP3 annoncés par audio-report.json (consigne du lot 5 : ancien fichie
     expect(langsOf(dayDir)).toEqual([]);
   });
 
+  it('verify-report.json illisible : le rapport audio n’est pas vérifiable, MP3 ignorés avec un avertissement', () => {
+    const { dayDir } = makeDay({ audio: ['fr'], audioReport: false, extra: { 'verify-report.json': '{ tronqué', 'audio-report.json': audioReport(DAY, ['fr']) } });
+    const r = announcedMp3(dayDir, DAY);
+    expect([...r.langs]).toEqual([]);
+    expect(r.issues).toEqual([{ level: 'warning', message: 'verify-report.json illisible : audio-report.json non vérifiable, MP3 ignorés' }]);
+  });
+
   it('MP3 annoncé mais absent : avertissement, édition sans lecteur', () => {
     const { dayDir } = makeDay({ extra: { 'audio-report.json': audioReport(DAY, ['fr']) } });
     const r = loadPublishInputs(dayDir, DAY);

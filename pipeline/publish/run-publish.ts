@@ -240,8 +240,12 @@ export async function runPublish(opts: RunPublishOptions): Promise<RunPublishRes
       counters: { editions: published().length, stories: sum('stories'), sources: sum('sources'), vocab: sum('vocab'), threadsCreated: sum('threadsCreated'), files: report.files.filter((f) => f.stored).length, audioPurged: report.audioPurged },
       errors: capErrors(report.issues.filter((i) => i.level === 'error').map((i) => (i.lang ? `${i.lang.toUpperCase()} : ${i.message}` : i.message))),
     };
+    // MP3 réellement publiés : enregistrés dans Storage et rattachés à une édition publiée.
+    const audioPublished = report.files.filter((f) => f.bucket === 'audio' && f.stored && published().some((e) => f.path === `${opts.date}/${e.lang}.mp3`)).length;
+    const audioStep = summary.steps.audio.status === 'missing' || summary.steps.audio.status === 'unreadable' ? summary.steps.audio : { ...summary.steps.audio, counters: { ...summary.steps.audio.counters, published: audioPublished } };
     const steps = {
       ...summary.steps,
+      audio: audioStep,
       publish: publishStep,
       drive: {
         status: report.drive.status,

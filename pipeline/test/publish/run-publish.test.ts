@@ -307,7 +307,15 @@ describe('runPublish', () => {
     expect(r.report.status).toBe('degraded');
     expect(r.report.files.map((f) => [f.bucket, f.stored])).toEqual([['pdf', true], ['audio', false]]);
     expect(r.report.drive.status).toBe('sent');
-    expect((await runsRow()).status).toBe('degraded');
+    const run = await runsRow();
+    expect(run.status).toBe('degraded');
+    // L'étape audio compte les MP3 réellement publiés (enregistrés et rattachés à une édition publiée).
+    expect(run.steps.audio.counters).toMatchObject({ mp3: 1, published: 0 });
+  });
+
+  it('étape audio de runs : compteur « published » des MP3 publiés', async () => {
+    await publish({ audio: ['fr', 'en'], extra: stepReports() });
+    expect((await runsRow()).steps.audio).toMatchObject({ status: 'ok', counters: { mp3: 2, characters: 4000, warnings: 0, published: 2 } });
   });
 
   it('Drive muet jusqu’à l’échéance : éditions publiées, PDF mis en attente, ligne runs écrite', async () => {

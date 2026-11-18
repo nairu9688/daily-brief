@@ -1,5 +1,6 @@
 /** Paramètres de requête qui portent un secret (TheNewsAPI : api_token ; Webz : token). */
-const SECRET_PARAM = /([?&;](?:api_token|token|api_key|apikey|key)=)[^&#\s"';\\]*/gi;
+/** Une valeur déjà masquée (`***`) est laissée telle quelle : un second passage ne mange pas le texte qui suit. */
+const SECRET_PARAM = /([?&;](?:api_token|token|api_key|apikey|key)=)(?:\*\*\*|[^&#\s"';\\]*)/gi;
 
 /** URL sans secret : la valeur des paramètres sensibles est remplacée par `***`. */
 export function redactUrl(url: string): string {

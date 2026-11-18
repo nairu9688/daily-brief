@@ -68,7 +68,9 @@ export function announcedMp3(dayDir: string, date: string): { langs: Set<Lang>; 
         return { langs, issues };
       }
     } catch {
-      // verify-report.json illisible : la publication le signale déjà dans le bilan `runs`.
+      // Sans date de contrôle lisible, rien ne dit que le rapport audio est de ce passage.
+      issues.push({ level: 'warning', message: 'verify-report.json illisible : audio-report.json non vérifiable, MP3 ignorés' });
+      return { langs, issues };
     }
   }
   if (report.status !== 'ok' && report.status !== 'degraded') return { langs, issues };

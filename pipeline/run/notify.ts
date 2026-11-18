@@ -2,6 +2,7 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
 import { LANGS, parseEdition, type Edition, type Lang } from '@daily-brief/schema';
+import { redactText } from '../lib/redact';
 import { MAX_JSON_BYTES } from '../publish/inputs';
 
 /** Lecture tolérante d'un rapport : absent, illisible ou d'une autre date donne null, jamais une exception. */
@@ -17,13 +18,31 @@ function report<T extends z.ZodType>(dayDir: string, name: string, date: string,
 }
 
 const Base = { date: z.string(), exitCode: z.number().int() };
+const Issues = z.array(z.object({ level: z.string(), lang: z.string().optional(), message: z.string() })).catch([]).default([]);
 const Context = z.object(Base);
-const Collect = z.object({ ...Base, degraded: z.boolean(), perLang: z.record(z.string(), z.object({ light: z.boolean() })) });
+const Collect = z.object({ ...Base, degraded: z.boolean(), perLang: z.record(z.string(), z.object({ light: z.boolean() })), issues: Issues });
 const Newsletters = z.object({ ...Base, written: z.array(z.unknown()) });
 const Verify = z.object({ ...Base, editions: z.array(z.object({ lang: z.string(), written: z.boolean() })) });
-const Audio = z.object({ ...Base, status: z.enum(['ok', 'degraded', 'disabled', 'failed', 'invalid']) });
+const Audio = z.object({ ...Base, status: z.enum(['ok', 'degraded', 'disabled', 'failed', 'invalid']), issues: Issues });
 const Render = z.object({ ...Base, pdf: z.string().nullable(), finals: z.array(z.string()) });
-const Publish = z.object({ ...Base, status: z.string(), editions: z.array(z.object({ lang: z.string(), published: z.boolean() })), drive: z.object({ status: z.string() }) });
+const Publish = z.object({
+  ...Base,
+  status: z.string(),
+  editions: z.array(z.object({ lang: z.string(), published: z.boolean() })),
+  drive: z.object({ status: z.string() }),
+  files: z.array(z.object({ name: z.string(), bucket: z.string(), stored: z.boolean() })).catch([]).default([]),
+  issues: Issues,
+});
+
+/** Messages repris d'un rapport dans la notification : 2 au plus, 120 caractères chacun, secrets masqués. */
+const MAX_NOTE_MESSAGES = 2;
+const MAX_NOTE_CHARS = 120;
+const bounded = (messages: string[], secrets: (string | undefined)[]) =>
+  messages.slice(0, MAX_NOTE_MESSAGES).map((m) => {
+    const r = redactText(m.replace(/\s+/g, ' ').trim(), secrets);
+    return r.length > MAX_NOTE_CHARS ? `${r.slice(0, MAX_NOTE_CHARS).trimEnd()}…` : r;
+  });
+const STALE_AUDIO = 'ancien fichier audio impossible à supprimer';
 
 const AUDIO_NOTE: Record<z.infer<typeof Audio>['status'], string | null> = {
   ok: null,
@@ -62,7 +81,8 @@ function finalEdition(dayDir: string, lang: Lang, date: string): Edition | null 
  * parenthèses de ce qui manque (collecte dégradée, audio partiel, Drive en attente…).
  * `dryRun` : répétition sans publication, les éditions comptées sont celles du rendu.
  */
-export function buildNotification(dayDir: string, date: string, opts: { dryRun?: boolean } = {}): Notification {
+export function buildNotification(dayDir: string, date: string, opts: { dryRun?: boolean; secrets?: (string | undefined)[] } = {}): Notification {
+  const secrets = opts.secrets ?? [];
   const context = report(dayDir, 'context-report.json', date, Context);
   const collect = report(dayDir, 'collect-report.json', date, Collect);
   const newsletters = report(dayDir, 'newsletters-report.json', date, Newsletters);
@@ -73,15 +93,31 @@ export function buildNotification(dayDir: string, date: string, opts: { dryRun?:
 
   const notes: string[] = [];
   if (!context || context.exitCode !== 0) notes.push('contexte indisponible : Threads non rattachés');
-  if (collect?.degraded) notes.push('collecte dégradée');
+  if (collect?.degraded) {
+    const errors = bounded(collect.issues.filter((i) => i.level === 'error').map((i) => i.message), secrets);
+    notes.push(errors.length ? `collecte dégradée : ${errors.join(' ; ')}` : 'collecte dégradée');
+  }
   const light = LANGS.filter((l) => collect?.perLang[l]?.light);
   if (light.length) notes.push(`édition allégée : ${light.map((l) => l.toUpperCase()).join(', ')}`);
   if (!newsletters || newsletters.exitCode !== 0) notes.push('newsletters non lues');
   else if (newsletters.written.length === 0) notes.push('aucune newsletter');
   if (!audio) notes.push('audio non lancé');
+  else if (audio.status === 'invalid' && audio.issues.some((i) => i.message.startsWith(STALE_AUDIO))) notes.push(`audio : ${STALE_AUDIO}, éditions sans lecteur`);
+  else if (audio.status === 'disabled' && opts.dryRun) notes.push('audio désactivé (répétition)');
   else if (AUDIO_NOTE[audio.status]) notes.push(AUDIO_NOTE[audio.status]!);
   if (render && render.finals.length > 0 && render.pdf === null) notes.push('PDF absent');
-  if (publish && DRIVE_NOTE[publish.drive.status]) notes.push(DRIVE_NOTE[publish.drive.status]);
+  if (publish) {
+    const before = notes.length;
+    if (publish.files.some((f) => f.bucket === 'pdf' && !f.stored)) notes.push('PDF non enregistré dans Storage');
+    const lostMp3 = publish.files.filter((f) => f.bucket === 'audio' && !f.stored).map((f) => /\b([A-Z]{2})\.mp3$/.exec(f.name)?.[1] ?? f.name);
+    if (lostMp3.length) notes.push(`MP3 non enregistré${lostMp3.length > 1 ? 's' : ''} dans Storage : ${lostMp3.join(', ')}`);
+    if (DRIVE_NOTE[publish.drive.status]) notes.push(DRIVE_NOTE[publish.drive.status]);
+    // Passage dégradé pour une autre raison (Thread refusé, purge, ligne runs…) : la première erreur du rapport.
+    if (publish.status === 'degraded' && notes.length === before) {
+      const [first] = bounded(publish.issues.filter((i) => i.level === 'error').map((i) => (i.lang ? `${i.lang.toUpperCase()} : ${i.message}` : i.message)), secrets);
+      notes.push(first ? `publication dégradée : ${first}` : 'publication dégradée');
+    }
+  }
 
   const done = opts.dryRun ? (render?.finals ?? []) : (publish?.editions.filter((e) => e.published).map((e) => e.lang) ?? []);
   const finals = LANGS.filter((l) => done.includes(l)).map((l) => finalEdition(dayDir, l, date)).filter((e): e is Edition => e !== null);
