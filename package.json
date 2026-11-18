@@ -16,6 +16,7 @@
     "schema:emit": "tsx packages/schema/scripts/emit-json-schema.ts",
     "brief:context": "tsx pipeline/context/cli.ts",
     "brief:collect": "tsx pipeline/collect/cli.ts",
+    "brief:newsletters": "tsx pipeline/newsletters/cli.ts",
     "brief:verify": "tsx pipeline/verify/cli.ts",
     "brief:audio": "tsx pipeline/audio/cli.ts",
     "brief:render": "tsx pipeline/render/cli.ts",
