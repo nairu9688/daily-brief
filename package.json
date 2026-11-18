@@ -23,6 +23,7 @@
     "brief:publish": "tsx pipeline/publish/cli.ts",
     "brief:finish": "tsx pipeline/run/finish-cli.ts",
     "brief:notify": "tsx pipeline/run/notify-cli.ts",
+    "env:check": "tsx pipeline/run/env-check-cli.ts",
     "audio:samples": "tsx pipeline/audio/samples-cli.ts",
     "check:thenewsapi": "tsx pipeline/collect/check-thenewsapi.ts",
     "maps:preview": "tsx packages/maps/scripts/preview.ts",
