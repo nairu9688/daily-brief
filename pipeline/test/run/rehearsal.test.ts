@@ -58,7 +58,7 @@ async function rehearse(tts: ReturnType<typeof fakeTts>) {
   const articles = fixtureArticles().map((a, i) => ({ id: `a${i}`, url: a.url, outlet: new URL(a.url).hostname, title: `Article ${i}`, description: null, lang: a.url.includes('pbs.org') ? 'en' : 'fr', publishedAt: null, origin: 'rss', text: a.text }));
   writeFileSync(join(dayDir, 'raw.json'), JSON.stringify({ date: DAY, collectedAt: `${DAY}T04:15:00.000Z`, articles, errors: [] }));
   // 3. Newsletters : un message enregistré depuis Gmail, converti mécaniquement.
-  writeFileSync(join(dayDir, 'newsletters', 'gmail', 'm1.json'), JSON.stringify({ id: 'm1', from: 'Public Sénat <newsletter@publicsenat.fr>', subject: 'La Quotidienne', date: `${DAY}T06:30:00+01:00`, html: '<p>Le Sénat examine le budget.</p><p><a href="https://www.publicsenat.fr/actualites/budget">Lire</a></p>' }));
+  writeFileSync(join(dayDir, 'newsletters', 'gmail', 'm1.json'), JSON.stringify({ id: 'm1', from: 'Public Sénat <newsletter@publicsenat.fr>', subject: 'La Quotidienne', date: `${DAY}T05:00:00+01:00`, html: '<p>Le Sénat examine le budget.</p><p><a href="https://www.publicsenat.fr/actualites/budget">Lire</a></p>' }));
   expect(runNewsletters({ outDir, date: DAY, now: new Date(`${DAY}T04:20:00.000Z`) }).report.written).toHaveLength(1);
   // 4. Rédaction : les éditions de la fixture.
   for (const lang of LANGS) writeFileSync(join(dayDir, `${lang}.json`), JSON.stringify(fixtureEdition(lang), null, 2));

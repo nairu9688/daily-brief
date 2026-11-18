@@ -40,7 +40,7 @@ describe('newsletters.json', () => {
     expect(NewslettersConfigSchema.safeParse(over).success).toBe(false);
     const tooMany = raw();
     tooMany.maxPerDay = 6;
-    expect(NewslettersConfigSchema.safeParse(tooMany).error?.issues.map((i) => i.message)).toContain('8 newsletters actives pour un plafond de 6');
+    expect(NewslettersConfigSchema.safeParse(tooMany).error?.issues.map((i) => i.message)).toContain('7 newsletters actives pour un plafond de 6');
     const dup = raw();
     dup.newsletters[1].id = dup.newsletters[0].id;
     expect(NewslettersConfigSchema.safeParse(dup).success).toBe(false);
@@ -62,12 +62,30 @@ describe('expéditeurs', () => {
     expect(senderDomain('Public Sénat <newsletter@info.publicsenat.fr>')).toBe('info.publicsenat.fr');
     expect(senderDomain('first.edition@theguardian.com')).toBe('theguardian.com');
     expect(senderDomain('pas une adresse')).toBeNull();
+    expect(senderDomain('a@publicsenat.fr@evil.example')).toBeNull();
+    expect(senderDomain('X <a@publicsenat.fr@evil.example>')).toBeNull();
+    expect(matchSender(c, 'X <news@publicsenat.fr@evil.example>')).toBeUndefined();
     expect(matchSender(c, 'Public Sénat <newsletter@info.publicsenat.fr>')?.id).toBe('publicsenat-quotidienne');
     expect(matchSender(c, 'X <a@evilpublicsenat.fr>')).toBeUndefined();
     expect(matchSender(c, 'EL PAÍS <noreply@elpais.com>')).toBeUndefined();
   });
 
   it('construit la requête du filtre Gmail à partir des newsletters actives', () => {
-    expect(gmailFilterQuery(loadNewsletters())).toBe('from:(publicsenat.fr OR theconversation.com OR lemonde.fr OR theguardian.com OR independent.co.uk OR axios.com OR eldiario.es OR kloshletter.com)');
+    expect(gmailFilterQuery(loadNewsletters())).toBe('from:(publicsenat.fr OR theconversation.com OR theguardian.com OR independent.co.uk OR axios.com OR eldiario.es OR kloshletter.com)');
+  });
+});
+
+describe('revue du lot 7', () => {
+  it('La Matinale du Monde (confiance « uncertain ») est désactivée ; requireDmarc vaut false par défaut', () => {
+    const c = loadNewsletters();
+    expect(c.newsletters.find((n) => n.id === 'lemonde-matinale')?.enabled).toBe(false);
+    expect(c.newsletters.filter((n) => n.enabled && n.confidence === 'uncertain')).toEqual([]);
+    expect(c.requireDmarc).toBe(false);
+    const { requireDmarc: _, ...rest } = raw();
+    expect(NewslettersConfigSchema.parse(rest).requireDmarc).toBe(false);
+  });
+
+  it('dit que theconversation.com expédie aussi les newsletters EN', () => {
+    expect(loadNewsletters().newsletters.find((n) => n.id === 'theconversation-quotidienne')?.notes).toMatch(/newsletters? (en anglais|EN)/);
   });
 });

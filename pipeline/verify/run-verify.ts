@@ -4,7 +4,7 @@ import { ContextSchema, IsoDateSchema, LANGS, parseEdition, RawCollectionSchema,
 import { loadWhitelist } from '../lib/whitelist';
 import { exitCodeFor, type Issue } from './issues';
 import { parseProgrammeSubjects } from './prepa';
-import { buildSourceTexts, loadSourceTexts, type SourceTexts } from './sources';
+import { buildSourceTexts, defaultScope, loadSourceTexts, type SourceTexts } from './sources';
 import { verifyEdition } from './verify-edition';
 
 export type RunVerifyOptions = {
@@ -66,9 +66,10 @@ export function runVerify(opts: RunVerifyOptions): RunVerifyResult {
       inputError('raw.json', e);
     }
   }
+  const whitelist = loadWhitelist(opts.whitelistPath);
   if (rawOk) {
     try {
-      texts = loadSourceTexts(dayDir);
+      texts = loadSourceTexts(dayDir, defaultScope(whitelist));
     } catch (e) {
       inputError('newsletters/', e);
     }
@@ -76,7 +77,7 @@ export function runVerify(opts: RunVerifyOptions): RunVerifyResult {
 
   const ctx = {
     texts,
-    whitelist: loadWhitelist(opts.whitelistPath),
+    whitelist,
     prepaSubjects: parseProgrammeSubjects(readFileSync(opts.programmePath, 'utf8')),
     openThreads,
   };

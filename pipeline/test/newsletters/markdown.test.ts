@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cleanLink, htmlToMarkdown, tidy } from '../../newsletters/markdown';
+import { cleanLink, htmlToMarkdown, plainLine, textToMarkdown, tidy } from '../../newsletters/markdown';
 
 describe('cleanLink', () => {
   it('garde un lien http(s), remplace un lien de suivi par sa destination, refuse les autres schémas', () => {
@@ -45,5 +45,76 @@ describe('htmlToMarkdown', () => {
 describe('tidy', () => {
   it('unifie les fins de ligne et réduit les lignes vides', () => {
     expect(tidy('a  \r\n\r\n\r\n\tb c ')).toBe('a\n\nb c');
+  });
+});
+
+describe('chaîne de confiance (revue du lot 7)', () => {
+  it.each([
+    'display:none',
+    'visibility: hidden',
+    'font-size:0',
+    'font-size: 0px',
+    'mso-hide:all',
+    'max-height:0',
+    'opacity:0',
+  ])('retire le sous-arbre d’un élément masqué par « %s »', (style) => {
+    const html = `<p>Visible</p><div style="color:red; ${style}"><p>Caché <a href="https://evil.example/x">Lire</a></p></div>`;
+    expect(htmlToMarkdown(html)).toBe('Visible');
+  });
+
+  it('garde un élément dont l’opacité ou la taille n’est pas nulle', () => {
+    expect(htmlToMarkdown('<p style="opacity:0.8;font-size:14px;max-height:200px">Visible</p>')).toBe('Visible');
+  });
+
+  it('retire l’attribut hidden et tout son sous-arbre', () => {
+    expect(htmlToMarkdown('<p>Visible</p><div hidden><a href="https://evil.example/x">Lire</a></div>')).toBe('Visible');
+  });
+
+  it('une URL nue dans le texte n’est jamais un lien : elle est retirée', () => {
+    expect(htmlToMarkdown('<p>Voir https://evil.example/x ici, ou www.evil.example.</p>')).toBe('Voir ici, ou www.evil.example.');
+  });
+
+  it('un lien dont le texte est une URL prend pour texte le nom d’hôte de sa destination', () => {
+    expect(htmlToMarkdown('<a href="https://www.pbs.org/a">https://evil.example/x</a>')).toBe('[www.pbs.org](https://www.pbs.org/a)');
+  });
+
+  it('retire les liens de désinscription où que soit le mot dans un texte court', () => {
+    const html = '<p><a href="https://l.fr/a">Click here to unsubscribe</a></p><p><a href="https://l.fr/b">Pour vous désinscrire, cliquez ici</a></p><p><a href="https://l.fr/c">Update your email preferences</a></p><p>Fin</p>';
+    expect(htmlToMarkdown(html)).toBe('Fin');
+  });
+
+  it('encode les parenthèses des URL et les retire du texte des liens', () => {
+    expect(htmlToMarkdown('<a href="https://fr.wikipedia.org/wiki/Foo_(bar)">Foo (bar)</a>')).toBe('[Foo bar](https://fr.wikipedia.org/wiki/Foo_%28bar%29)');
+  });
+});
+
+describe('cleanLink : déballage limité', () => {
+  it('ne déballe que les clés de redirection connues', () => {
+    expect(cleanLink('https://click.lettre.fr/r?next=https%3A%2F%2Fwww.pbs.org%2Fa')).toBe('https://click.lettre.fr/r?next=https%3A%2F%2Fwww.pbs.org%2Fa');
+    for (const k of ['u', 'url', 'q', 'redirect', 'target', 'dest']) expect(cleanLink(`https://click.lettre.fr/r?${k}=https%3A%2F%2Fwww.pbs.org%2Fa`), k).toBe('https://www.pbs.org/a');
+  });
+
+  it('ne déballe jamais vers un autre domaine quand l’hôte extérieur est un hôte d’articles', () => {
+    const articleHost = (h: string) => h === 'lemonde.fr' || h.endsWith('.lemonde.fr');
+    expect(cleanLink('https://www.lemonde.fr/a.html?ref=https://evil.example/x', { articleHost })).toBe('https://www.lemonde.fr/a.html?ref=https://evil.example/x');
+    expect(cleanLink('https://www.lemonde.fr/a.html?url=https://evil.example/x', { articleHost })).toBe('https://www.lemonde.fr/a.html?url=https://evil.example/x');
+    expect(cleanLink('https://click.lemonde.fr/r?u=https%3A%2F%2Fwww.lemonde.fr%2Fb.html', { articleHost })).toBe('https://www.lemonde.fr/b.html');
+  });
+});
+
+describe('textToMarkdown (corps en texte brut)', () => {
+  it('déballe les liens de suivi, écrit [url](url), retire les liens de désinscription', () => {
+    const text = 'Lire https://click.x.fr/r?u=https%3A%2F%2Fwww.eldiario.es%2Fa_1.html.\r\n\r\nSe désabonner : https://x.fr/unsubscribe?id=1\nfin';
+    expect(textToMarkdown(text)).toBe('Lire [https://www.eldiario.es/a_1.html](https://www.eldiario.es/a_1.html).\n\nSe désabonner :\nfin');
+  });
+
+  it('encode les parenthèses', () => {
+    expect(textToMarkdown('Voir https://fr.wikipedia.org/wiki/Foo_(bar)')).toBe('Voir [https://fr.wikipedia.org/wiki/Foo_%28bar%29](https://fr.wikipedia.org/wiki/Foo_%28bar%29)');
+  });
+});
+
+describe('plainLine (objet du message)', () => {
+  it('une seule ligne, sans URL', () => {
+    expect(plainLine('Al día\n# https://evil.example/x  presupuestos\r\n')).toBe('Al día # presupuestos');
   });
 });

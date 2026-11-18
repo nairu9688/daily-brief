@@ -1,10 +1,14 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 import { IsoDateSchema } from '@daily-brief/schema';
 import { writeAtomic } from '../lib/fs';
+import { loadWhitelist, type Whitelist } from '../lib/whitelist';
 import { loadNewsletters, matchSender, senderDomain, type Newsletter, type NewslettersConfig } from './config';
-import { htmlToMarkdown, tidy } from './markdown';
+import { htmlToMarkdown, plainLine, textToMarkdown, type CleanLinkOptions } from './markdown';
+
+export const WHITELIST_PATH = fileURLToPath(new URL('../config/whitelist.json', import.meta.url));
 
 /** Message tel que la routine l'enregistre depuis le connecteur Gmail, sans rien réécrire. */
 export const GmailMessageSchema = z
@@ -15,12 +19,33 @@ export const GmailMessageSchema = z
     date: z.string().min(1),
     html: z.string().nullish(),
     text: z.string().nullish(),
+    /** En-tête Authentication-Results du message (le premier, celui de Gmail), s'il est enregistré. */
+    authenticationResults: z.union([z.string(), z.array(z.string())]).nullish(),
   })
   .refine((m) => Boolean(m.html?.trim() || m.text?.trim()), 'ni html ni text');
 
 export const MAX_MESSAGE_BYTES = 2 * 1024 * 1024;
 /** Un message plus vieux que 36 h n'est pas du jour (la routine lit les 24 dernières heures). */
 export const MAX_AGE_MS = 36 * 3600_000;
+/** Tolérance d'horloge : un message daté de plus d'une heure dans le futur est ignoré. */
+export const MAX_FUTURE_MS = 3600_000;
+
+/**
+ * Vrai si Authentication-Results (le premier en-tête, ajouté par Gmail) dit `dmarc=pass` avec un
+ * `header.from` couvert par les domaines d'expédition de la newsletter et aligné sur l'adresse From
+ * (même domaine, ou From sur un sous-domaine de header.from).
+ */
+export function dmarcAligned(results: string | string[], fromDomain: string, n: Newsletter): boolean {
+  const first = Array.isArray(results) ? results[0] : results;
+  if (!first) return false;
+  for (const m of first.matchAll(/\bdmarc\s*=\s*([a-z]+)\b[^;]*?\bheader\.from\s*=\s*"?([a-z0-9.-]+)/gi)) {
+    const hf = m[2].toLowerCase().replace(/\.$/, '');
+    if (m[1].toLowerCase() !== 'pass') continue;
+    const covered = n.senders.some((s) => hf === s || hf.endsWith(`.${s}`));
+    if (covered && (fromDomain === hf || fromDomain.endsWith(`.${hf}`))) return true;
+  }
+  return false;
+}
 
 export type NewslettersIssue = { level: 'error' | 'warning'; message: string };
 export type NewslettersReport = {
@@ -32,7 +57,7 @@ export type NewslettersReport = {
   issues: NewslettersIssue[];
 };
 
-export type RunNewslettersOptions = { outDir: string; date: string; configPath?: string; now?: Date };
+export type RunNewslettersOptions = { outDir: string; date: string; configPath?: string; whitelistPath?: string; now?: Date };
 
 /**
  * `brief:newsletters` : convertit, par une étape mécanique, les messages Gmail enregistrés par la
@@ -66,6 +91,13 @@ export function runNewsletters(opts: RunNewslettersOptions): { exitCode: 0 | 2; 
     config = loadNewsletters(opts.configPath);
   } catch (e) {
     issue('error', `newsletters.json invalide : ${e instanceof z.ZodError ? e.issues.map((i) => i.message).slice(0, 3).join(' ; ') : (e as Error).message}`);
+    return finish(2);
+  }
+  let whitelist: Whitelist;
+  try {
+    whitelist = loadWhitelist(opts.whitelistPath ?? WHITELIST_PATH);
+  } catch (e) {
+    issue('error', `whitelist.json invalide : ${(e as Error).message}`);
     return finish(2);
   }
   try {
@@ -103,12 +135,32 @@ export function runNewsletters(opts: RunNewslettersOptions): { exitCode: 0 | 2; 
         continue;
       }
       const at = Date.parse(parsed.data.date);
-      if (Number.isNaN(at)) issue('warning', `${file} : date « ${parsed.data.date} » illisible, message gardé`);
+      if (Number.isNaN(at)) issue('warning', `${file} : date « ${parsed.data.date} » illisible, message gardé (compté comme le plus ancien)`);
       else if (now.getTime() - at > MAX_AGE_MS) {
         skip(file, `message du ${new Date(at).toISOString()} : plus de 36 h`);
         continue;
+      } else if (at - now.getTime() > MAX_FUTURE_MS) {
+        skip(file, `message daté du ${new Date(at).toISOString()} : plus d’une heure dans le futur`);
+        continue;
       }
-      kept.push({ file, n, m: parsed.data, at: Number.isNaN(at) ? now.getTime() : at });
+      const fromDomain = senderDomain(parsed.data.from)!;
+      const auth = parsed.data.authenticationResults;
+      if (auth != null && !dmarcAligned(auth, fromDomain, n)) {
+        const reason = `expéditeur non authentifié (dmarc=pass aligné sur ${fromDomain} absent d’Authentication-Results)`;
+        skip(file, reason);
+        issue('warning', `${file} : ${reason}`);
+        continue;
+      }
+      if (auth == null) {
+        if (config.requireDmarc) {
+          const reason = 'expéditeur non authentifié (pas d’Authentication-Results enregistré, requireDmarc)';
+          skip(file, reason);
+          issue('warning', `${file} : ${reason}`);
+          continue;
+        }
+        issue('warning', `${file} : expéditeur non authentifié (pas d’Authentication-Results enregistré)`);
+      }
+      kept.push({ file, n, m: parsed.data, at: Number.isNaN(at) ? Number.NEGATIVE_INFINITY : at });
     } catch (e) {
       skip(file, `message illisible : ${(e as Error).message}`);
     }
@@ -126,12 +178,16 @@ export function runNewsletters(opts: RunNewslettersOptions): { exitCode: 0 | 2; 
   for (const k of chosen.slice(config.maxPerDay)) skip(k.file, `plafond de ${config.maxPerDay} newsletters par jour`);
 
   chosen.slice(0, config.maxPerDay).forEach((k, i) => {
-    const body = k.m.html?.trim() ? htmlToMarkdown(k.m.html) : tidy(k.m.text ?? '');
+    // Hôtes d'articles : le domaine de la newsletter et ceux de la liste blanche (jamais déballés vers un autre domaine).
+    const linkOpts: CleanLinkOptions = { articleHost: (h) => h === k.n.domain || h.endsWith(`.${k.n.domain}`) || whitelist.domains.some((e) => h === e.domain || h.endsWith(`.${e.domain}`)) };
+    const body = k.m.html?.trim() ? htmlToMarkdown(k.m.html, linkOpts) : textToMarkdown(k.m.text ?? '', linkOpts);
     const name = `${String(i + 1).padStart(2, '0')}-${k.n.id}.md`;
-    const header = `# ${tidy(k.m.subject) || k.n.name}\n\nNewsletter : ${k.n.name} (${k.n.publisher}) · ${senderDomain(k.m.from)} · ${k.m.date}`;
+    // En-tête mécanique : brief:verify y lit le domaine de l'éditeur (seuls ses liens et ceux de la liste blanche comptent comme lus).
+    const frontMatter = `---\nnewsletter: ${k.n.id}\ndomain: ${k.n.domain}\n---`;
+    const header = `# ${plainLine(k.m.subject) || k.n.name}\n\nNewsletter : ${k.n.name} (${k.n.publisher}) · ${senderDomain(k.m.from)} · ${plainLine(k.m.date)}`;
     try {
-      writeAtomic(join(dir, name), `${header}\n\n${body}\n`);
-      report.written.push({ file: name, newsletter: k.n.id, messageId: k.m.id, links: (body.match(/\]\(https?:\/\//g) ?? []).length + (body.match(/(^|[^(])https?:\/\//g) ?? []).length });
+      writeAtomic(join(dir, name), `${frontMatter}\n\n${header}\n\n${body}\n`);
+      report.written.push({ file: name, newsletter: k.n.id, messageId: k.m.id, links: (body.match(/\]\(https?:\/\//g) ?? []).length });
     } catch (e) {
       issue('error', `${name} impossible à écrire : ${(e as Error).message}`);
     }

@@ -33,6 +33,12 @@ export const NewslettersConfigSchema = z
     checkedAt: z.iso.date(),
     note: z.string().optional(),
     gmailLabel: z.string().min(1),
+    /**
+     * Exiger un en-tête Authentication-Results (dmarc=pass aligné) enregistré avec chaque message.
+     * Un en-tête présent est toujours contrôlé ; à false, un message sans en-tête est gardé avec un
+     * avertissement. À passer à true quand le premier passage réel montre que le connecteur le donne.
+     */
+    requireDmarc: z.boolean().default(false),
     /** Plafond de la spec §4.3 (6 à 8 par jour) : au-delà, les messages sont ignorés. */
     maxPerDay: z.number().int().min(1).max(8),
     newsletters: z.array(NewsletterSchema).min(1),
@@ -57,11 +63,13 @@ export function loadNewsletters(path: string = NEWSLETTERS_PATH): NewslettersCon
   return NewslettersConfigSchema.parse(JSON.parse(readFileSync(path, 'utf8')));
 }
 
-/** Domaine de l'adresse d'un en-tête From (« Nom <a@b.fr> » ou « a@b.fr ») ; null s'il n'y en a pas. */
+/** Domaine de l'adresse d'un en-tête From (« Nom <a@b.fr> » ou « a@b.fr ») ; null s'il n'y en a pas ou si l'adresse a plus d'un `@`. */
 export function senderDomain(from: string): string | null {
   const m = /<([^<>\s]+@[^<>\s]+)>\s*$/.exec(from) ?? /^\s*([^<>\s]+@[^<>\s]+)\s*$/.exec(from);
   if (!m) return null;
-  return m[1].split('@').pop()!.toLowerCase().replace(/\.$/, '');
+  const parts = m[1].split('@');
+  if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
+  return parts[1].toLowerCase().replace(/\.$/, '');
 }
 
 /** Newsletter active dont un domaine d'expédition couvre l'adresse From ; undefined sinon. */

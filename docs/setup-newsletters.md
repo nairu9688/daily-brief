@@ -15,14 +15,16 @@ Avec l'adresse de la boîte du Daily Brief (spec : nanigeek@gmail.com), s'inscri
 |---|---|---|---|---|---|
 | FR | La Quotidienne | Public Sénat | mardi au samedi, 7 h 30 | <https://www.publicsenat.fr/newsletters> | vérifiée |
 | FR | La quotidienne | The Conversation France | quotidienne | <https://theconversation.com/fr/newsletters> | probable |
-| FR | La Matinale du Monde | Le Monde | chaque matin | <https://www.lemonde.fr/newsletters/> | incertaine : si elle est réservée aux abonnés, prendre à la place « Les Actus du jour » d'HugoDécrypte (<https://www.hugodecrypte.com/>), puis passer `lemonde-matinale` à `enabled: false` et `hugodecrypte-actus` à `enabled: true` |
 | EN (UK) | First Edition | The Guardian | lundi au vendredi, matin | <https://www.theguardian.com/email-newsletters> | probable |
 | EN (UK) | Morning Headlines | The Independent | lundi au vendredi, matin | <https://www.independent.co.uk/newsletters> | probable |
 | EN (US) | Axios AM | Axios | chaque jour, vers midi à Paris | <https://www.axios.com/newsletters/axios-am> | probable |
 | ES | Al día | elDiario.es | chaque matin | <https://www.eldiario.es/newsletters/> | probable |
 | ES | Kloshletter | Kloshletter | lundi au vendredi, 7 h | <https://kloshletter.com/> | probable |
 
-En réserve (désactivée) : « EL PAÍS de la mañana » (<https://elpais.com/newsletters/>, compte gratuit probablement demandé), à activer à la place d'une autre si l'édition ES manque de textes.
+En réserve (désactivées, confiance incertaine) :
+
+- « La Matinale du Monde » (<https://www.lemonde.fr/newsletters/>) : gratuité avec un simple compte non confirmée. Si l'inscription gratuite est confirmée, passer `lemonde-matinale` à `enabled: true` et `confidence: "verified"`, et ajouter `lemonde.fr` au filtre ; sinon, prendre « Les Actus du jour » d'HugoDécrypte (<https://www.hugodecrypte.com/>, `hugodecrypte-actus`) de la même façon ;
+- « EL PAÍS de la mañana » (<https://elpais.com/newsletters/>, compte gratuit probablement demandé), à activer à la place d'une autre si l'édition ES manque de textes.
 
 Ne pas s'abonner à une newsletter payante : la spec exige des newsletters gratuites (`free: true`).
 
@@ -32,7 +34,7 @@ Ne pas s'abonner à une newsletter payante : la spec exige des newsletters gratu
 2. Dans le champ **De**, coller exactement :
 
    ```
-   from:(publicsenat.fr OR theconversation.com OR lemonde.fr OR theguardian.com OR independent.co.uk OR axios.com OR eldiario.es OR kloshletter.com)
+   from:(publicsenat.fr OR theconversation.com OR theguardian.com OR independent.co.uk OR axios.com OR eldiario.es OR kloshletter.com)
    ```
 
    (Sans `from:` si Gmail l'ajoute lui-même : seule la parenthèse compte.)
