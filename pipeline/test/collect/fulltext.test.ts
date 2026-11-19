@@ -105,6 +105,27 @@ describe('fetchFullText : garde R1', () => {
   });
 });
 
+describe('fetchFullText : article payant (R1)', () => {
+  const withLd = (free: string) => PAGE.replace('</head>', `<script type="application/ld+json">{"@type":"NewsArticle","isAccessibleForFree": ${free}}</script></head>`);
+  it('refuse une page qui se déclare payante (isAccessibleForFree false, JSON-LD ou microdonnée), même si le texte est long', async () => {
+    const { fetch } = fakeHttp({
+      'https://fr.euronews.com/payant-ld': { body: withLd('false') },
+      'https://fr.euronews.com/payant-chaine': { body: withLd('"False"') },
+      'https://fr.euronews.com/payant-micro': { body: PAGE.replace('</head>', '<meta itemprop="isAccessibleForFree" content="false"></head>') },
+    });
+    for (const path of ['payant-ld', 'payant-chaine', 'payant-micro']) {
+      const err = await fetchFullText(`https://fr.euronews.com/${path}`, { ...base, fetch }).catch((e: unknown) => e);
+      expect(err, path).toBeInstanceOf(BodyError);
+      expect((err as Error).message).toContain('article payant');
+    }
+  });
+
+  it('lit une page qui se déclare gratuite (isAccessibleForFree true)', async () => {
+    const { fetch } = fakeHttp({ 'https://fr.euronews.com/libre': { body: withLd('true') } });
+    expect((await fetchFullText('https://fr.euronews.com/libre', { ...base, fetch })).length).toBeGreaterThan(200);
+  });
+});
+
 describe('fetchFullText : redirections, corps et signal', () => {
   const redirect = (to: string, status = 301) => ({ status, headers: { location: to }, type: null as null });
 

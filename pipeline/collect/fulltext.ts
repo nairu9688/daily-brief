@@ -130,6 +130,13 @@ export function extractText(html: string): string {
   }
 }
 
+/**
+ * Marque schema.org d'un article payant : `"isAccessibleForFree": false` (JSON-LD, booléen ou chaîne) ou
+ * `itemprop="isAccessibleForFree" content="false"` (microdonnée). Les médias à paywall partiel (El Confidencial…)
+ * la posent sur leurs articles réservés.
+ */
+const PAYWALLED = /"isAccessibleForFree"\s*:\s*"?false"?|itemprop=["']isAccessibleForFree["'][^>]*content=["']false["']/i;
+
 /** Seuls les ports par défaut (80, 443) sont suivis : `URL.port` est vide pour eux. */
 const hasDefaultPort = (u: URL): boolean => u.port === '';
 
@@ -137,7 +144,7 @@ const hasDefaultPort = (u: URL): boolean => u.port === '';
  * Texte intégral d'un article. **Garde R1** : l'URL et chaque redirection doivent être sur un
  * domaine `full`, sinon NotFullError avant toute requête vers elles. http(s) seulement, ports par défaut
  * seulement, pas de repli vers http après un passage par https, un seul délai pour toute la chaîne de redirections,
- * taille et nombre de redirections bornés, HTML seulement, texte d'au moins `minChars` caractères.
+ * taille et nombre de redirections bornés, HTML seulement, page non déclarée payante, texte d'au moins `minChars` caractères.
  * Les refus portant sur la page (NotFullError, BodyError) ne disent rien de l'état de l'hôte.
  */
 export async function fetchFullText(url: string, o: FullTextOptions): Promise<string> {
@@ -167,7 +174,10 @@ export async function fetchFullText(url: string, o: FullTextOptions): Promise<st
     }
     if (!res.ok) return refuse(new HttpError(res.status, current));
     if (!HTML_TYPES.has(mimeOf(res))) return refuse(new BodyError(`type ${mimeOf(res) || 'absent'} refusé`));
-    const text = extractText(decodeBody(await readCapped(res, o.maxBytes), res.headers.get('content-type')));
+    const html = decodeBody(await readCapped(res, o.maxBytes), res.headers.get('content-type'));
+    // R1 : une page qui se déclare payante (schema.org) n'est jamais lue, même si un extrait long est visible.
+    if (PAYWALLED.test(html)) throw new BodyError('article payant (isAccessibleForFree : false)');
+    const text = extractText(html);
     if (text.length < o.minChars) throw new BodyError(`texte trop court (${text.length} caractères)`);
     return text;
   }
