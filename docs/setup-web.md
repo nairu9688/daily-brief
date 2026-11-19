@@ -91,7 +91,7 @@ Ces points ne peuvent pas être vérifiés hors ligne. Ils sont à cocher au pre
 - [ ] **Écritures.** Cocher un mot, « Ajouter à Anki » et « Suivre ce thread » écrivent en base ; aucune autre écriture n'est possible (RLS).
 - [ ] **Audio.** Le lecteur joue le MP3 par l'URL signée (redirection de `/audio/<date>/<langue>`) et affiche sa durée ; la console ne montre aucune violation de CSP (`media-src` contient l'origine Supabase). Vérifier aussi un MP3 concaténé sans ffmpeg (consigne du lot 5).
 - [ ] **PDF.** « PDF du jour » télécharge `Daily Brief AAAA-MM-JJ.pdf`.
-- [ ] **Photos.** Une photo Pexels s'affiche (CSP `img-src https://images.pexels.com`).
+- [ ] **Photos.** Une photo Wikimedia Commons s'affiche, avec « Photo : auteur — licence · Wikimedia Commons » (CSP `img-src https://upload.wikimedia.org https://thumb.wikimedia.org`).
 - [ ] **CSP.** Aucune violation dans la console, sur chaque écran, en production.
 - [ ] **Cookies.** Les cookies de session et `ed` portent `Secure` en https.
 - [ ] **PWA.** L'installation fonctionne sur iPhone et Android ; l'icône et la couleur de fond sont correctes.

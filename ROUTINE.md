@@ -48,4 +48,4 @@ Interdits : afficher ou recopier un secret ou `.env` ; commiter, pousser ou modi
 
 Tout autre code que ceux du tableau se traite comme 2.
 
-`brief:finish` résume lui-même les codes de `brief:audio` (jamais bloquant), `brief:render` et `brief:publish` dans `out/D/routine-report.json`. Une répétition sans publication ni appel extérieur (audio désactivé, rendu sans Pexels) se lance avec `npm run brief:finish -- --date D --dry-run`.
+`brief:finish` résume lui-même les codes de `brief:audio` (jamais bloquant), `brief:render` et `brief:publish` dans `out/D/routine-report.json`. Une répétition sans publication ni appel extérieur (audio désactivé, rendu sans recherche de photos) se lance avec `npm run brief:finish -- --date D --dry-run`.

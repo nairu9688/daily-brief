@@ -88,7 +88,6 @@ Dans le tableau de bord : *Project Settings* → *Vault* → *Add new secret*. L
 | `APPS_SCRIPT_URL` | URL de l'application web Apps Script (§5 ci-dessous), qui finit par `/exec` | `brief:publish` |
 | `APPS_SCRIPT_TOKEN` | Le jeton choisi au §5 | `brief:publish` |
 | `THENEWSAPI_KEY`, `EXA_API_KEY`, `WEBZ_TOKEN` | Clés de collecte | `brief:collect` |
-| `PEXELS_API_KEY` | Clé Pexels | `brief:render` |
 | `GOOGLE_TTS_API_KEY` | Clé Text-to-Speech | `brief:audio` |
 
 La clé de service contourne la RLS : elle ne doit jamais se retrouver dans l'application web, dans Vercel ni dans le dépôt. L'application n'utilise que la clé publique (`anon` ou `sb_publishable_…`).

@@ -76,7 +76,7 @@ Lors de la configuration, Claude prépare la liste vérifiée des newsletters ma
    │                + Claude lit les newsletters Gmail → out/…/newsletters/*.md
    ├─ 3. rédaction  Claude écrit out/…/{fr,en,es}.json (schéma §6) + scripts audio
    ├─ 4. contrôle   npm run brief:verify    → corrige ou retire ce qui viole R2–R12
-   ├─ 5. rendu      npm run brief:render    → PDF unique, MP3 Chirp HD ×3, photos Pexels
+   ├─ 5. rendu      npm run brief:render    → PDF unique, MP3 Chirp HD ×3, photos Wikimedia Commons
    ├─ 6. publication npm run brief:publish  → Supabase (tables + stockage) → Apps Script → Drive
    └─ 7. notification push « Brief prêt » / « Brief incomplet : <raison> »
 
@@ -95,7 +95,7 @@ daily-brief/
     collect/                thenewsapi.ts, exa.ts, webz.ts, rss.ts, dedupe.ts
     editorial/              PROMPT.md, programme-ect.md, rubriques.json
     verify/                 quotes.ts, numbers.ts, diversity.ts, divergences.ts, schema.ts
-    render/                 pdf.ts, audio.ts (Google TTS), pexels.ts
+    render/                 pdf.ts, audio.ts (Google TTS), commons.ts
     publish/                supabase.ts, drive.ts, retry-pending.ts
     config/                 whitelist.json, feeds.json, newsletters.json
   supabase/migrations/      schéma SQL, RLS, buckets
@@ -123,7 +123,7 @@ type Edition = {
 };
 type Story = {
   id: string; kicker: string; date: string; title: string; summary: string;
-  visual: { type: 'map'; caption: string; map: MapSpec } | { type: 'photo'; query: string; pexels?: PexelsPhoto };
+  visual: { type: 'map'; caption: string; map: MapSpec } | { type: 'photo'; query: string; photo?: Photo };
   stats: { value: string; label: string; sourceUrl: string }[];            // 0 ou 4
   quote: { text: string; speaker: string; translation: string | null; sourceUrl: string } | null;
   divergences: { metric: string; a: { value: string; by: string }; b: { value: string; by: string } }[];
@@ -157,7 +157,7 @@ Stockage : bucket privé `audio` (MP3, purge après 30 jours) et bucket privé `
 
 ### 6.3 Secrets
 
-Les secrets sont stockés dans **Supabase Vault**, saisis par Naïm dans le tableau de bord (jamais dans la conversation, le prompt ou GitHub) : `THENEWSAPI_KEY`, `EXA_API_KEY`, `WEBZ_TOKEN`, `PEXELS_API_KEY`, `GOOGLE_TTS_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `APPS_SCRIPT_URL`, `APPS_SCRIPT_TOKEN`. Au démarrage, la routine les lit via le connecteur Supabase (`vault.decrypted_secrets`) et les écrit dans un `.env` local au conteneur, jamais commité.
+Les secrets sont stockés dans **Supabase Vault**, saisis par Naïm dans le tableau de bord (jamais dans la conversation, le prompt ou GitHub) : `THENEWSAPI_KEY`, `EXA_API_KEY`, `WEBZ_TOKEN`, `GOOGLE_TTS_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `APPS_SCRIPT_URL`, `APPS_SCRIPT_TOKEN`. Au démarrage, la routine les lit via le connecteur Supabase (`vault.decrypted_secrets`) et les écrit dans un `.env` local au conteneur, jamais commité.
 
 ## 7. Règles éditoriales et contrôles
 
@@ -172,7 +172,7 @@ Le contrôle (`brief:verify`) vérifie chaque règle automatiquement. Une violat
 **R8. Morning Brief.** Exactement cinq infos, classées par importance (nombre de médias qui couvrent, poids pour la prépa) et équilibrées entre rubriques.
 **R9. Lien prépa.** Seulement s'il existe un vrai rapport avec le programme ECT (économie-droit, management, culture générale, LV1 anglais, LV2 espagnol), d'après `pipeline/editorial/programme-ect.md`, que Naïm complète avec ses chapitres.
 **R10. Vocabulaire.** Six mots par édition EN/ES, tirés des textes du jour, avec une phrase exemple issue du texte quand c'est possible.
-**R11. Visuels.** Une carte quand le lieu compte, sinon une photo Pexels trouvée avec des mots-clés d'objets ou de lieux, jamais de nom de personne, avec le crédit du photographe. Jamais de photo de presse ni de personnalité publique.
+**R11. Visuels.** Une carte quand le lieu compte, sinon une photo libre de Wikimedia Commons (CC0, domaine public, CC BY ou CC BY-SA) trouvée avec des mots-clés d'objets ou de lieux, jamais de nom de personne, créditée « Photo : auteur — licence · Wikimedia Commons ». Jamais de photo de presse ni de personnalité publique. *(19/11/2026 : Commons remplace Pexels, qui ne délivre plus de clés d'API ; voir `docs/superpowers/plans/2026-11-19-photos-wikimedia.md`.)*
 **R12. Threads.** Un sujet qui prolonge une histoire suivie est rattaché au Thread ouvert correspondant (contexte de l'étape 1). Une nouvelle histoire durable crée un Thread. Un Thread sans événement depuis 21 jours est fermé.
 
 ## 8. Design
@@ -196,7 +196,7 @@ Les valeurs de référence sont dans `design/app.css` et `design/pdf.css`.
 
 Une carte empile, dans l'ordre :
 
-1. Le visuel (carte SVG ou photo Pexels), avec une légende en mono en haut à gauche.
+1. Le visuel (carte SVG ou photo Wikimedia Commons), avec une légende en mono en haut à gauche.
 2. Le kicker en accent avec la date.
 3. Le titre.
 4. Le libellé « Résumé IA ».
@@ -228,7 +228,7 @@ Les autres écrans sont **Threads** (liste puis frise chronologique, avec « Sui
 
 ### 8.5 PDF
 
-Le PDF est un fichier A4 unique par jour, avec FR, puis EN, puis ES. Chaque édition s'ouvre sur une couverture : en-tête de l'édition, titre du jour en grand, Morning Brief, sommaire de l'édition, liens internes vers les trois éditions, encart audio et « Les chiffres du jour ». Les rubriques suivent sur les pages suivantes. Chaque sujet occupe une colonne texte et une colonne visuelle avec QR code vers la source principale et liens cliquables vers toutes les sources. Viennent ensuite les brèves en liste, puis le tableau de vocabulaire. Le pied de page porte la date, les éditions et la pagination. Le PDF est rendu par Playwright à partir du même HTML que `reference/render.mjs`. Les photos Pexels y sont intégrées avec leur crédit. Le nom du fichier est `Daily Brief AAAA-MM-JJ.pdf`.
+Le PDF est un fichier A4 unique par jour, avec FR, puis EN, puis ES. Chaque édition s'ouvre sur une couverture : en-tête de l'édition, titre du jour en grand, Morning Brief, sommaire de l'édition, liens internes vers les trois éditions, encart audio et « Les chiffres du jour ». Les rubriques suivent sur les pages suivantes. Chaque sujet occupe une colonne texte et une colonne visuelle avec QR code vers la source principale et liens cliquables vers toutes les sources. Viennent ensuite les brèves en liste, puis le tableau de vocabulaire. Le pied de page porte la date, les éditions et la pagination. Le PDF est rendu par Playwright à partir du même HTML que `reference/render.mjs`. Les photos Wikimedia Commons y sont intégrées avec leur crédit (auteur et licence). Le nom du fichier est `Daily Brief AAAA-MM-JJ.pdf`.
 
 ## 9. Audio
 
@@ -252,7 +252,7 @@ Les tests unitaires couvrent le vérificateur de citations (avec le cas réel de
 
 ## 14. Mise en place (côté Naïm, environ 30 minutes, guidée par Claude)
 
-1. Créer les clés gratuites TheNewsAPI, Exa, Webz.io et Pexels.
+1. Créer les clés gratuites TheNewsAPI, Exa et Webz.io (les photos de Wikimedia Commons n'en demandent pas).
 2. Dans Google Cloud, créer un projet, activer Text-to-Speech, enregistrer une carte de facturation et créer une clé API restreinte à cette API.
 3. S'abonner aux newsletters de la liste préparée par Claude et créer le filtre Gmail vers le libellé `Daily Brief`.
 4. Coller `Code.gs` dans un nouveau projet Apps Script, définir `TOKEN` et déployer en application web.
@@ -262,7 +262,7 @@ Les tests unitaires couvrent le vérificateur de citations (avec le cas réel de
 
 ## 15. Coûts
 
-L'infrastructure revient à 0 € : Vercel Hobby, Supabase Free (un projet de plus à côté de FinTrack, actif grâce aux écritures quotidiennes), TheNewsAPI, Webz.io Lite et Pexels gratuits, Exa dans les 10 $ offerts par mois, Chirp 3 HD sous le million de caractères gratuit. Le coût variable est la consommation du quota Claude par la routine. Il est mesuré au premier passage, et on peut l'alléger en réduisant le nombre de newsletters lues ou de sujets par rubrique.
+L'infrastructure revient à 0 € : Vercel Hobby, Supabase Free (un projet de plus à côté de FinTrack, actif grâce aux écritures quotidiennes), TheNewsAPI, Webz.io Lite et Wikimedia Commons gratuits, Exa dans les 10 $ offerts par mois, Chirp 3 HD sous le million de caractères gratuit. Le coût variable est la consommation du quota Claude par la routine. Il est mesuré au premier passage, et on peut l'alléger en réduisant le nombre de newsletters lues ou de sujets par rubrique.
 
 ## 16. Vérifications en début d'implémentation
 

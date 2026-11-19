@@ -14,7 +14,6 @@ Procédure suivie par la routine (`ROUTINE.md`, étape 2) et, au besoin, à la m
 | `SUPABASE_URL` | oui | `brief:context`, `brief:publish` (pas un secret ; rangé dans Vault par commodité) |
 | `SUPABASE_SERVICE_ROLE_KEY` | oui | `brief:context`, `brief:publish` |
 | `THENEWSAPI_KEY`, `EXA_API_KEY`, `WEBZ_TOKEN` | non (source coupée sans clé) | `brief:collect` |
-| `PEXELS_API_KEY` | non (photos sans image) | `brief:render` |
 | `GOOGLE_TTS_API_KEY` | non (éditions sans lecteur) | `brief:audio` |
 | `APPS_SCRIPT_URL`, `APPS_SCRIPT_TOKEN` | non (pas de dépôt Drive) | `brief:publish` |
 | `GITHUB_READ_TOKEN` | routine Cowork seulement, jamais écrit dans `.env` | clonage du dépôt privé (voir la dernière section) |
@@ -25,7 +24,7 @@ Procédure suivie par la routine (`ROUTINE.md`, étape 2) et, au besoin, à la m
 
    ```sql
    select name from vault.decrypted_secrets
-   where name = any (array['SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY','THENEWSAPI_KEY','EXA_API_KEY','WEBZ_TOKEN','PEXELS_API_KEY','GOOGLE_TTS_API_KEY','APPS_SCRIPT_URL','APPS_SCRIPT_TOKEN'])
+   where name = any (array['SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY','THENEWSAPI_KEY','EXA_API_KEY','WEBZ_TOKEN','GOOGLE_TTS_API_KEY','APPS_SCRIPT_URL','APPS_SCRIPT_TOKEN'])
    order by name;
    ```
 
