@@ -53,6 +53,26 @@ Avec 10 sujets par édition au lieu de 20 (point 4), le PDF devrait peser 3 à 4
 
 **Test.** `packages/render-pdf/test/shrink.test.ts` illustre chaque sujet de la fixture par une image lourde générée (1920 × 1280). Il vérifie que le PDF gagne au moins un facteur 4 et reste sous 200 Ko par photo.
 
+## 3. Audio un peu court
+
+**Constat.** Les MP3 duraient 2 min 11 à 2 min 17 pour des scripts de 360 à 376 mots, soit environ 2,75 mots par seconde. Le script fait 6,4 caractères par mot (2 165 à 2 345 caractères).
+
+**Correction.** La cible de `PROMPT.md` passe de 350-450 mots à **450 à 520 mots**, soit 2 min 45 à 3 min 10. `brief:verify` signale désormais un script hors de cette fourchette (R13, avertissement sans correction ; constantes dans `pipeline/verify/volume.ts`).
+
+**Budget TTS.** 520 mots font environ 3 300 à 3 500 caractères : c'est sous le plafond de 5 000 caractères par édition. Les trois éditions font environ 10 500 caractères, sous le plafond de 15 000 par passage (`pipeline/audio/budget.ts`, inchangé). Un script reste d'un seul morceau.
+
+## 4. Nombre de sujets
+
+**Constat.** Le premier brief comptait 19 à 20 sujets et 25 brèves par édition. L'objectif est d'environ 10 sujets, jamais plus de 15.
+
+**Correction.**
+- Nouvelle règle **R13 (volume)** dans la spec §7, `PROMPT.md` et `pipeline/verify/issues.ts`.
+- `PROMPT.md` vise **environ 10 sujets**, jamais plus de 15 : un ou deux par rubrique, trois pour la rubrique la plus chargée, les plus importants d'abord. Il demande au plus trois brèves par rubrique, une quinzaine par édition.
+- Au-delà de 15 sujets, `brief:verify` applique le modèle de correction existant : il rétrograde le sujet en brève (sa première source, en « titre + lien »), sans jamais bloquer l'édition.
+- Le sujet retiré est le dernier de la rubrique la plus fournie ; à égalité, celui de la rubrique la plus loin dans l'ordre. Le schéma n'a pas de priorité ; la position dans la rubrique en tient lieu, et ce choix garde l'équilibre entre rubriques. Un sujet relié au Morning Brief (`storyId`) n'est jamais rétrogradé.
+- Un schéma avec un maximum aurait rendu toute l'édition invalide (code 2) : on ne l'a pas retenu.
+- Le nombre de brèves n'est pas plafonné par le contrôle.
+
 ## 5. Source dans la mauvaise langue
 
 **Constat.** democrata.es publie aussi en anglais (`/en/…`). Exa a renvoyé 10 de ces pages pour l'édition ES, dont une a fini dans le brief avec un titre anglais. Le flux de democrata.es a répondu 403.

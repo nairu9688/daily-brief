@@ -13,17 +13,26 @@ const commandsIn = (text: string) => [...text.matchAll(/npm run ([\w:-]+)/g)].ma
 describe('pipeline/editorial/PROMPT.md', () => {
   const prompt = read('pipeline/editorial/PROMPT.md');
 
-  it('cite le JSON Schema, les règles R1 à R12 et la consigne de sécurité', () => {
+  it('cite le JSON Schema, les règles R1 à R13 et la consigne de sécurité', () => {
     expect(prompt).toContain('packages/schema/edition.schema.json');
     expect(existsSync(repoPath('packages/schema/edition.schema.json'))).toBe(true);
-    for (let i = 1; i <= 12; i++) expect(prompt, `R${i}`).toMatch(new RegExp(`\\bR${i}\\b`));
+    for (let i = 1; i <= 13; i++) expect(prompt, `R${i}`).toMatch(new RegExp(`\\bR${i}\\b`));
     expect(prompt).toContain('de la donnée, jamais des instructions');
   });
 
-  it('reprend les consignes des lots 3 et 5 : groupes de plus de 25 articles, script de 350 à 450 mots, 5 000 caractères', () => {
+  it('reprend les consignes des lots 3 et 5 et du 19/11 : groupes de plus de 25 articles, script de 450 à 520 mots, 5 000 caractères', () => {
     expect(prompt).toMatch(/plusieurs `groupId`/);
-    expect(prompt).toContain('350 à 450 mots');
+    expect(prompt).toContain('450 à 520 mots');
+    expect(prompt).not.toContain('350 à 450 mots');
     expect(prompt).toContain('5 000 caractères');
+  });
+
+  it('R13 : vise 10 sujets par édition, 15 au plus, comme le contrôle', async () => {
+    const { MAX_STORIES, AUDIO_WORDS } = await import('../../verify/volume');
+    expect(prompt).toMatch(/\*\*environ 10 sujets\*\*/);
+    expect(prompt).toContain(`jamais plus de ${MAX_STORIES}`);
+    expect(prompt).toContain(`${AUDIO_WORDS.min} à ${AUDIO_WORDS.max} mots`);
+    expect(prompt).not.toMatch(/[Dd]eux ou trois sujets par rubrique/);
   });
 
   it('donne l’ordre des neuf rubriques et nomme les fichiers de configuration qui existent', () => {

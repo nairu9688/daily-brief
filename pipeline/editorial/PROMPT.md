@@ -34,7 +34,8 @@ Un même `groupId` réunit le même événement vu par plusieurs médias. Au-del
 - `region` : « France · Monde », « US · UK », « España ».
 - `headline` : le titre du jour, court.
 - `morningBrief` (**R8**) : **exactement cinq** infos `{ lead, text, rubric, storyId? }`, une ou deux phrases chacune, classées par importance (nombre de médias qui couvrent, poids pour la prépa) et équilibrées entre rubriques. `rubric` est le libellé traduit de la rubrique ; `storyId` désigne le sujet développé plus bas, s'il existe.
-- `sections` : dans l'ordre `pol`, `int`, `eco`, `ent`, `dro`, `tec`, `env`, `cul`, `spo`, avec les libellés traduits de `packages/schema/src/rubrics.ts`. Une rubrique sans actualité marquante est **omise**. Deux ou trois sujets par rubrique quand l'actualité le permet, puis `briefs` (« En bref ») : les sources « titre + lien » qui ne font pas un sujet.
+- `sections` : dans l'ordre `pol`, `int`, `eco`, `ent`, `dro`, `tec`, `env`, `cul`, `spo`, avec les libellés traduits de `packages/schema/src/rubrics.ts`. Une rubrique sans actualité marquante est **omise**. Puis `briefs` (« En bref ») : les sources « titre + lien » qui ne font pas un sujet, **au plus trois par rubrique** (une quinzaine par édition).
+- **R13. Volume.** **environ 10 sujets** par édition, **jamais plus de 15** : un ou deux par rubrique, trois pour la rubrique la plus chargée du jour. Range les sujets d'une rubrique du plus important au moins important. Au-delà de 15, `brief:verify` rétrograde en brèves les derniers sujets des rubriques les plus fournies (jamais un sujet relié au Morning Brief) : choisis toi-même plutôt que de laisser le contrôle couper.
 - Identifiant d'un sujet : `<date>-<lang>-<n>` (par exemple `2026-11-06-fr-3`), unique dans l'édition. `kicker` : lieu ou thème court ; `date` : `JJ.MM` de l'événement.
 - `vocab` (**R10**) : `null` en FR ; en EN et ES, un objet `{ title, items }` : `title` est le titre de l'encart, court et lié aux sujets du jour (par exemple « Midterms vocabulary », « Política y transporte »), `items` **six** mots tirés des textes du jour, `{ term, pos, translation, example, sourceUrl? }`, traduction en français, phrase exemple issue du texte quand c'est possible (avec `sourceUrl`).
 - Édition allégée (`light`) : garde les sujets qui ont un texte lu, mets le reste en brèves.
@@ -52,7 +53,7 @@ Un même `groupId` réunit le même événement vu par plusieurs médias. Au-del
 
 ## 6. Script audio
 
-`audioScript` (environ 3 minutes) : **350 à 450 mots**, écrit pour l'oreille, dans la langue de l'édition. Phrases complètes, sans balises, sans liste ni émoji, sans abréviations ambiguës (« M. » → « monsieur », sigles développés une fois), nombres écrits pour être lus. Il reprend le titre du jour et les cinq infos du Morning Brief, puis une phrase de fin. **Au-delà de 5 000 caractères, l'édition part sans audio.**
+`audioScript` (environ 3 minutes, **R13**) : **450 à 520 mots** (le premier brief réel, à 360-376 mots, durait 2 min 11 à 2 min 17), écrit pour l'oreille, dans la langue de l'édition. Phrases complètes, sans balises, sans liste ni émoji, sans abréviations ambiguës (« M. » → « monsieur », sigles développés une fois), nombres écrits pour être lus. Il reprend le titre du jour et les cinq infos du Morning Brief, en les développant un peu, puis une phrase de fin. 520 mots font environ 3 300 à 3 500 caractères. `brief:verify` signale un script hors de cette fourchette. **Au-delà de 5 000 caractères, l'édition part sans audio.**
 
 ## 7. Après `brief:verify`
 
@@ -60,4 +61,4 @@ Un même `groupId` réunit le même événement vu par plusieurs médias. Au-del
 
 ## 8. Quota Claude
 
-Le coût de la routine dépend du volume lu et écrit. Au plus 6 à 8 newsletters (plafond de `pipeline/config/newsletters.json`) ; deux ou trois sujets par rubrique ; résumés courts. Si le premier passage mesuré est trop coûteux, réduire d'abord le nombre de newsletters, puis le nombre de sujets par rubrique.
+Le coût de la routine dépend du volume lu et écrit. Au plus 6 à 8 newsletters (plafond de `pipeline/config/newsletters.json`) ; environ 10 sujets par édition ; résumés courts. Si un passage mesuré est trop coûteux, réduire d'abord le nombre de newsletters, puis le nombre de sujets.
