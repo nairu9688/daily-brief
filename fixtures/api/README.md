@@ -1,6 +1,8 @@
 # Réponses d'API pour les tests
 
-Réponses **construites** d'après la documentation publique des API (forme des champs), pas des enregistrements réels. Elles servent à tester l'analyse des réponses sans appel réseau.
+Réponses **construites** d'après la documentation publique des API (forme des champs), pas des enregistrements réels, sauf `commons-search.json`. Elles servent à tester l'analyse des réponses sans appel réseau.
+
+- `commons-search.json` : réponse **réelle** de `GET https://commons.wikimedia.org/w/api.php`, enregistrée le 19/11/2026 par un seul appel manuel (`action=query`, `formatversion=2`, `generator=search`, `gsrsearch=high-speed train filetype:bitmap`, `gsrnamespace=6`, `gsrlimit=10`, `prop=imageinfo`, `iiprop=url|extmetadata|mime|size`, `iiurlwidth=1600`, métadonnées filtrées). Formes observées : `query.pages[]` dans le désordre (rang dans `index`) ; vignette sur `thumb.wikimedia.org` (`…/1920px-…` alors que `thumbwidth` vaut 1600), original sur `upload.wikimedia.org`, tous deux suivis de paramètres `utm_*` ; quand l'original est plus étroit que 1600 px, `thumburl` est l'original et `thumbwidth`/`thumbheight` sont agrandis ; `Artist` est du HTML ; `LicenseUrl` parfois en `http://`. Le meilleur résultat est le TGV (JPEG, CC BY-SA 3.0) ; on y trouve aussi des portraits, un « line scan » panoramique, un schéma presque carré (CC0) et des PNG.
 
 - `pexels-search.json` : `GET https://api.pexels.com/v1/search` (documentation Pexels API v1, objet `Photo`). La première photo est en portrait, pour vérifier que le client préfère une photo paysage.
 - `thenewsapi-top.json` : `GET https://api.thenewsapi.com/v1/news/top` (documentation TheNewsAPI : `meta` et `data[]` avec `uuid`, `title`, `description`, `keywords`, `snippet`, `url`, `image_url`, `language`, `published_at`, `source`, `categories`, `relevance_score`, `locale`). Le troisième article n'a pas d'URL : il doit être ignoré.

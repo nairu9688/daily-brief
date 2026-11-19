@@ -20,7 +20,8 @@ export function fakeFetch(routes: Record<string, Reply | (() => never)>) {
     if (typeof r === 'function') r();
     const reply = r as Reply;
     const status = reply.status ?? 200;
-    const body = reply.body ?? new Uint8Array();
+    // Sans corps binaire, `arrayBuffer` rend le JSON encodé : la lecture bornée (`readCapped`) le voit comme `json()`.
+    const body = reply.body ?? (reply.json !== undefined ? new TextEncoder().encode(JSON.stringify(reply.json)) : new Uint8Array());
     return {
       ok: status < 400,
       status,

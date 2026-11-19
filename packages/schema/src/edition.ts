@@ -36,6 +36,46 @@ export const MapSpecSchema = z.strictObject({
   places: z.array(PlaceSchema),
 });
 
+/** Hôtes de confiance des images Wikimedia Commons : originaux et vignettes (réponse de l'API, jamais le modèle). */
+export const PHOTO_IMAGE_HOSTS = ['upload.wikimedia.org', 'thumb.wikimedia.org'] as const;
+/** Pages de fichier de Commons (lien du crédit). */
+export const PHOTO_PAGE_HOST = 'commons.wikimedia.org';
+/** Textes des licences Creative Commons (lien du crédit). */
+export const LICENSE_HOST = 'creativecommons.org';
+/** Longueur maximale du nom d'auteur affiché. */
+export const MAX_AUTHOR_LENGTH = 80;
+
+/** URL https sur l'un des hôtes donnés (nom exact), sans identifiants ni port. */
+export function isHttpsUrlOn(url: string, hosts: readonly string[]): boolean {
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' && hosts.includes(u.hostname) && !u.username && !u.password && !u.port;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Licences admises (R11) : CC0, domaine public, CC BY et CC BY-SA, avec ou sans version ni suffixe
+ * de pays (« CC BY-SA 2.5 nl »). Tout le reste est refusé : NC, ND, GFDL seule, usage loyal, inconnu.
+ */
+const FREE_LICENSE = /^(?:CC0(?: 1\.0)?|Public domain|CC BY(?:-SA)?(?: \d\.\d)?(?: [a-z]{2,3})?)$/i;
+export const isFreeLicense = (name: string): boolean => FREE_LICENSE.test(name.trim());
+
+const urlOn = (hosts: readonly string[], message: string) => Url.refine((u) => isHttpsUrlOn(u, hosts), message);
+
+/** Photo libre d'un sujet, renseignée par `brief:render` seulement (leçon SSRF du lot 2). */
+export const PhotoSchema = z.strictObject({
+  provider: z.literal('wikimedia'),
+  src: urlOn(PHOTO_IMAGE_HOSTS, 'image hors de upload.wikimedia.org ou thumb.wikimedia.org').refine((u) => !/[?#]/.test(u), 'URL d’image sans paramètres attendue'),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+  author: z.string().trim().min(1).max(MAX_AUTHOR_LENGTH),
+  license: z.string().refine(isFreeLicense, 'licence non libre ou inconnue'),
+  licenseUrl: urlOn([LICENSE_HOST], 'lien de licence hors de creativecommons.org').optional(),
+  pageUrl: urlOn([PHOTO_PAGE_HOST], 'page hors de commons.wikimedia.org').refine((u) => isHttpsUrlOn(u, [PHOTO_PAGE_HOST]) && new URL(u).pathname.startsWith('/wiki/File:'), 'page de fichier attendue'),
+});
+
 export const PexelsPhotoSchema = z.strictObject({
   id: z.number(),
   src: Url,
@@ -151,6 +191,7 @@ export type SourceRef = z.infer<typeof SourceRefSchema>;
 export type Place = z.infer<typeof PlaceSchema>;
 export type MapSpec = z.infer<typeof MapSpecSchema>;
 export type PexelsPhoto = z.infer<typeof PexelsPhotoSchema>;
+export type Photo = z.infer<typeof PhotoSchema>;
 export type Visual = z.infer<typeof VisualSchema>;
 export type Stat = z.infer<typeof StatSchema>;
 export type Quote = z.infer<typeof QuoteSchema>;
