@@ -38,11 +38,36 @@ const sameUrl = (a: string, b: string) => {
 };
 
 /**
+ * Copie de l'entrée sans les photos écrites par la rédaction (`visual.photo`, ou l'ancien `visual.pexels`),
+ * et les id des sujets touchés. Retirées avant l'analyse : une photo hors des hôtes Wikimedia rendrait
+ * sinon l'édition entière invalide. Seul `brief:render` renseigne une photo (leçon SSRF du lot 2).
+ */
+function withoutEditorPhotos(input: unknown): { input: unknown; ids: string[] } {
+  const ids: string[] = [];
+  const sections = (input as { sections?: unknown } | null)?.sections;
+  if (!Array.isArray(sections)) return { input, ids };
+  const copy = structuredClone(input) as { sections: unknown[] };
+  for (const section of copy.sections) {
+    const stories = (section as { stories?: unknown } | null)?.stories;
+    if (!Array.isArray(stories)) continue;
+    for (const story of stories) {
+      const v = (story as { visual?: unknown } | null)?.visual as Record<string, unknown> | undefined;
+      if (!v || typeof v !== 'object' || v.type !== 'photo' || !('photo' in v || 'pexels' in v)) continue;
+      delete v.photo;
+      delete v.pexels;
+      ids.push(String((story as { id?: unknown }).id ?? '?'));
+    }
+  }
+  return { input: copy, ids };
+}
+
+/**
  * Contrôle une édition et renvoie une copie corrigée qui respecte R1–R12.
  * Ne bloque jamais l'édition : seul un schéma invalide renvoie `edition: null`.
  */
 export function verifyEdition(input: unknown, ctx: VerifyContext): VerifyResult {
-  const parsed = parseEdition(input);
+  const stripped = withoutEditorPhotos(input);
+  const parsed = parseEdition(stripped.input);
   if (!parsed.success) {
     return { edition: null, issues: parsed.errors.map((message) => ({ rule: 'SCHEMA', level: 'error', message })) };
   }
@@ -52,6 +77,7 @@ export function verifyEdition(input: unknown, ctx: VerifyContext): VerifyResult 
     issues.push({ rule, level: 'fixed', lang: ed.lang, storyId, message });
   const warn = (rule: Rule, message: string, storyId?: string) =>
     issues.push({ rule, level: 'warning', lang: ed.lang, storyId, message });
+  for (const id of stripped.ids) fix('R11', 'photo fournie par la rédaction retirée : seul le rendu choisit la photo Wikimedia Commons', id);
 
   const people = ed.sections.flatMap((s) => s.stories.flatMap((st) => (st.quote ? [st.quote.speaker] : [])));
 
@@ -142,10 +168,6 @@ export function verifyEdition(input: unknown, ctx: VerifyContext): VerifyResult 
     };
 
     if (story.visual.type === 'photo') {
-      if (story.visual.pexels) {
-        fix('R11', 'photo fournie par la rédaction retirée : seul le rendu choisit la photo Pexels', id);
-        delete story.visual.pexels;
-      }
       const problem = photoQueryProblem(story.visual.query, people);
       if (problem) {
         fix('R11', `requête photo remplacée (${problem})`, id);

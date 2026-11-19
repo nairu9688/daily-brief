@@ -1,13 +1,14 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { z } from 'zod';
-import { IsoDateSchema, LANGS, parseEdition, type Edition, type Lang } from '@daily-brief/schema';
-import type { PexelsPhoto } from '@daily-brief/schema';
+import { IsoDateSchema, LANGS, parseEdition, stripInvalidPhotos, type Edition, type Lang, type Photo } from '@daily-brief/schema';
 import { printPdf, renderPdfHtml, type FooterInfo } from '@daily-brief/render-pdf';
+import { Breaker, describeError } from '../collect/breaker';
+import { HttpError } from '../collect/http';
+import { findCommonsPhoto } from './commons';
 import type { FetchLike } from './http';
 import { fetchAsDataUri } from './images';
 import { issueNumber, pdfFileName } from './issue';
-import { findPhoto, isTrustedPexelsPhoto, PexelsHttpError } from './pexels';
 import { fillPhotos, type PhotoFinder } from './photos';
 
 export type RenderIssue = { level: 'error' | 'warning'; lang?: Lang; message: string };
@@ -15,30 +16,36 @@ export type RenderIssue = { level: 'error' | 'warning'; lang?: Lang; message: st
 export type RunRenderOptions = {
   outDir: string;
   date: string;
-  /** Clé Pexels ; sans clé, les sujets illustrés par une photo sont rendus sans image. */
-  pexelsApiKey?: string;
   fetch: FetchLike;
+  /**
+   * Recherche des photos sur Wikimedia Commons (vrai par défaut, aucune clé n'est nécessaire).
+   * Faux en répétition (`brief:finish --dry-run`) : aucun appel, sujets illustrés rendus sans photo.
+   */
+  photoLookup?: boolean;
   /** Imprimante PDF, remplaçable dans les tests. */
   print?: (html: string, outPath: string, footer: FooterInfo) => Promise<void>;
-  /** Recherche Pexels, remplaçable dans les tests. */
-  findPhoto?: typeof findPhoto;
-  /** Délai d'une requête Pexels (10 s par défaut). */
-  pexelsTimeoutMs?: number;
+  /** Recherche Commons, remplaçable dans les tests. */
+  findPhoto?: typeof findCommonsPhoto;
+  /** Délai d'une requête Commons (10 s par défaut). */
+  photoTimeoutMs?: number;
 };
 
 export type RunRenderResult = { issues: RenderIssue[]; exitCode: 0 | 2; pdfPath: string | null; langs: Lang[]; finals: Lang[] };
 
-const PEXELS_DOWN = 'Pexels indisponible';
+const COMMONS_DOWN = 'Wikimedia Commons indisponible';
 
 const photoSrcs = (editions: Edition[]): Set<string> =>
-  new Set(editions.flatMap((e) => e.sections.flatMap((s) => s.stories.flatMap((st) => (st.visual.type === 'photo' && st.visual.pexels ? [st.visual.pexels.src] : [])))));
+  new Set(editions.flatMap((e) => e.sections.flatMap((s) => s.stories.flatMap((st) => (st.visual.type === 'photo' && st.visual.photo ? [st.visual.photo.src] : [])))));
+
+/** Message court d'un échec de recherche : statut HTTP sans l'URL, jamais de fragment de corps. */
+const searchError = (e: unknown): string => (e instanceof HttpError ? `Wikimedia Commons : HTTP ${e.status}` : describeError(e));
 
 /** `audio.json` (écrit par le lot 5) : durée par édition, toutes facultatives. */
 const AudioEntry = z.object({ duration: z.string().min(1) });
 const AudioSchema = z.object({ fr: AudioEntry, en: AudioEntry, es: AudioEntry }).partial();
 
 /**
- * Lit `out/<date>/{lang}.verified.json`, complète les photos Pexels, écrit `{lang}.final.json`
+ * Lit `out/<date>/{lang}.verified.json`, complète les photos (Wikimedia Commons), écrit `{lang}.final.json`
  * puis `Daily Brief <date>.pdf` et `render-report.json`. Une édition absente ou invalide est
  * simplement omise ; sans aucune édition, pas de PDF et code 2.
  */
@@ -61,32 +68,31 @@ export async function runRender(opts: RunRenderOptions): Promise<RunRenderResult
     rmSync(pdfPath, { force: true });
     rmSync(join(dayDir, 'render-report.json'), { force: true });
 
-    // Un seul chercheur pour toutes les langues : mémoïsé par requête, coupé après un 401/429.
-    const cache = new Map<string, { photo?: PexelsPhoto | null; error?: Error }>();
-    let pexelsDown: number | null = null;
-    const apiKey = opts.pexelsApiKey;
-    const search = opts.findPhoto ?? findPhoto;
+    // Un seul chercheur pour toutes les langues : mémoïsé par requête, coupé par le disjoncteur de la
+    // collecte (401, 402, 403, 429, délai dépassé, ou trois échecs de suite), avec un seul avertissement.
+    const cache = new Map<string, { photo?: Photo | null; error?: Error }>();
+    const breaker = new Breaker();
+    const search = opts.findPhoto ?? findCommonsPhoto;
     const finder: PhotoFinder = async (q) => {
-      if (pexelsDown !== null) throw new Error(PEXELS_DOWN);
+      if (breaker.open) throw new Error(COMMONS_DOWN);
       const hit = cache.get(q);
       if (hit) {
         if (hit.error) throw hit.error;
         return hit.photo!;
       }
       try {
-        const photo = await search(q, { apiKey: apiKey!, fetch: opts.fetch, timeoutMs: opts.pexelsTimeoutMs });
+        const photo = await search(q, { fetch: opts.fetch, timeoutMs: opts.photoTimeoutMs });
+        breaker.success();
         cache.set(q, { photo });
         return photo;
       } catch (e) {
-        const status = e instanceof PexelsHttpError ? e.status : null;
-        const timedOut = e instanceof Error && (e.name === 'TimeoutError' || e.name === 'AbortError');
-        if (status === 401 || status === 429 || timedOut) {
-          pexelsDown = status ?? 0;
-          issues.push({ level: 'warning', message: `Pexels indisponible (${status ?? 'délai dépassé'}) : photos omises` });
-          throw new Error(PEXELS_DOWN);
+        if (breaker.trip(e)) {
+          issues.push({ level: 'warning', message: `${COMMONS_DOWN} (${breaker.reason}) : photos omises` });
+          throw new Error(COMMONS_DOWN);
         }
-        cache.set(q, { error: e as Error });
-        throw e;
+        const error = new Error(searchError(e));
+        cache.set(q, { error });
+        throw error;
       }
     };
 
@@ -100,7 +106,11 @@ export async function runRender(opts: RunRenderOptions): Promise<RunRenderResult
       }
       let parsed: ReturnType<typeof parseEdition>;
       try {
-        parsed = parseEdition(JSON.parse(readFileSync(path, 'utf8')));
+        const raw: unknown = JSON.parse(readFileSync(path, 'utf8'));
+        // Défense en profondeur (leçon SSRF du lot 2) : une photo pré-remplie hors des hôtes Wikimedia,
+        // ou invalide, est retirée avant l'analyse ; elle n'est jamais téléchargée.
+        for (const id of stripInvalidPhotos(raw)) issues.push({ level: 'warning', lang, message: `${id} : photo pré-remplie invalide retirée` });
+        parsed = parseEdition(raw);
       } catch (e) {
         issues.push({ level: 'error', lang, message: `${lang}.verified.json illisible : ${(e as Error).message}` });
         continue;
@@ -114,19 +124,12 @@ export async function runRender(opts: RunRenderOptions): Promise<RunRenderResult
         continue;
       }
       let ed = parsed.data;
-    // Défense en profondeur : seule une photo venue de Pexels (hôtes vérifiés) est conservée.
-    for (const st of ed.sections.flatMap((s) => s.stories)) {
-      if (st.visual.type === 'photo' && st.visual.pexels && !isTrustedPexelsPhoto(st.visual.pexels)) {
-        delete st.visual.pexels;
-        issues.push({ level: 'warning', lang, message: `${st.id} : photo pré-remplie hors Pexels retirée` });
-      }
-    }
-      if (opts.pexelsApiKey) {
+      if (opts.photoLookup ?? true) {
         const r = await fillPhotos(ed, finder);
         ed = r.edition;
-        for (const message of r.problems) if (!message.endsWith(`: ${PEXELS_DOWN}`)) issues.push({ level: 'warning', lang, message });
-      } else if (ed.sections.some((s) => s.stories.some((st) => st.visual.type === 'photo' && !st.visual.pexels))) {
-        issues.push({ level: 'warning', lang, message: 'PEXELS_API_KEY absente : sujets illustrés rendus sans photo' });
+        for (const message of r.problems) if (!message.endsWith(`: ${COMMONS_DOWN}`)) issues.push({ level: 'warning', lang, message });
+      } else if (ed.sections.some((s) => s.stories.some((st) => st.visual.type === 'photo' && !st.visual.photo))) {
+        issues.push({ level: 'warning', lang, message: 'recherche de photos désactivée : sujets illustrés rendus sans photo' });
       }
       const check = parseEdition(ed);
       if (!check.success) {
@@ -147,7 +150,7 @@ export async function runRender(opts: RunRenderOptions): Promise<RunRenderResult
     for (const src of photoSrcs(editions)) {
       const data = await fetchAsDataUri(src, opts.fetch);
       if (data) images[src] = data;
-      else issues.push({ level: 'warning', message: `image Pexels non téléchargée : ${src}` });
+      else issues.push({ level: 'warning', message: `image Wikimedia non téléchargée : ${src}` });
     }
 
     let audio: z.infer<typeof AudioSchema> | undefined;

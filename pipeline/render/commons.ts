@@ -1,15 +1,12 @@
 import { z } from 'zod';
 import { isFreeLicense, isHttpsUrlOn, LICENSE_HOST, MAX_AUTHOR_LENGTH, PhotoSchema, type Photo } from '@daily-brief/schema';
 import { fetchJson } from '../collect/http';
-import type { FetchLike } from './http';
+import { WIKIMEDIA_USER_AGENT, type FetchLike } from './http';
+
+export { WIKIMEDIA_USER_AGENT };
 import { MAX_IMAGE_BYTES } from './images';
 
 export const COMMONS_API = 'https://commons.wikimedia.org/w/api.php';
-/**
- * Agent exigé par la politique de Wikimedia (requêtes sans agent descriptif refusées) :
- * générique, sans nom ni adresse de personne.
- */
-export const WIKIMEDIA_USER_AGENT = 'DailyBrief/1.0 (personal news digest)';
 export const WIKIMEDIA_HEADERS = { 'User-Agent': WIKIMEDIA_USER_AGENT, 'Api-User-Agent': WIKIMEDIA_USER_AGENT } as const;
 /** Réponse de 10 fichiers avec métadonnées filtrées : environ 20 Ko ; au-delà de 1 Mo, elle est refusée. */
 export const MAX_COMMONS_BYTES = 1_000_000;

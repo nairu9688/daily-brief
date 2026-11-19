@@ -33,7 +33,7 @@ const offline = (async () => {
 
 /**
  * Les trois étapes de `brief:finish`. En répétition (`dryRun`), aucun appel extérieur : l'audio
- * part sans clé (« désactivé »), le rendu sans clé Pexels et sans réseau, et la publication n'est
+ * part sans clé (« désactivé »), le rendu sans recherche de photos et sans réseau, et la publication n'est
  * pas lancée.
  */
 export function finishSteps(o: FinishStepsOptions): Record<FinishStep, StepRunner> {
@@ -43,7 +43,7 @@ export function finishSteps(o: FinishStepsOptions): Record<FinishStep, StepRunne
   if (o.dryRun) {
     return {
       audio: () => runAudio({ outDir, date, apiKey: undefined, fetch: offline as unknown as HttpFetch, ...ffmpeg }),
-      render: () => runRender({ outDir, date, pexelsApiKey: undefined, fetch: offline, ...print }),
+      render: () => runRender({ outDir, date, photoLookup: false, fetch: offline, ...print }),
       publish: async () => {
         throw new Error('répétition : pas de publication');
       },
@@ -51,7 +51,7 @@ export function finishSteps(o: FinishStepsOptions): Record<FinishStep, StepRunne
   }
   return {
     audio: () => runAudio({ outDir, date, apiKey: o.env.GOOGLE_TTS_API_KEY, fetch: o.fetch as HttpFetch, ...ffmpeg }),
-    render: () => runRender({ outDir, date, pexelsApiKey: o.env.PEXELS_API_KEY, fetch: o.fetch as FetchLike, ...print }),
+    render: () => runRender({ outDir, date, fetch: o.fetch as FetchLike, ...print }),
     publish: () => runPublish({ outDir, date, env: Object.fromEntries(PUBLISH_ENV.map((n) => [n, o.env[n]])), supabaseFetch: o.fetch as SupabaseFetch, driveFetch: o.fetch as HttpFetch }),
   };
 }

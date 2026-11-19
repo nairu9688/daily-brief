@@ -3,24 +3,16 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parseEdition } from '@daily-brief/schema';
-import type { PexelsPhoto } from '@daily-brief/schema';
 import type { FooterInfo } from '@daily-brief/render-pdf';
-import { PexelsHttpError } from '../../render/pexels';
+import { HttpError } from '../../collect/http';
+import { COMMONS_API } from '../../render/commons';
 import { runRender } from '../../render/run-render';
 import { fixtureBrief, repoPath } from '../helpers';
 import { fakeFetch } from './fake-fetch';
+import { photo } from './photo';
 
-const search = JSON.parse(readFileSync(repoPath('fixtures/api/pexels-search.json'), 'utf8'));
-
-const photo = (id: number): PexelsPhoto => ({
-  id,
-  src: `https://images.pexels.com/photos/${id}/p.jpeg`,
-  width: 6000,
-  height: 4000,
-  photographer: 'P',
-  photographerUrl: 'https://www.pexels.com/@p',
-  pexelsUrl: `https://www.pexels.com/photo/${id}/`,
-});
+const search = JSON.parse(readFileSync(repoPath('fixtures/api/commons-search.json'), 'utf8'));
+const TGV_PAGE = 'https://commons.wikimedia.org/wiki/File:SNCF_TGV_Duplex_Viaduc_de_Cize_-_Bolozon.jpg';
 
 function day(langs = ['fr', 'en', 'es']) {
   const outDir = mkdtempSync(join(tmpdir(), 'render-'));
@@ -41,15 +33,16 @@ function printer() {
 
 const net = () =>
   fakeFetch({
-    'https://api.pexels.com/v1/search': { json: search },
-    'https://images.pexels.com/': { body: new Uint8Array([255, 216, 255]), type: 'image/jpeg' },
+    [COMMONS_API]: { json: search },
+    'https://thumb.wikimedia.org/': { body: new Uint8Array([255, 216, 255]), type: 'image/jpeg' },
+    'https://upload.wikimedia.org/': { body: new Uint8Array([255, 216, 255]), type: 'image/jpeg' },
   });
 
 describe('runRender', () => {
   it('complète les photos, écrit les éditions finales, le PDF et le rapport', async () => {
     const { outDir, dayDir } = day();
     const { print, printed } = printer();
-    const r = await runRender({ outDir, date: '2026-11-06', pexelsApiKey: 'k', fetch: net().fetch, print });
+    const r = await runRender({ outDir, date: '2026-11-06', fetch: net().fetch, print });
     expect(r.exitCode).toBe(0);
     expect(r.pdfPath).toBe(join(dayDir, 'Daily Brief 2026-11-06.pdf'));
     expect(existsSync(r.pdfPath!)).toBe(true);
@@ -57,8 +50,9 @@ describe('runRender', () => {
     expect(printed[0].html).toContain('src="data:image/jpeg;base64,/9j/"');
     expect(printed[0].html).toContain('N° 001');
     const fr = JSON.parse(readFileSync(join(dayDir, 'fr.final.json'), 'utf8'));
-    const photo = fr.sections.flatMap((s: { stories: { visual: { type: string; pexels?: { id: number } } }[] }) => s.stories).find((st: { visual: { type: string } }) => st.visual.type === 'photo');
-    expect(photo.visual.pexels.id).toBe(2002);
+    const story = fr.sections.flatMap((s: { stories: { visual: { type: string; photo?: { pageUrl: string } } }[] }) => s.stories).find((st: { visual: { type: string } }) => st.visual.type === 'photo');
+    expect(story.visual.photo.pageUrl).toBe(TGV_PAGE);
+    expect(printed[0].html).toContain('· Wikimedia Commons');
     const report = JSON.parse(readFileSync(join(dayDir, 'render-report.json'), 'utf8'));
     expect(report).toMatchObject({ exitCode: 0, langs: ['fr', 'en', 'es'] });
     for (const l of ['fr', 'en', 'es']) expect(parseEdition(JSON.parse(readFileSync(join(dayDir, `${l}.final.json`), 'utf8'))).success).toBe(true);
@@ -68,10 +62,12 @@ describe('runRender', () => {
     const { outDir, dayDir } = day(['fr']);
     writeFileSync(join(dayDir, 'audio.json'), JSON.stringify({ fr: { duration: '3:24' } }));
     const { print, printed } = printer();
-    const r = await runRender({ outDir, date: '2026-11-06', fetch: net().fetch, print });
+    const n = net();
+    const r = await runRender({ outDir, date: '2026-11-06', fetch: n.fetch, print, photoLookup: false });
     expect(r.langs).toEqual(['fr']);
     expect(r.issues).toContainEqual(expect.objectContaining({ lang: 'en', level: 'warning' }));
-    expect(r.issues).toContainEqual(expect.objectContaining({ lang: 'fr', message: expect.stringMatching(/PEXELS_API_KEY/) }));
+    expect(r.issues).toContainEqual(expect.objectContaining({ lang: 'fr', message: 'recherche de photos désactivée : sujets illustrés rendus sans photo' }));
+    expect(n.calls).toEqual([]);
     expect(printed[0].html).toContain('3:24 · voix Chirp HD');
     expect(printed[0].footer.langs).toEqual(['fr']);
   });
@@ -126,40 +122,44 @@ describe('runRender', () => {
     expect(existsSync(join(outDir, '2026-11-05', 'fr.final.json'))).toBe(false);
   });
 
-  it('une photo Pexels invalide laisse le sujet sans photo et final.json valide', async () => {
+  it('sans photo convenable (licence NC, hôte inconnu) : aplat, avertissement, final.json valide', async () => {
     const { outDir, dayDir } = day(['fr']);
     const bad = structuredClone(search);
-    bad.photos = [{ ...bad.photos[1], photographer: '' }];
-    const n = fakeFetch({ 'https://api.pexels.com/v1/search': { json: bad } });
-    const r = await runRender({ outDir, date: '2026-11-06', pexelsApiKey: 'k', fetch: n.fetch, print: printer().print });
+    for (const p of bad.query.pages) {
+      p.imageinfo[0].extmetadata.LicenseShortName = { value: 'CC BY-NC-SA 4.0' };
+      p.imageinfo[0].thumburl = 'http://169.254.169.254/x.jpg';
+    }
+    const n = fakeFetch({ [COMMONS_API]: { json: bad }, http: { body: new Uint8Array([1]), type: 'image/jpeg' } });
+    const r = await runRender({ outDir, date: '2026-11-06', fetch: n.fetch, print: printer().print });
     expect(r.exitCode).toBe(0);
     const fr = JSON.parse(readFileSync(join(dayDir, 'fr.final.json'), 'utf8'));
     expect(parseEdition(fr).success).toBe(true);
-    expect(JSON.stringify(fr)).not.toContain('"pexels"');
-    expect(r.issues).toContainEqual(expect.objectContaining({ message: expect.stringMatching(/photo Pexels invalide/) }));
+    expect(JSON.stringify(fr)).not.toContain('"photo":');
+    expect(r.issues).toContainEqual(expect.objectContaining({ level: 'warning', lang: 'fr', message: expect.stringMatching(/aucune photo libre sur Wikimedia Commons pour « car factory »/) }));
+    expect(n.calls.every((c) => c.url.startsWith(COMMONS_API))).toBe(true);
   });
 
-  it('après un 429, Pexels n’est plus appelé et un seul avertissement est émis, le PDF est produit', async () => {
+  it('après un 429, Commons n’est plus appelé et un seul avertissement est émis, le PDF est produit', async () => {
     const { outDir } = day();
-    const n = fakeFetch({ 'https://api.pexels.com/v1/search': { status: 429, json: {} } });
+    const n = fakeFetch({ [COMMONS_API]: { status: 429, json: {} } });
     const { print, printed } = printer();
-    const r = await runRender({ outDir, date: '2026-11-06', pexelsApiKey: 'k', fetch: n.fetch, print });
+    const r = await runRender({ outDir, date: '2026-11-06', fetch: n.fetch, print });
     expect(r.exitCode).toBe(0);
     expect(printed).toHaveLength(1);
     expect(n.calls).toHaveLength(1);
-    const msgs = r.issues.map((i) => i.message).filter((m) => /Pexels/.test(m));
-    expect(msgs).toEqual(['Pexels indisponible (429) : photos omises']);
+    const msgs = r.issues.map((i) => i.message).filter((m) => /Commons/.test(m));
+    expect(msgs).toEqual(['Wikimedia Commons indisponible (HTTP 429) : photos omises']);
   });
 
   it('une image non téléchargée donne un avertissement et le PDF est quand même produit', async () => {
     const { outDir } = day(['fr']);
     const n = fakeFetch({
-      'https://api.pexels.com/v1/search': { json: search },
-      'https://images.pexels.com/': { status: 500 },
+      [COMMONS_API]: { json: search },
+      'https://thumb.wikimedia.org/': { status: 500 },
     });
-    const r = await runRender({ outDir, date: '2026-11-06', pexelsApiKey: 'k', fetch: n.fetch, print: printer().print });
+    const r = await runRender({ outDir, date: '2026-11-06', fetch: n.fetch, print: printer().print });
     expect(r.exitCode).toBe(0);
-    expect(r.issues).toContainEqual(expect.objectContaining({ level: 'warning', message: expect.stringMatching(/image Pexels non téléchargée/) }));
+    expect(r.issues).toContainEqual(expect.objectContaining({ level: 'warning', message: expect.stringMatching(/image Wikimedia non téléchargée/) }));
   });
 
   it('supprime un fr.final.json périmé quand fr.verified.json est absent', async () => {
@@ -171,7 +171,7 @@ describe('runRender', () => {
 
   it('le rapport liste les finals et le nom du PDF, sans chemin ni clé API', async () => {
     const { outDir, dayDir } = day(['fr', 'es']);
-    const r = await runRender({ outDir, date: '2026-11-06', pexelsApiKey: 'SECRETKEY', fetch: net().fetch, print: printer().print });
+    const r = await runRender({ outDir, date: '2026-11-06', fetch: net().fetch, print: printer().print });
     expect(r.finals).toEqual(['fr', 'es']);
     const raw = readFileSync(join(dayDir, 'render-report.json'), 'utf8');
     expect(JSON.parse(raw)).toMatchObject({ finals: ['fr', 'es'], pdf: 'Daily Brief 2026-11-06.pdf' });
@@ -202,55 +202,55 @@ describe('runRender', () => {
     expect(existsSync(join(dayDir, 'fr.final.json'))).toBe(false);
   });
 
-  it('un 401 coupe Pexels dès le premier appel et le PDF est produit', async () => {
+  it('un 403 (agent refusé) coupe Commons dès le premier appel et le PDF est produit', async () => {
     const { outDir } = day();
-    const n = fakeFetch({ 'https://api.pexels.com/v1/search': { status: 401, json: {} } });
-    const r = await runRender({ outDir, date: '2026-11-06', pexelsApiKey: 'k', fetch: n.fetch, print: printer().print });
+    const n = fakeFetch({ [COMMONS_API]: { status: 403, json: {} } });
+    const r = await runRender({ outDir, date: '2026-11-06', fetch: n.fetch, print: printer().print });
     expect(r.exitCode).toBe(0);
     expect(n.calls).toHaveLength(1);
-    expect(r.issues.filter((i) => /Pexels/.test(i.message)).map((i) => i.message)).toEqual(['Pexels indisponible (401) : photos omises']);
+    expect(r.issues.filter((i) => /Commons/.test(i.message)).map((i) => i.message)).toEqual(['Wikimedia Commons indisponible (HTTP 403) : photos omises']);
   });
 
-  it('un délai dépassé coupe Pexels : un seul appel, un seul avertissement', async () => {
+  it('un délai dépassé coupe Commons : un seul appel, un seul avertissement', async () => {
     const { outDir } = day();
-    const n = fakeFetch({ 'https://api.pexels.com/v1/search': { hang: true } });
-    const r = await runRender({ outDir, date: '2026-11-06', pexelsApiKey: 'k', fetch: n.fetch, print: printer().print, pexelsTimeoutMs: 20 });
+    const n = fakeFetch({ [COMMONS_API]: { hang: true } });
+    const r = await runRender({ outDir, date: '2026-11-06', fetch: n.fetch, print: printer().print, photoTimeoutMs: 20 });
     expect(r.exitCode).toBe(0);
     expect(n.calls).toHaveLength(1);
-    expect(r.issues.filter((i) => /Pexels/.test(i.message)).map((i) => i.message)).toEqual(['Pexels indisponible (délai dépassé) : photos omises']);
+    expect(r.issues.filter((i) => /Commons/.test(i.message)).map((i) => i.message)).toEqual(['Wikimedia Commons indisponible (délai dépassé) : photos omises']);
   });
 
   it('une requête en 500 laisse seulement ce sujet sans photo, les autres gardent la leur', async () => {
     const { outDir, dayDir } = day(['fr']);
     const find = async (q: string) => {
-      if (q === 'car factory') throw new PexelsHttpError(500, q);
+      if (q === 'car factory') throw new HttpError(500, `${COMMONS_API}?gsrsearch=car`);
       return photo(7);
     };
-    const r = await runRender({ outDir, date: '2026-11-06', pexelsApiKey: 'k', fetch: net().fetch, print: printer().print, findPhoto: find });
+    const r = await runRender({ outDir, date: '2026-11-06', fetch: net().fetch, print: printer().print, findPhoto: find });
     expect(r.exitCode).toBe(0);
     const fr = JSON.parse(readFileSync(join(dayDir, 'fr.final.json'), 'utf8'));
     const photos = fr.sections.flatMap((s: any) => s.stories).filter((st: any) => st.visual.type === 'photo');
-    expect(photos.map((st: any) => [st.visual.query, !!st.visual.pexels])).toEqual([['car factory', false], ['high-speed train', true]]);
-    expect(r.issues.filter((i) => /Pexels/.test(i.message))).toHaveLength(1);
+    expect(photos.map((st: any) => [st.visual.query, !!st.visual.photo])).toEqual([['car factory', false], ['high-speed train', true]]);
+    expect(r.issues.filter((i) => /Commons/.test(i.message)).map((i) => i.message)).toEqual(['2026-11-06-fr-5 : Wikimedia Commons : HTTP 500']);
   });
 
   it('mémoïse les recherches entre langues : un appel par requête distincte', async () => {
     const { outDir } = day();
     const n = net();
-    await runRender({ outDir, date: '2026-11-06', pexelsApiKey: 'k', fetch: n.fetch, print: printer().print });
+    await runRender({ outDir, date: '2026-11-06', fetch: n.fetch, print: printer().print });
     const queries = new Set(
       fixtureBrief().editions.flatMap((e) => e.sections.flatMap((s) => s.stories.flatMap((st) => (st.visual.type === 'photo' ? [st.visual.query] : [])))),
     );
-    expect(n.calls.filter((c) => c.url.startsWith('https://api.pexels.com/v1/search'))).toHaveLength(queries.size);
+    expect(n.calls.filter((c) => c.url.startsWith(COMMONS_API))).toHaveLength(queries.size);
   });
 
   it('repli sur l’édition vérifiée, sans photo, si la photo rend l’édition invalide', async () => {
     const { outDir, dayDir } = day(['fr']);
-    const find = async () => ({ ...photo(9), photographer: '' });
-    const r = await runRender({ outDir, date: '2026-11-06', pexelsApiKey: 'k', fetch: net().fetch, print: printer().print, findPhoto: find });
+    const find = async () => ({ ...photo(9), author: '' });
+    const r = await runRender({ outDir, date: '2026-11-06', fetch: net().fetch, print: printer().print, findPhoto: find });
     const fr = JSON.parse(readFileSync(join(dayDir, 'fr.final.json'), 'utf8'));
     expect(parseEdition(fr).success).toBe(true);
-    expect(JSON.stringify(fr)).not.toContain('"pexels"');
+    expect(JSON.stringify(fr)).not.toContain('"photo":');
     expect(r.issues).toContainEqual(expect.objectContaining({ level: 'error', lang: 'fr', message: expect.stringMatching(/édition finale invalide/) }));
   });
 
@@ -283,12 +283,12 @@ describe('runRender', () => {
     expect(printed[0].html).toContain('3:24 · voix Chirp HD');
   });
 
-  it('retire une photo pré-remplie hors Pexels, avec un avertissement, et produit le PDF', async () => {
+  it('retire une photo pré-remplie invalide, avec un avertissement, la recherche puis produit le PDF', async () => {
     const { outDir, dayDir } = day(['fr']);
     const file = join(dayDir, 'fr.verified.json');
     const ed = JSON.parse(readFileSync(file, 'utf8'));
     for (const st of ed.sections.flatMap((s: any) => s.stories)) {
-      if (st.visual.type === 'photo') st.visual.pexels = { ...photo(5), src: 'http://169.254.169.254/x.jpg', photographerUrl: 'https://evil.example/' };
+      if (st.visual.type === 'photo') st.visual.photo = { ...photo(5), src: 'http://169.254.169.254/x.jpg', pageUrl: 'https://evil.example/' };
     }
     writeFileSync(file, JSON.stringify(ed));
     const n = net();
@@ -296,8 +296,36 @@ describe('runRender', () => {
     const r = await runRender({ outDir, date: '2026-11-06', fetch: n.fetch, print });
     expect(r.exitCode).toBe(0);
     expect(printed).toHaveLength(1);
-    expect(readFileSync(join(dayDir, 'fr.final.json'), 'utf8')).not.toContain('"pexels"');
-    expect(r.issues).toContainEqual(expect.objectContaining({ level: 'warning', lang: 'fr', message: expect.stringContaining('photo pré-remplie hors Pexels retirée') }));
+    const final = readFileSync(join(dayDir, 'fr.final.json'), 'utf8');
+    expect(final).not.toContain('169.254');
+    expect(final).toContain(TGV_PAGE);
+    expect(r.issues).toContainEqual(expect.objectContaining({ level: 'warning', lang: 'fr', message: '2026-11-06-fr-5 : photo pré-remplie invalide retirée' }));
     expect(n.calls.some((c) => c.url.includes('169.254'))).toBe(false);
+  });
+
+  it('lit une ancienne édition avec `pexels` : champ ignoré, photo cherchée sur Commons', async () => {
+    const { outDir, dayDir } = day(['fr']);
+    const file = join(dayDir, 'fr.verified.json');
+    const ed = JSON.parse(readFileSync(file, 'utf8'));
+    for (const st of ed.sections.flatMap((s: any) => s.stories)) {
+      if (st.visual.type === 'photo') st.visual.pexels = { id: 1, src: 'https://images.pexels.com/1.jpeg', width: 6, height: 4, photographer: 'P', photographerUrl: 'https://www.pexels.com/@p', pexelsUrl: 'https://www.pexels.com/photo/1/' };
+    }
+    writeFileSync(file, JSON.stringify(ed));
+    const n = net();
+    const r = await runRender({ outDir, date: '2026-11-06', fetch: n.fetch, print: printer().print });
+    expect(r.exitCode).toBe(0);
+    const final = readFileSync(join(dayDir, 'fr.final.json'), 'utf8');
+    expect(final).not.toContain('pexels');
+    expect(final).toContain(TGV_PAGE);
+    expect(n.calls.some((c) => c.url.includes('pexels'))).toBe(false);
+  });
+
+  it('trois échecs de suite coupent Commons (disjoncteur de la collecte)', async () => {
+    const { outDir } = day();
+    const n = fakeFetch({ [COMMONS_API]: { status: 500, json: {} } });
+    const r = await runRender({ outDir, date: '2026-11-06', fetch: n.fetch, print: printer().print });
+    expect(r.exitCode).toBe(0);
+    expect(n.calls).toHaveLength(3);
+    expect(r.issues.filter((i) => /indisponible/.test(i.message)).map((i) => i.message)).toEqual(['Wikimedia Commons indisponible (source coupée après 3 échecs consécutifs) : photos omises']);
   });
 });

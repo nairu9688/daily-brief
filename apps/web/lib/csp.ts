@@ -9,8 +9,9 @@ export function buildCsp({ nonce, supabaseOrigin, dev, upgrade }: CspOptions): s
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${dev ? " 'unsafe-eval'" : ''}`,
     // Attributs style (couleurs des pastilles, hauteurs des barres) : pas de feuille externe.
     "style-src 'self' 'unsafe-inline'",
-    // Photos : seulement le CDN de Pexels (leçon SSRF du lot 2 : pas d'optimiseur d'images côté serveur).
-    "img-src 'self' data: https://images.pexels.com",
+    // Photos : seulement les médias de Wikimedia Commons, originaux et vignettes (leçon SSRF du lot 2 :
+    // pas d'optimiseur d'images côté serveur).
+    "img-src 'self' data: https://upload.wikimedia.org https://thumb.wikimedia.org",
     // Audio : la route /audio redirige vers une URL signée du projet Supabase.
     `media-src ${media.join(' ')}`,
     "connect-src 'self'",

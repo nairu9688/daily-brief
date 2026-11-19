@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { stableUuid } from '@/lib/data/ids';
-import { editionFromRows, parseRows, pexelsSrc, safeUrl, StoryRowSchema, threadFromRow, type EditionRow, type SourceRow, type StoryRow } from '@/lib/data/rows';
+import { editionFromRows, parseRows, photoSrc, safeUrl, StoryRowSchema, threadFromRow, type EditionRow, type SourceRow, type StoryRow } from '@/lib/data/rows';
 
 const edition: EditionRow = {
   id: 'e1',
@@ -89,14 +89,33 @@ describe('lignes Supabase → affichage', () => {
     expect(parseRows(StoryRowSchema, null, 'sujet').problems).toEqual(['sujet : réponse inattendue']);
   });
 
-  it('n’accepte que des URL http(s) et des photos https de images.pexels.com', () => {
+  it('n’accepte que des URL http(s) et des photos https de upload.wikimedia.org ou thumb.wikimedia.org', () => {
     expect(safeUrl('https://a.fr/x')).toBe('https://a.fr/x');
     expect(safeUrl('data:text/html,x')).toBeNull();
-    expect(pexelsSrc('https://images.pexels.com/photos/1/a.jpeg?w=800')).toBe('https://images.pexels.com/photos/1/a.jpeg?w=800');
-    expect(pexelsSrc('http://images.pexels.com/a.jpg')).toBeNull();
-    expect(pexelsSrc('https://images.pexels.com.evil.fr/a.jpg')).toBeNull();
-    expect(pexelsSrc('https://169.254.169.254/latest')).toBeNull();
-    expect(pexelsSrc(undefined)).toBeNull();
+    expect(photoSrc('https://upload.wikimedia.org/wikipedia/commons/a/ab/X.jpg')).toBe('https://upload.wikimedia.org/wikipedia/commons/a/ab/X.jpg');
+    expect(photoSrc('https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/X.jpg/1920px-X.jpg')).toBe('https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/X.jpg/1920px-X.jpg');
+    for (const u of ['http://upload.wikimedia.org/a.jpg', 'https://upload.wikimedia.org.evil.fr/a.jpg', 'https://u:p@upload.wikimedia.org/a.jpg', 'https://images.pexels.com/photos/1/a.jpeg', 'https://169.254.169.254/latest']) {
+      expect(photoSrc(u), u).toBeNull();
+    }
+    expect(photoSrc(undefined)).toBeNull();
+  });
+
+  it('garde un sujet dont la photo est invalide ou de l’ancienne forme Pexels, sans la photo', () => {
+    const good = { provider: 'wikimedia', src: 'https://upload.wikimedia.org/wikipedia/commons/a/ab/X.jpg', width: 1600, height: 1067, author: 'Ana', license: 'CC BY 4.0', pageUrl: 'https://commons.wikimedia.org/wiki/File:X.jpg' };
+    const legacy = { id: 1, src: 'https://images.pexels.com/1.jpeg', width: 6, height: 4, photographer: 'Jo', photographerUrl: 'https://www.pexels.com/@jo', pexelsUrl: 'https://www.pexels.com/photo/1/' };
+    const visuals = [
+      { type: 'photo', query: 'train', photo: { ...good, src: 'https://evil.example/x.jpg' } },
+      { type: 'photo', query: 'train', pexels: legacy },
+      { type: 'photo', query: 'train', photo: good },
+    ];
+    const [bad, old, ok] = visuals.map((v) => {
+      const { value, problems } = editionFromRows({ edition, stories: [story({ visual: v })], sources: [source()], vocab: [] });
+      expect(problems).toEqual([]);
+      return value.sections[0].stories[0]?.visual;
+    });
+    expect(bad).toEqual({ type: 'photo', query: 'train' });
+    expect(old).toEqual({ type: 'photo', query: 'train' });
+    expect(ok).toEqual({ type: 'photo', query: 'train', photo: good });
   });
 
   it('construit une frise du plus récent au plus ancien, avec la carte et la première source', () => {

@@ -26,11 +26,11 @@ for (const path of PAGES) {
   });
 }
 
-test('la CSP porte un nonce et n’autorise que Pexels pour les images', async ({ page }) => {
+test('la CSP porte un nonce et n’autorise que Wikimedia pour les images', async ({ page }) => {
   const r = await page.goto('/');
   const csp = r?.headers()['content-security-policy'] ?? '';
   expect(csp).toMatch(/script-src 'self' 'nonce-[A-Za-z0-9+/=]+' 'strict-dynamic'/);
-  expect(csp).toContain("img-src 'self' data: https://images.pexels.com");
+  expect(csp).toContain("img-src 'self' data: https://upload.wikimedia.org https://thumb.wikimedia.org");
   expect(csp).toContain("frame-ancestors 'none'");
   expect(r?.headers()['x-content-type-options']).toBe('nosniff');
 });

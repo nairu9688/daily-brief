@@ -76,21 +76,59 @@ export const PhotoSchema = z.strictObject({
   pageUrl: urlOn([PHOTO_PAGE_HOST], 'page hors de commons.wikimedia.org').refine((u) => isHttpsUrlOn(u, [PHOTO_PAGE_HOST]) && new URL(u).pathname.startsWith('/wiki/File:'), 'page de fichier attendue'),
 });
 
-export const PexelsPhotoSchema = z.strictObject({
-  id: z.number(),
-  src: Url,
-  width: z.number(),
-  height: z.number(),
-  photographer: z.string().min(1),
-  photographerUrl: Url,
-  pexelsUrl: Url,
-  alt: z.string().optional(),
-});
+/** Ancienne forme (lot 2) : `pexels` n'a jamais été renseigné en production, il est ignoré à la lecture. */
+const dropLegacyPhoto = (v: unknown): unknown => {
+  if (!v || typeof v !== 'object' || Array.isArray(v) || !('pexels' in v)) return v;
+  const { pexels: _legacy, ...rest } = v as Record<string, unknown>;
+  return rest;
+};
 
-export const VisualSchema = z.discriminatedUnion('type', [
-  z.strictObject({ type: z.literal('map'), caption: z.string().min(1), map: MapSpecSchema }),
-  z.strictObject({ type: z.literal('photo'), query: z.string().min(1), pexels: PexelsPhotoSchema.optional() }),
-]);
+/**
+ * Visuel d'un sujet. Une ancienne ligne ou un ancien fichier `{ type: 'photo', query, pexels }` se lit
+ * encore (photo sans image) ; le JSON Schema émis n'expose que la forme actuelle.
+ */
+export const VisualSchema = z.preprocess(
+  dropLegacyPhoto,
+  z.discriminatedUnion('type', [
+    z.strictObject({ type: z.literal('map'), caption: z.string().min(1), map: MapSpecSchema }),
+    z.strictObject({
+      type: z.literal('photo'),
+      query: z.string().min(1),
+      photo: PhotoSchema.optional().describe('Renseigné par brief:render seulement : la rédaction ne l’écrit jamais (retiré par brief:verify).'),
+    }),
+  ]),
+);
+
+/**
+ * Visuel brut sans photo invalide (ni ancien champ `pexels`) : le sujet garde son aplat plutôt que
+ * d'être rejeté en entier. `removed` vaut vrai si une photo a été retirée.
+ */
+export function sanitizeVisual(v: unknown): { visual: unknown; removed: boolean } {
+  if (!v || typeof v !== 'object' || Array.isArray(v) || (v as { type?: unknown }).type !== 'photo') return { visual: v, removed: false };
+  const rest = dropLegacyPhoto(v) as Record<string, unknown>;
+  if (!('photo' in rest) || PhotoSchema.safeParse(rest.photo).success) return { visual: rest, removed: false };
+  const { photo: _invalid, ...clean } = rest;
+  return { visual: clean, removed: true };
+}
+
+/** Retire en place les photos invalides d'une édition brute (avant analyse) ; renvoie les id des sujets touchés. */
+export function stripInvalidPhotos(edition: unknown): string[] {
+  const ids: string[] = [];
+  const sections = (edition as { sections?: unknown } | null)?.sections;
+  if (!Array.isArray(sections)) return ids;
+  for (const section of sections) {
+    const stories = (section as { stories?: unknown } | null)?.stories;
+    if (!Array.isArray(stories)) continue;
+    for (const story of stories) {
+      if (!story || typeof story !== 'object') continue;
+      const st = story as { id?: unknown; visual?: unknown };
+      const r = sanitizeVisual(st.visual);
+      if (r.visual !== st.visual) st.visual = r.visual;
+      if (r.removed) ids.push(typeof st.id === 'string' ? st.id : '?');
+    }
+  }
+  return ids;
+}
 
 export const StatSchema = z.strictObject({ value: z.string().min(1), label: z.string().min(1), sourceUrl: Url });
 
@@ -190,7 +228,6 @@ export const BriefSchema = z
 export type SourceRef = z.infer<typeof SourceRefSchema>;
 export type Place = z.infer<typeof PlaceSchema>;
 export type MapSpec = z.infer<typeof MapSpecSchema>;
-export type PexelsPhoto = z.infer<typeof PexelsPhotoSchema>;
 export type Photo = z.infer<typeof PhotoSchema>;
 export type Visual = z.infer<typeof VisualSchema>;
 export type Stat = z.infer<typeof StatSchema>;

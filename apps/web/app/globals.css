@@ -105,7 +105,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .photo{position:relative;aspect-ratio:16/10;overflow:hidden;border-bottom:1px solid var(--line)}
 .photo .ph{position:absolute;inset:0}
 .photo .cap{color:#fff;background:rgba(0,0,0,.35);backdrop-filter:blur(6px)}
-.photo .pex{position:absolute;right:12px;top:12px;font-size:9.5px;color:rgba(255,255,255,.85);text-transform:uppercase}
+.photo .credit{position:absolute;left:12px;right:12px;bottom:10px;font-size:9px;line-height:1.3;color:rgba(255,255,255,.92);text-shadow:0 1px 2px rgba(0,0,0,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 .body{padding:16px 16px 14px}
 .card h3{font-size:21px;line-height:1.2;letter-spacing:-.02em;font-weight:420;margin:8px 0 10px;text-wrap:balance}
@@ -228,7 +228,7 @@ body{background:var(--bg)}
 .player[data-failed] .play{opacity:.5}
 .vrow input:focus-visible+.box{outline:2px solid var(--accent);outline-offset:2px}
 .photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.photo .pex a{color:inherit;text-decoration:underline}
+.photo .credit a{color:inherit;text-decoration:underline}
 .ed-filter[data-show="pol"] .rub:not([data-rub="pol"]),.ed-filter[data-show="int"] .rub:not([data-rub="int"]),.ed-filter[data-show="eco"] .rub:not([data-rub="eco"]),
 .ed-filter[data-show="ent"] .rub:not([data-rub="ent"]),.ed-filter[data-show="dro"] .rub:not([data-rub="dro"]),.ed-filter[data-show="tec"] .rub:not([data-rub="tec"]),
 .ed-filter[data-show="env"] .rub:not([data-rub="env"]),.ed-filter[data-show="cul"] .rub:not([data-rub="cul"]),.ed-filter[data-show="spo"] .rub:not([data-rub="spo"]){display:none}

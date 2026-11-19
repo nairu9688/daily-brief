@@ -46,7 +46,8 @@ describe('CSP', () => {
     const csp = buildCsp({ nonce: 'abc', supabaseOrigin: 'https://ref.supabase.co', dev: false, upgrade: true });
     expect(csp).toContain("script-src 'self' 'nonce-abc' 'strict-dynamic'");
     expect(csp).toContain("media-src 'self' https://ref.supabase.co");
-    expect(csp).toContain("img-src 'self' data: https://images.pexels.com");
+    expect(csp).toContain("img-src 'self' data: https://upload.wikimedia.org https://thumb.wikimedia.org");
+    expect(csp).not.toContain('pexels');
     expect(csp).toContain("connect-src 'self'");
     expect(csp).toContain('upgrade-insecure-requests');
     expect(csp).not.toContain('unsafe-eval');

@@ -1,12 +1,22 @@
 import { readFileSync } from 'node:fs';
 import { chromium } from 'playwright';
-import type { Brief, Edition } from '@daily-brief/schema';
+import type { Brief, Edition, Photo } from '@daily-brief/schema';
 import { describe, expect, it } from 'vitest';
 import { renderPdfHtml } from '../src/html';
 
 const brief: Brief = JSON.parse(readFileSync(new URL('../../../fixtures/brief-2026-11-06.json', import.meta.url), 'utf8'));
 const ed = (lang: string): Edition => structuredClone(brief.editions.find((e) => e.lang === lang)!);
 const count = (s: string, re: RegExp) => (s.match(re) ?? []).length;
+const PHOTO: Photo = {
+  provider: 'wikimedia',
+  src: 'https://upload.wikimedia.org/wikipedia/commons/a/ab/Usine.jpg',
+  width: 1600,
+  height: 1067,
+  author: 'Jo & Ana',
+  license: 'CC BY-SA 4.0',
+  licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0',
+  pageUrl: 'https://commons.wikimedia.org/wiki/File:Usine.jpg',
+};
 
 describe('renderPdfHtml', () => {
   it('rend les trois éditions dans l’ordre FR, EN, ES avec leur couverture', async () => {
@@ -43,19 +53,25 @@ describe('renderPdfHtml', () => {
     expect(silent).toContain('<p>“We had a tough night, no question about it”</p>');
   });
 
-  it('intègre une photo Pexels avec son crédit, et omet une photo non téléchargée', async () => {
+  it('intègre une photo Wikimedia Commons avec auteur et licence liés, et omet une photo non téléchargée', async () => {
     const fr = ed('fr');
     const story = fr.sections.find((s) => s.key === 'eco')!.stories[0];
-    story.visual = {
-      type: 'photo',
-      query: 'car factory',
-      pexels: { id: 1, src: 'https://images.pexels.com/1.jpeg', width: 6, height: 4, photographer: 'Jo Rails', photographerUrl: 'https://www.pexels.com/@jo', pexelsUrl: 'https://www.pexels.com/photo/1/' },
-    };
-    const withImg = await renderPdfHtml({ date: brief.date, issue: '001', editions: [fr] }, { images: { 'https://images.pexels.com/1.jpeg': 'data:image/jpeg;base64,AA' } });
+    story.visual = { type: 'photo', query: 'car factory', photo: PHOTO };
+    const withImg = await renderPdfHtml({ date: brief.date, issue: '001', editions: [fr] }, { images: { [PHOTO.src]: 'data:image/jpeg;base64,AA' } });
     expect(withImg).toContain('<img src="data:image/jpeg;base64,AA" alt="car factory">');
-    expect(withImg).toContain('Photo : <a href="https://www.pexels.com/@jo">Jo Rails</a>');
+    expect(withImg).toContain(
+      'Photo : <a href="https://commons.wikimedia.org/wiki/File:Usine.jpg">Jo &amp; Ana</a> — <a href="https://creativecommons.org/licenses/by-sa/4.0">CC BY-SA 4.0</a> · Wikimedia Commons',
+    );
     const without = await renderPdfHtml({ date: brief.date, issue: '001', editions: [fr] });
     expect(without).not.toContain('<img');
+  });
+
+  it('crédite une photo sans lien de licence (domaine public) sans lien vide', async () => {
+    const fr = ed('fr');
+    const { licenseUrl: _, ...pd } = { ...PHOTO, license: 'Public domain' };
+    fr.sections.find((s) => s.key === 'eco')!.stories[0].visual = { type: 'photo', query: 'x', photo: pd };
+    const html = await renderPdfHtml({ date: brief.date, issue: '001', editions: [fr] }, { images: { [PHOTO.src]: 'data:image/jpeg;base64,AA' } });
+    expect(html).toContain('Jo &amp; Ana</a> — Public domain · Wikimedia Commons');
   });
 
   it('échappe le texte venu du JSON', async () => {
@@ -73,12 +89,8 @@ describe('renderPdfHtml', () => {
   it('rejette une data URI d’image malveillante (injection) et omet la photo', async () => {
     const fr = ed('fr');
     const story = fr.sections.find((s) => s.key === 'eco')!.stories[0];
-    const src = 'https://images.pexels.com/1.jpeg';
-    story.visual = {
-      type: 'photo',
-      query: 'x',
-      pexels: { id: 1, src, width: 6, height: 4, photographer: 'J', photographerUrl: 'https://www.pexels.com/@j', pexelsUrl: 'https://www.pexels.com/photo/1/' },
-    };
+    const src = PHOTO.src;
+    story.visual = { type: 'photo', query: 'x', photo: PHOTO };
     const evil = 'data:image/jpeg"><script>document.body.innerHTML="PWNED"</script><x a=";base64,AA';
     const html = await renderPdfHtml({ date: brief.date, issue: '001', editions: [fr] }, { images: { [src]: evil } });
     expect(html).not.toContain('<img');

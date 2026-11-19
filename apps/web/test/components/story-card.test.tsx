@@ -23,16 +23,39 @@ describe('carte d’un sujet', () => {
     expect(order(container)).toEqual(['photo', 'kicker', 'h3', 'ai', 'sum', 'srcs']);
   });
 
-  it('affiche une photo Pexels, et un aplat pour toute autre URL', () => {
+  it('affiche une photo Wikimedia Commons créditée (auteur, licence, source), et un aplat sans crédit pour toute autre URL', () => {
     const base = fixtureStory('2026-11-06-fr-5');
-    const pexels = { id: 1, src: 'https://images.pexels.com/photos/1/p.jpeg', width: 10, height: 10, photographer: 'Ana', photographerUrl: 'https://www.pexels.com/@ana', pexelsUrl: 'https://www.pexels.com/photo/1' };
-    const { container, unmount } = render(<StoryCard story={{ ...base, visual: { type: 'photo', query: 'train', pexels } }} lang="fr" />);
-    expect(container.querySelector('img')?.getAttribute('src')).toBe('https://images.pexels.com/photos/1/p.jpeg');
-    expect(screen.getByText('Pexels · Ana')).toBeTruthy();
+    const photo = {
+      provider: 'wikimedia' as const,
+      src: 'https://upload.wikimedia.org/wikipedia/commons/a/ab/Train.jpg',
+      width: 1600,
+      height: 1067,
+      author: 'Ana',
+      license: 'CC BY-SA 4.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0',
+      pageUrl: 'https://commons.wikimedia.org/wiki/File:Train.jpg',
+    };
+    const { container, unmount } = render(<StoryCard story={{ ...base, visual: { type: 'photo', query: 'train', photo } }} lang="fr" />);
+    expect(container.querySelector('img')?.getAttribute('src')).toBe(photo.src);
+    const credit = container.querySelector('.credit')!;
+    expect(credit.textContent).toBe('Photo : Ana — CC BY-SA 4.0 · Wikimedia Commons');
+    expect(within(credit as HTMLElement).getByRole('link', { name: 'Ana' }).getAttribute('href')).toBe(photo.pageUrl);
+    expect(within(credit as HTMLElement).getByRole('link', { name: 'CC BY-SA 4.0' }).getAttribute('href')).toBe(photo.licenseUrl);
     unmount();
-    const evil = render(<StoryCard story={{ ...base, visual: { type: 'photo', query: 'train', pexels: { ...pexels, src: 'https://evil.example/p.jpg' } } }} lang="fr" />);
+    const { licenseUrl: _, ...pd } = { ...photo, license: 'Public domain' };
+    const pdCard = render(<StoryCard story={{ ...base, visual: { type: 'photo', query: 'train', photo: pd } }} lang="fr" />);
+    expect(pdCard.container.querySelector('.credit')?.textContent).toBe('Photo : Ana — Public domain · Wikimedia Commons');
+    expect(within(pdCard.container.querySelector('.credit') as HTMLElement).getAllByRole('link')).toHaveLength(1);
+    pdCard.unmount();
+    const evil = render(<StoryCard story={{ ...base, visual: { type: 'photo', query: 'train', photo: { ...photo, src: 'https://evil.example/p.jpg' } } }} lang="fr" />);
     expect(evil.container.querySelector('img')).toBeNull();
     expect(evil.container.querySelector('.ph')).not.toBeNull();
+    expect(evil.container.querySelector('.credit')).toBeNull();
+    evil.unmount();
+    const none = render(<StoryCard story={base} lang="fr" />);
+    expect(none.container.querySelector('.ph')).not.toBeNull();
+    expect(none.container.querySelector('.credit')).toBeNull();
+    expect(none.container.textContent).not.toMatch(/Pexels|Wikimedia/);
   });
 
   it('échappe les textes écrits par le modèle', () => {

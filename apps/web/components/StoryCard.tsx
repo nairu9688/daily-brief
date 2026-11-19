@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import type { Lang, SourceRef } from '@daily-brief/schema';
-import { pexelsSrc, safeUrl } from '@/lib/data/rows';
+import { isHttpsUrlOn, LICENSE_HOST, PHOTO_PAGE_HOST, type Lang, type SourceRef } from '@daily-brief/schema';
+import { photoSrc } from '@/lib/data/rows';
 import type { StoryView } from '@/lib/data/types';
 import { favColor, initials, QUOTE_MARKS, T, uniqueOutlets } from '@/lib/i18n';
 import { Cap, Chev, Split, Spark, ThreadIcon } from './icons';
@@ -26,12 +26,24 @@ function Visual({ story }: { story: StoryView }) {
       </div>
     );
   }
-  const src = pexelsSrc(v.pexels?.src);
-  const credit = v.pexels ? safeUrl(v.pexels.photographerUrl) : null;
+  const p = v.photo;
+  const src = photoSrc(p?.src);
+  // Crédit exigé par la licence : auteur (vers la page du fichier), licence (vers son texte), source. Sans image, rien à créditer.
+  const page = p && isHttpsUrlOn(p.pageUrl, [PHOTO_PAGE_HOST]) ? p.pageUrl : null;
+  const license = p?.licenseUrl && isHttpsUrlOn(p.licenseUrl, [LICENSE_HOST]) ? p.licenseUrl : null;
+  const link = (href: string, text: string) => (
+    <a href={href} target="_blank" rel="noopener noreferrer">
+      {text}
+    </a>
+  );
   return (
     <div className="photo">
-      {src ? <img src={src} alt={v.pexels?.alt ?? ''} loading="lazy" decoding="async" referrerPolicy="no-referrer" /> : <div className="ph" style={{ background: 'linear-gradient(165deg,var(--surface-2) 0%,var(--line-2) 100%)' }} />}
-      <span className="pex mono">{v.pexels && credit ? <a href={credit} target="_blank" rel="noopener noreferrer">Pexels · {v.pexels.photographer}</a> : 'Pexels'}</span>
+      {src ? <img src={src} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" /> : <div className="ph" style={{ background: 'linear-gradient(165deg,var(--surface-2) 0%,var(--line-2) 100%)' }} />}
+      {p && src ? (
+        <span className="credit mono">
+          Photo : {page ? link(page, p.author) : p.author} — {license ? link(license, p.license) : p.license} · Wikimedia Commons
+        </span>
+      ) : null}
       <span className="cap mono">Photo libre · « {v.query} »</span>
     </div>
   );

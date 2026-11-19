@@ -1,6 +1,6 @@
 import type { MapSpec, RubricKey } from '@daily-brief/schema';
 
-/** Requêtes Pexels de repli quand celle de Claude viole R11 : objets ou lieux, jamais de personne. */
+/** Requêtes photo (Wikimedia Commons) de repli quand celle de Claude viole R11 : objets ou lieux, jamais de personne. */
 export const DEFAULT_PHOTO_QUERY: Record<RubricKey, string> = {
   pol: 'parliament building',
   int: 'world map',

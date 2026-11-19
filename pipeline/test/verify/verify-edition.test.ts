@@ -66,19 +66,31 @@ describe('verifyEdition', () => {
     expect(v).toEqual({ type: 'photo', query: 'city skyline' });
   });
 
-  it('retire une photo Pexels écrite par la rédaction, de façon idempotente (R11)', () => {
+  it('retire une photo écrite par la rédaction, même conforme ou de l’ancienne forme, de façon idempotente (R11)', () => {
+    const MSG = 'photo fournie par la rédaction retirée : seul le rendu choisit la photo Wikimedia Commons';
+    const ssrf = { provider: 'wikimedia', src: 'http://169.254.169.254/latest/meta-data/x.jpg', width: 3, height: 2, author: 'Fake', license: 'CC0', pageUrl: 'https://evil.example/' };
+    const valid = { ...ssrf, src: 'https://upload.wikimedia.org/wikipedia/commons/a/ab/X.jpg', pageUrl: 'https://commons.wikimedia.org/wiki/File:X.jpg' };
+    const legacy = { id: 1, src: 'http://169.254.169.254/x.jpg', width: 3, height: 2, photographer: 'Fake', photographerUrl: 'https://evil.example/', pexelsUrl: 'https://www.pexels.com/photo/1/' };
+    for (const extra of [{ photo: ssrf }, { photo: valid }, { pexels: legacy }]) {
+      const e = fixtureEdition('fr');
+      const eco = e.sections.find((s) => s.key === 'eco')!;
+      eco.stories[0].visual = { type: 'photo', query: 'city skyline', ...extra } as never;
+      const r = verifyEdition(e, ctx);
+      expect(r.edition, JSON.stringify(extra)).not.toBeNull();
+      const v = r.edition!.sections.find((s) => s.key === 'eco')!.stories[0].visual;
+      expect(v).toEqual({ type: 'photo', query: 'city skyline' });
+      expect(r.issues).toContainEqual(expect.objectContaining({ rule: 'R11', level: 'fixed', storyId: eco.stories[0].id, message: MSG }));
+      expect(verifyEdition(r.edition, ctx).issues.filter((i) => i.level === 'fixed')).toEqual([]);
+    }
+  });
+
+  it('ne modifie pas l’entrée en retirant une photo écrite par la rédaction', () => {
     const e = fixtureEdition('fr');
     const eco = e.sections.find((s) => s.key === 'eco')!;
-    eco.stories[0].visual = {
-      type: 'photo',
-      query: 'city skyline',
-      pexels: { id: 1, src: 'http://169.254.169.254/latest/meta-data/x.jpg', width: 3, height: 2, photographer: 'Fake', photographerUrl: 'https://evil.example/', pexelsUrl: 'https://www.pexels.com/photo/1/' },
-    };
-    const r = verifyEdition(e, ctx);
-    const v = r.edition!.sections.find((s) => s.key === 'eco')!.stories[0].visual;
-    expect(v).toEqual({ type: 'photo', query: 'city skyline' });
-    expect(r.issues).toContainEqual(expect.objectContaining({ rule: 'R11', level: 'fixed', message: 'photo fournie par la rédaction retirée : seul le rendu choisit la photo Pexels' }));
-    expect(verifyEdition(r.edition, ctx).issues.filter((i) => i.level === 'fixed')).toEqual([]);
+    eco.stories[0].visual = { type: 'photo', query: 'city skyline', photo: { provider: 'wikimedia' } } as never;
+    const before = JSON.stringify(e);
+    verifyEdition(e, ctx);
+    expect(JSON.stringify(e)).toBe(before);
   });
 
   it('ne signale aucune carte des fixtures (R11)', () => {

@@ -63,7 +63,7 @@ describe('runFinish (revue du lot 7)', () => {
     expect(written).not.toMatch(/TEMOIN|AUTRE/);
   });
 
-  it('--dry-run : aucun appel extérieur (audio sans clé, rendu sans Pexels ni réseau), « audio désactivé (répétition) »', async () => {
+  it('--dry-run : aucun appel extérieur (audio sans clé, rendu sans recherche de photos ni réseau), « audio désactivé (répétition) »', async () => {
     const outDir = mkdtempSync(join(tmpdir(), 'finish-'));
     mkdirSync(join(outDir, DAY));
     for (const lang of LANGS) writeFileSync(join(outDir, DAY, `${lang}.verified.json`), JSON.stringify(fixtureEdition(lang)));
@@ -72,7 +72,7 @@ describe('runFinish (revue du lot 7)', () => {
       calls.push(String(url));
       throw new Error('réseau interdit');
     }) as unknown as typeof fetch;
-    const env = { GOOGLE_TTS_API_KEY: 'AIzaTEMOIN', PEXELS_API_KEY: 'pexels-TEMOIN', SUPABASE_URL: 'https://abc.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'sb_secret_TEMOIN' };
+    const env = { GOOGLE_TTS_API_KEY: 'AIzaTEMOIN', SUPABASE_URL: 'https://abc.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'sb_secret_TEMOIN' };
     const r = await runFinish({
       outDir,
       date: DAY,
@@ -83,6 +83,9 @@ describe('runFinish (revue du lot 7)', () => {
     expect(calls).toEqual([]);
     expect(r.report.steps.map((x) => [x.step, x.exitCode])).toEqual([['audio', 0], ['render', 0]]);
     expect(JSON.parse(readFileSync(join(outDir, DAY, 'audio-report.json'), 'utf8')).status).toBe('disabled');
+    const render = JSON.parse(readFileSync(join(outDir, DAY, 'render-report.json'), 'utf8'));
+    expect(render.issues).toContainEqual(expect.objectContaining({ message: 'recherche de photos désactivée : sujets illustrés rendus sans photo' }));
+    expect(JSON.stringify(render.issues)).not.toMatch(/Commons indisponible/);
     expect(r.report.notification.message).toContain('audio désactivé (répétition)');
     expect(r.report.notification.message).toMatch(/^Répétition sans publication : 10 sujets/);
   });

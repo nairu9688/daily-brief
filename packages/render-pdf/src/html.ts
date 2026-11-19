@@ -13,7 +13,7 @@ export type PdfInput = {
 };
 
 export type PdfOptions = {
-  /** URL d'image Pexels → data URI ; une photo absente de la table n'est pas affichée. */
+  /** URL d'image Wikimedia → data URI ; une photo absente de la table n'est pas affichée. */
   images?: Record<string, string>;
   /** Durée de l'audio par édition (« 3:24 ») ; sans durée, pas d'encart audio. */
   audio?: Partial<Record<Lang, { duration: string }>>;
@@ -40,10 +40,12 @@ function visual(story: Story, ctx: Ctx): string {
   if (v.type === 'map') {
     return `<div class="fig">${renderMap(v.map, v.caption)}</div><div class="figcap mono">${esc(v.caption)}</div>`;
   }
-  const data = v.pexels ? ctx.images[v.pexels.src] : undefined;
-  if (!v.pexels || !data || !SAFE_IMAGE.test(data)) return '';
-  const alt = v.pexels.alt ?? v.query;
-  return `<div class="fig"><img src="${esc(data)}" alt="${esc(alt)}"></div><div class="figcap mono">Photo : <a href="${esc(v.pexels.photographerUrl)}">${esc(v.pexels.photographer)}</a> · <a href="${esc(v.pexels.pexelsUrl)}">Pexels</a></div>`;
+  const p = v.photo;
+  const data = p ? ctx.images[p.src] : undefined;
+  if (!p || !data || !SAFE_IMAGE.test(data)) return '';
+  // Crédit exigé par la licence : auteur (lien vers la page du fichier), licence (lien vers son texte s'il existe), source.
+  const license = p.licenseUrl ? `<a href="${esc(p.licenseUrl)}">${esc(p.license)}</a>` : esc(p.license);
+  return `<div class="fig"><img src="${esc(data)}" alt="${esc(v.query)}"></div><div class="figcap mono">Photo : <a href="${esc(p.pageUrl)}">${esc(p.author)}</a> — ${license} · Wikimedia Commons</div>`;
 }
 
 function story(s: Story, lang: Lang, ctx: Ctx): string {

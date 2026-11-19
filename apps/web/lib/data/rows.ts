@@ -2,11 +2,14 @@ import { z } from 'zod';
 import {
   DivergenceSchema,
   IsoDateSchema,
+  isHttpsUrlOn,
   LangSchema,
   MorningBriefItemSchema,
+  PHOTO_IMAGE_HOSTS,
   PrepaSchema,
   QuoteSchema,
   RubricKeySchema,
+  sanitizeVisual,
   StatSchema,
   UrlSchema,
   VisualSchema,
@@ -108,15 +111,9 @@ export function safeUrl(url: string | null | undefined): string | null {
   return typeof url === 'string' && UrlSchema.safeParse(url).success ? url : null;
 }
 
-/** Photo affichable : seulement une image https de images.pexels.com (CSP img-src), sinon null. */
-export function pexelsSrc(src: string | undefined): string | null {
-  if (!src) return null;
-  try {
-    const u = new URL(src);
-    return u.protocol === 'https:' && u.hostname === 'images.pexels.com' && !u.username && !u.password ? u.href : null;
-  } catch {
-    return null;
-  }
+/** Photo affichable : seulement une image https de upload.wikimedia.org ou thumb.wikimedia.org (CSP img-src), sinon null. */
+export function photoSrc(src: string | undefined): string | null {
+  return src && isHttpsUrlOn(src, PHOTO_IMAGE_HOSTS) ? new URL(src).href : null;
 }
 
 const sourceOf = (r: SourceRow): SourceRef | null => {
@@ -154,7 +151,8 @@ export function editionFromRows(input: { edition: EditionRow; stories: StoryRow[
 
   const storiesByRubric = new Map<string, StoryView[]>();
   for (const r of [...input.stories].sort(byPosition)) {
-    const json = StoryJson.safeParse({ visual: r.visual, stats: r.stats ?? [], quote: r.quote ?? null, divergences: r.divergences ?? [], prepa: r.prepa ?? null });
+    // Une photo invalide (ou l'ancien champ `pexels`) est retirée : le sujet reste affiché, avec un aplat.
+    const json = StoryJson.safeParse({ visual: sanitizeVisual(r.visual).visual, stats: r.stats ?? [], quote: r.quote ?? null, divergences: r.divergences ?? [], prepa: r.prepa ?? null });
     const sources = storySources.get(r.id) ?? [];
     if (!json.success || sources.length === 0) {
       problems.push(`sujet ${r.key} ignoré : ${json.success ? 'aucune source valide' : json.error.issues[0]?.message}`);
