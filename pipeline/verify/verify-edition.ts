@@ -21,6 +21,7 @@ import type { SourceTexts } from './sources';
 import { resolveThread } from './threads';
 import { arcProblem, DEFAULT_PHOTO_QUERY, photoQueryProblem } from './visuals';
 import { vocabWarnings } from './vocab';
+import { AUDIO_WORDS, capStories, MAX_STORIES, wordCount } from './volume';
 
 export type VerifyContext = {
   texts: SourceTexts;
@@ -63,7 +64,7 @@ function withoutEditorPhotos(input: unknown): { input: unknown; ids: string[] } 
 }
 
 /**
- * Contrôle une édition et renvoie une copie corrigée qui respecte R1–R12.
+ * Contrôle une édition et renvoie une copie corrigée qui respecte R1–R13.
  * Ne bloque jamais l'édition : seul un schéma invalide renvoie `edition: null`.
  */
 export function verifyEdition(input: unknown, ctx: VerifyContext): VerifyResult {
@@ -248,6 +249,13 @@ export function verifyEdition(input: unknown, ctx: VerifyContext): VerifyResult 
     });
   }
   ed.sections = ed.sections.filter((s) => s.stories.length + s.briefs.length > 0);
+
+  // R13 : au plus 15 sujets ; les sujets du Morning Brief restent.
+  const storyCount = ed.sections.reduce((n, s) => n + s.stories.length, 0);
+  const inMorningBrief = new Set(ed.morningBrief.flatMap((m) => (m.storyId ? [m.storyId] : [])));
+  for (const id of capStories(ed, inMorningBrief)) fix('R13', `${storyCount} sujets, ${MAX_STORIES} au plus : sujet rétrogradé en brève`, id);
+  const words = wordCount(ed.audioScript);
+  if (words < AUDIO_WORDS.min || words > AUDIO_WORDS.max) warn('R13', `script audio de ${words} mots (objectif : ${AUDIO_WORDS.min} à ${AUDIO_WORDS.max}, environ 3 minutes)`);
 
   const storyIds = new Set(ed.sections.flatMap((s) => s.stories.map((st) => st.id)));
   for (const item of ed.morningBrief) {

@@ -270,3 +270,60 @@ describe('verifyEdition', () => {
     expect(out.briefs.find((b) => b.url.includes('lemonde.fr/eco/x'))!.title).toBe('Déjà là');
   });
 });
+
+describe('R13 : volume de l’édition', () => {
+  /** Édition FR de la fixture portée à 18 sujets : copies du sujet fr-1, avec un id propre. */
+  function bigEdition() {
+    const e = fixtureEdition('fr');
+    const base = e.sections.find((s) => s.key === 'pol')!.stories[0];
+    let n = 100;
+    const add = (key: string, count: number) => {
+      const section = e.sections.find((s) => s.key === key)!;
+      for (let i = 0; i < count; i++) section.stories.push({ ...structuredClone(base), id: `2026-11-06-fr-${n++}` });
+    };
+    add('pol', 4); // fr-100 … fr-103 : pol a 5 sujets
+    add('int', 3); // fr-104 … fr-106 : int a 5 sujets
+    add('eco', 2);
+    add('tec', 2);
+    e.morningBrief[0].storyId = '2026-11-06-fr-103';
+    return e;
+  }
+
+  it('au-delà de 15 sujets, rétrograde en brèves les derniers sujets des rubriques les plus fournies, jamais un sujet du Morning Brief', () => {
+    const e = bigEdition();
+    expect(e.sections.flatMap((s) => s.stories)).toHaveLength(18);
+    const r = verifyEdition(e, ctx);
+    const ids = r.edition!.sections.flatMap((s) => s.stories.map((st) => st.id));
+    expect(ids).toHaveLength(15);
+    const demoted = r.issues.filter((i) => i.rule === 'R13' && i.level === 'fixed').map((i) => i.storyId);
+    // int (5, plus loin dans l'ordre que pol) perd fr-106 ; pol perd fr-102 (fr-103 est au Morning Brief) ; int perd fr-105.
+    expect(demoted).toEqual(['2026-11-06-fr-106', '2026-11-06-fr-102', '2026-11-06-fr-105']);
+    expect(ids).toContain('2026-11-06-fr-103');
+    for (const id of demoted) expect(ids).not.toContain(id);
+    expect(r.edition!.morningBrief[0].storyId).toBe('2026-11-06-fr-103');
+    const int = r.edition!.sections.find((s) => s.key === 'int')!;
+    expect(int.briefs.some((b) => b.url === e.sections[0].stories[0].sources[0].url && !b.readFull)).toBe(true);
+    expect(r.issues.find((i) => i.rule === 'R13' && i.level === 'fixed')!.message).toBe('18 sujets, 15 au plus : sujet rétrogradé en brève');
+  });
+
+  it('15 sujets ou moins : rien n’est retiré', () => {
+    const e = bigEdition();
+    e.sections.find((s) => s.key === 'pol')!.stories.splice(1, 3); // 15 sujets
+    const r = verifyEdition(e, ctx);
+    expect(r.edition!.sections.flatMap((s) => s.stories)).toHaveLength(15);
+    expect(r.issues.filter((i) => i.rule === 'R13' && i.level === 'fixed')).toEqual([]);
+  });
+
+  it('signale un script audio hors de 450 à 520 mots (environ 3 minutes), sans le corriger', () => {
+    const words = (n: number) => Array.from({ length: n }, (_, i) => `mot${i}`).join(' ') + '.';
+    for (const [n, warned] of [[300, true], [449, true], [450, false], [520, false], [521, true]] as const) {
+      const e = fixtureEdition('fr');
+      e.audioScript = words(n);
+      const r = verifyEdition(e, ctx);
+      const w = r.issues.filter((i) => i.rule === 'R13' && i.level === 'warning');
+      expect(w.length, String(n)).toBe(warned ? 1 : 0);
+      if (warned) expect(w[0].message).toBe(`script audio de ${n} mots (objectif : 450 à 520, environ 3 minutes)`);
+      expect(r.edition!.audioScript).toBe(e.audioScript);
+    }
+  });
+});
