@@ -78,3 +78,12 @@ Avec 10 sujets par édition au lieu de 20 (point 4), le PDF devrait peser 3 à 4
 **Constat.** democrata.es publie aussi en anglais (`/en/…`). Exa a renvoyé 10 de ces pages pour l'édition ES, dont une a fini dans le brief avec un titre anglais. Le flux de democrata.es a répondu 403.
 
 **Correction.** `pipeline/collect/language.ts` repère la langue par mots-outils propres au FR, à l'EN et à l'ES, sur le titre, le chapô et le début du texte. Il faut au moins 8 mots reconnus et deux fois plus que la langue suivante. `brief:collect` écarte, après la lecture des textes, tout article nettement dans une autre langue que celle annoncée, et le signale (« langue : N article(s)… »). Si la langue est incertaine, l'article est gardé. Sur le `raw.json` du 19/11, cette règle écarte exactement les 10 pages `/en/` de democrata.es et aucune autre. Corriger la langue du domaine dans la configuration n'aurait pas suffi : democrata.es publie dans les deux langues.
+
+## À surveiller au prochain passage réel
+
+- **Nouveaux médias `full`.** Dans `collect-report.json`, regarder les erreurs « textes intégraux non lus » des dix nouveaux domaines (403, 429, texte trop court, « article payant »). Un média qui refuse l'agent coupe son hôte après un 403 : le repasser en `meta` s'il échoue deux jours de suite.
+- **R3.** Regarder la part de chaque média dans `verify-report.json` : aucun média ne devrait plus dépasser 30 %. Le plafond `fulltext.maxFetches` (180 pages) est partagé entre plus de médias : vérifier `fulltext.skipped`.
+- **Langue.** L'avertissement « langue : N article(s)… » doit citer surtout democrata.es. Un média FR, EN ou ES légitime écarté signalerait un faux positif de `language.ts`.
+- **PDF.** Le poids attendu est de 3 à 4 Mo avec environ 10 sujets par édition. L'avertissement « photos non réduites » signale un échec de Chromium. Vérifier aussi que les vignettes Commons arrivent bien en 1280 px (URL `1280px-…`).
+- **Audio.** Durée attendue : 2 min 45 à 3 min 10 par édition, et aucun avertissement R13 sur le script.
+- **Volume.** Aucune correction R13 « sujet rétrogradé » ne devrait apparaître si la rédaction suit `PROMPT.md`.
