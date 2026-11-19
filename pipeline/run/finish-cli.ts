@@ -17,7 +17,7 @@ try {
     date,
     dryRun,
     secrets: secrets(),
-    // Répétition (--dry-run) : aucun appel extérieur, ni Text-to-Speech, ni Pexels, ni publication.
+    // Répétition (--dry-run) : aucun appel extérieur, ni Text-to-Speech, ni recherche de photos (Wikimedia Commons), ni publication.
     steps: finishSteps({ outDir, date, dryRun, env: process.env, fetch, ...(values['no-ffmpeg'] ? { ffmpeg: null } : {}) }),
   });
   console.log(`brief:finish ${date}${report.dryRun ? ' (répétition, sans publication ni appel extérieur)' : ''}`);

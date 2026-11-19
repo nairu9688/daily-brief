@@ -12,7 +12,7 @@ import type { SupabaseFetch } from '../supabase/client';
 import { buildNotification, type Notification } from './notify';
 
 /** Variables secrètes lues par les étapes de fin : masquées dans tout message. */
-export const FINISH_SECRET_ENV = ['GOOGLE_TTS_API_KEY', 'PEXELS_API_KEY', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'APPS_SCRIPT_URL', 'APPS_SCRIPT_TOKEN'] as const;
+export const FINISH_SECRET_ENV = ['GOOGLE_TTS_API_KEY', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'APPS_SCRIPT_URL', 'APPS_SCRIPT_TOKEN'] as const;
 const PUBLISH_ENV = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'APPS_SCRIPT_URL', 'APPS_SCRIPT_TOKEN'] as const;
 
 export type FinishStepsOptions = {

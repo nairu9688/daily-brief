@@ -24,6 +24,15 @@ describe('checkEnvFile', () => {
     expect(r.lines.join('\n')).not.toMatch(/sb_secret|AIza|abcdefgh/);
   });
 
+  it('PEXELS_API_KEY n’est plus attendue : signalée comme retirée, jamais comme manquante', () => {
+    const absent = checkEnvFile(envFile(`SUPABASE_URL=https://abcdefgh.supabase.co\nSUPABASE_SERVICE_ROLE_KEY=${SECRET}\n`));
+    expect(absent.lines.join('\n')).not.toMatch(/PEXELS/);
+    const left = checkEnvFile(envFile(`SUPABASE_URL=https://abcdefgh.supabase.co\nSUPABASE_SERVICE_ROLE_KEY=${SECRET}\nPEXELS_API_KEY=pexels-TEMOIN\n`));
+    expect(left.exitCode).toBe(0);
+    expect(left.lines).toContain('avertissement PEXELS_API_KEY : plus utilisée (photos Wikimedia Commons, sans clé), à retirer de Vault');
+    expect(left.lines.join('\n')).not.toMatch(/TEMOIN/);
+  });
+
   it('clé de service absente : code 2 ; nom inconnu, URL inattendue et droits trop larges signalés', () => {
     const r = checkEnvFile(envFile('SUPABASE_URL=http://localhost:54321\nSUPABASE_KEY=x\n', 0o644));
     expect(r.exitCode).toBe(2);

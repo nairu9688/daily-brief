@@ -3,8 +3,12 @@ import { parseEnv } from 'node:util';
 
 /** Variables sans lesquelles `brief:context` et `brief:publish` sortent avec le code 2. */
 export const REQUIRED_ENV = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'] as const;
-/** Variables dont l'absence dégrade le brief (source, photos, audio ou Drive coupés), sans le bloquer. */
-export const OPTIONAL_ENV = ['THENEWSAPI_KEY', 'EXA_API_KEY', 'WEBZ_TOKEN', 'PEXELS_API_KEY', 'GOOGLE_TTS_API_KEY', 'APPS_SCRIPT_URL', 'APPS_SCRIPT_TOKEN'] as const;
+/** Variables dont l'absence dégrade le brief (source, audio ou Drive coupés), sans le bloquer. */
+export const OPTIONAL_ENV = ['THENEWSAPI_KEY', 'EXA_API_KEY', 'WEBZ_TOKEN', 'GOOGLE_TTS_API_KEY', 'APPS_SCRIPT_URL', 'APPS_SCRIPT_TOKEN'] as const;
+/** Variables qui ne servent plus : signalées pour qu'on les retire de Vault, jamais exigées. */
+export const RETIRED_ENV: Record<string, string> = {
+  PEXELS_API_KEY: 'plus utilisée (photos Wikimedia Commons, sans clé), à retirer de Vault',
+};
 const KNOWN = new Set<string>([...REQUIRED_ENV, ...OPTIONAL_ENV, 'FFMPEG_PATH']);
 /** Forme d'un nom de variable affichable. */
 const ENV_NAME = /^[A-Z][A-Z0-9_]*$/;
@@ -47,6 +51,10 @@ export function checkEnvFile(path = '.env'): EnvCheck {
   const fileLines = text.split(/\r?\n/);
   for (const name of Object.keys(vars)) {
     if (KNOWN.has(name)) continue;
+    if (Object.hasOwn(RETIRED_ENV, name)) {
+      lines.push(`avertissement ${name} : ${RETIRED_ENV[name]}`);
+      continue;
+    }
     if (ENV_NAME.test(name)) {
       lines.push(`avertissement ${name} : variable inconnue du pipeline`);
       continue;
