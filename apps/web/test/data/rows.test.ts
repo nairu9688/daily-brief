@@ -101,7 +101,7 @@ describe('lignes Supabase → affichage', () => {
   });
 
   it('garde un sujet dont la photo est invalide ou de l’ancienne forme Pexels, sans la photo', () => {
-    const good = { provider: 'wikimedia', src: 'https://upload.wikimedia.org/wikipedia/commons/a/ab/X.jpg', width: 1600, height: 1067, author: 'Ana', license: 'CC BY 4.0', pageUrl: 'https://commons.wikimedia.org/wiki/File:X.jpg' };
+    const good = { provider: 'wikimedia', src: 'https://upload.wikimedia.org/wikipedia/commons/a/ab/X.jpg', width: 1600, height: 1067, author: 'Ana', license: 'CC BY 4.0', licenseUrl: 'https://creativecommons.org/licenses/by/4.0/', pageUrl: 'https://commons.wikimedia.org/wiki/File:X.jpg' };
     const legacy = { id: 1, src: 'https://images.pexels.com/1.jpeg', width: 6, height: 4, photographer: 'Jo', photographerUrl: 'https://www.pexels.com/@jo', pexelsUrl: 'https://www.pexels.com/photo/1/' };
     const visuals = [
       { type: 'photo', query: 'train', photo: { ...good, src: 'https://evil.example/x.jpg' } },

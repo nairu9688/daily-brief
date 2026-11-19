@@ -45,8 +45,14 @@ export const LICENSE_HOST = 'creativecommons.org';
 /** Longueur maximale du nom d'auteur affiché. */
 export const MAX_AUTHOR_LENGTH = 80;
 
-/** URL https sur l'un des hôtes donnés (nom exact), sans identifiants ni port. */
+/**
+ * URL https sur l'un des hôtes donnés (nom exact), sans identifiants ni port. L'URL brute est aussi
+ * contrôlée : le parseur WHATWG retire en silence tabulations et sauts de ligne, et efface `:443`.
+ */
 export function isHttpsUrlOn(url: string, hosts: readonly string[]): boolean {
+  if (/[\t\n\r]/.test(url)) return false;
+  const authority = /^https:\/\/([^/?#\\]*)/i.exec(url)?.[1];
+  if (authority === undefined || /[:@]/.test(authority)) return false;
   try {
     const u = new URL(url);
     return u.protocol === 'https:' && hosts.includes(u.hostname) && !u.username && !u.password && !u.port;
@@ -55,26 +61,55 @@ export function isHttpsUrlOn(url: string, hosts: readonly string[]): boolean {
   }
 }
 
+/** Versions publiées des licences Creative Commons 4.0 et antérieures. */
+const CC_VERSION = '(?:1\\.0|2\\.0|2\\.5|3\\.0|4\\.0)';
+/** Suffixe de portage (pays, « igo ») : jamais un élément de licence (nc, nd, sa). */
+const CC_PORT = '(?!(?:nc|nd|sa)$)[a-z]{2,3}';
 /**
- * Licences admises (R11) : CC0, domaine public, CC BY et CC BY-SA, avec ou sans version ni suffixe
- * de pays (« CC BY-SA 2.5 nl »). Tout le reste est refusé : NC, ND, GFDL seule, usage loyal, inconnu.
+ * Licences admises (R11) : CC0, domaine public, CC BY et CC BY-SA d'une version publiée, avec ou sans
+ * suffixe de portage (« CC BY-SA 2.5 nl »). Tout le reste est refusé : NC, ND, GFDL seule, usage loyal, inconnu.
  */
-const FREE_LICENSE = /^(?:CC0(?: 1\.0)?|Public domain|CC BY(?:-SA)?(?: \d\.\d)?(?: [a-z]{2,3})?)$/i;
+const FREE_LICENSE = new RegExp(`^(?:CC0(?: 1\\.0)?|Public domain|CC (BY(?:-SA)?) (${CC_VERSION})(?: (${CC_PORT}))?)$`, 'i');
 export const isFreeLicense = (name: string): boolean => FREE_LICENSE.test(name.trim());
 
-const urlOn = (hosts: readonly string[], message: string) => Url.refine((u) => isHttpsUrlOn(u, hosts), message);
+/**
+ * Lien canonique du texte d'une licence CC BY ou CC BY-SA, d'après son nom
+ * (« CC BY-SA 2.5 nl » → https://creativecommons.org/licenses/by-sa/2.5/nl/) ; undefined sinon.
+ */
+export function ccLicenseUrl(name: string): string | undefined {
+  const m = FREE_LICENSE.exec(name.trim());
+  if (!m?.[1]) return undefined;
+  return `https://creativecommons.org/licenses/${m[1].toLowerCase()}/${m[2]}/${m[3] ? `${m[3].toLowerCase()}/` : ''}`;
+}
+
+/** Forme normalisée (WHATWG) d'une URL déjà validée. */
+const normalized = (u: string): string => {
+  try {
+    return new URL(u).href;
+  } catch {
+    return u;
+  }
+};
+/** Contrôle sur la chaîne brute : `z.url()` la normaliserait d'abord (tabulations et sauts de ligne effacés). */
+const urlOn = (hosts: readonly string[], message: string) => z.string().refine((u) => isHttpsUrlOn(u, hosts), message);
+const noQuery = (u: string) => !/[?#]/.test(u);
 
 /** Photo libre d'un sujet, renseignée par `brief:render` seulement (leçon SSRF du lot 2). */
-export const PhotoSchema = z.strictObject({
-  provider: z.literal('wikimedia'),
-  src: urlOn(PHOTO_IMAGE_HOSTS, 'image hors de upload.wikimedia.org ou thumb.wikimedia.org').refine((u) => !/[?#]/.test(u), 'URL d’image sans paramètres attendue'),
-  width: z.number().int().positive(),
-  height: z.number().int().positive(),
-  author: z.string().trim().min(1).max(MAX_AUTHOR_LENGTH),
-  license: z.string().refine(isFreeLicense, 'licence non libre ou inconnue'),
-  licenseUrl: urlOn([LICENSE_HOST], 'lien de licence hors de creativecommons.org').optional(),
-  pageUrl: urlOn([PHOTO_PAGE_HOST], 'page hors de commons.wikimedia.org').refine((u) => isHttpsUrlOn(u, [PHOTO_PAGE_HOST]) && new URL(u).pathname.startsWith('/wiki/File:'), 'page de fichier attendue'),
-});
+export const PhotoSchema = z
+  .strictObject({
+    provider: z.literal('wikimedia'),
+    src: urlOn(PHOTO_IMAGE_HOSTS, 'image hors de upload.wikimedia.org ou thumb.wikimedia.org').refine(noQuery, 'URL d’image sans paramètres attendue').overwrite(normalized),
+    width: z.number().int().positive(),
+    height: z.number().int().positive(),
+    author: z.string().trim().min(1).max(MAX_AUTHOR_LENGTH),
+    license: z.string().refine(isFreeLicense, 'licence non libre ou inconnue'),
+    licenseUrl: urlOn([LICENSE_HOST], 'lien de licence hors de creativecommons.org').overwrite(normalized).optional(),
+    pageUrl: urlOn([PHOTO_PAGE_HOST], 'page hors de commons.wikimedia.org')
+      .refine(noQuery, 'page sans paramètres attendue')
+      .refine((u) => isHttpsUrlOn(u, [PHOTO_PAGE_HOST]) && new URL(u).pathname.startsWith('/wiki/File:'), 'page de fichier attendue')
+      .overwrite(normalized),
+  })
+  .refine((p) => p.licenseUrl !== undefined || !ccLicenseUrl(p.license), { path: ['licenseUrl'], message: 'lien de licence requis pour CC BY et CC BY-SA' });
 
 /** Ancienne forme (lot 2) : `pexels` n'a jamais été renseigné en production, il est ignoré à la lecture. */
 const dropLegacyPhoto = (v: unknown): unknown => {
@@ -100,13 +135,16 @@ export const VisualSchema = z.preprocess(
 );
 
 /**
- * Visuel brut sans photo invalide (ni ancien champ `pexels`) : le sujet garde son aplat plutôt que
- * d'être rejeté en entier. `removed` vaut vrai si une photo a été retirée.
+ * Visuel brut sans photo invalide (ni ancien champ `pexels`), quel que soit son type : le sujet garde son
+ * aplat ou sa carte plutôt que d'être rejeté en entier. `removed` vaut vrai si une photo a été retirée
+ * (un `pexels` sur une photo, ancienne forme lisible, ne compte pas).
  */
 export function sanitizeVisual(v: unknown): { visual: unknown; removed: boolean } {
-  if (!v || typeof v !== 'object' || Array.isArray(v) || (v as { type?: unknown }).type !== 'photo') return { visual: v, removed: false };
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return { visual: v, removed: false };
   const rest = dropLegacyPhoto(v) as Record<string, unknown>;
-  if (!('photo' in rest) || PhotoSchema.safeParse(rest.photo).success) return { visual: rest, removed: false };
+  const keep = !('photo' in rest) || (rest.type === 'photo' && PhotoSchema.safeParse(rest.photo).success);
+  // Un `pexels` retiré d'une carte compte comme une photo retirée ; sur une photo, c'est l'ancienne forme, lisible.
+  if (keep) return { visual: rest, removed: rest !== v && rest.type !== 'photo' };
   const { photo: _invalid, ...clean } = rest;
   return { visual: clean, removed: true };
 }

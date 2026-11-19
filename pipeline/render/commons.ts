@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { isFreeLicense, isHttpsUrlOn, LICENSE_HOST, MAX_AUTHOR_LENGTH, PhotoSchema, type Photo } from '@daily-brief/schema';
+import { ccLicenseUrl, isFreeLicense, isHttpsUrlOn, LICENSE_HOST, MAX_AUTHOR_LENGTH, PhotoSchema, type Photo } from '@daily-brief/schema';
 import { fetchJson } from '../collect/http';
 import { WIKIMEDIA_USER_AGENT, type FetchLike } from './http';
 
@@ -64,24 +64,33 @@ export function commonsSearchUrl(query: string): string {
 
 const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
 
+/** Balise HTML, attributs entre guillemets compris (un `>` dans `title="a>b"` ne la ferme pas). */
+const TAG = `<(?:"[^"]*"|'[^']*'|[^'">])*>`;
+const BLOCK_TAG = new RegExp(`<\\/?(?:br|p|div|li|ul|ol|tr|td|th|table)\\b(?:"[^"]*"|'[^']*'|[^'">])*>`, 'gi');
+
 /**
- * Auteur affichable à partir du champ `Artist` (HTML) : balises retirées (contenu des scripts et
- * styles compris, blocs remplacés par un espace), entités décodées, contrôles et espaces ramenés à un espace, borné à 80 caractères.
+ * Auteur affichable à partir du champ `Artist` (HTML) : commentaires puis balises retirés (contenu des
+ * scripts et styles compris, blocs remplacés par un espace), entités décodées, contrôles, demi-paires
+ * isolées et espaces ramenés à un espace, borné à 80 unités UTF-16 sans couper un caractère.
  */
 export function cleanAuthor(html: string): string {
   const text = html
-    .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ')
-    .replace(/<\/?(?:br|p|div|li|ul|ol|tr|td|th|table)\b[^>]*>/gi, ' ')
-    .replace(/<[^>]*>/g, '')
+    .replace(/<!--[\s\S]*?(?:-->|$)/g, '')
+    .replace(new RegExp(`<(script|style)\\b(?:"[^"]*"|'[^']*'|[^'">])*>[\\s\\S]*?<\\/\\1\\s*>`, 'gi'), ' ')
+    .replace(BLOCK_TAG, ' ')
+    .replace(new RegExp(TAG, 'g'), '')
     .replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e: string) => {
       if (e[0] !== '#') return ENTITIES[e.toLowerCase()] ?? m;
       const code = e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
-      return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : ' ';
+      return code > 0 && code <= 0x10ffff && (code < 0xd800 || code > 0xdfff) ? String.fromCodePoint(code) : ' ';
     })
-    .replace(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/gu, ' ')
+    .replace(/[\p{Cc}\p{Cf}\p{Cs}\p{Zl}\p{Zp}]/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-  return text.length > MAX_AUTHOR_LENGTH ? `${text.slice(0, MAX_AUTHOR_LENGTH - 1).trimEnd()}…` : text;
+  if (text.length <= MAX_AUTHOR_LENGTH) return text;
+  const chars = Array.from(text);
+  while (chars.join('').length > MAX_AUTHOR_LENGTH - 1) chars.pop();
+  return `${chars.join('').trimEnd()}…`;
 }
 
 const str = (m: { value: unknown } | undefined): string => (typeof m?.value === 'string' ? m.value.trim() : '');
@@ -98,11 +107,18 @@ const bare = (url: string): string => {
   }
 };
 
-/** Lien de licence en https sur creativecommons.org, sinon absent. */
-const licenseLink = (raw: string): string | undefined => {
-  const url = raw.replace(/^http:\/\/creativecommons\.org\//i, 'https://creativecommons.org/');
-  return isHttpsUrlOn(url, [LICENSE_HOST]) ? url : undefined;
-};
+/**
+ * Lien de licence du crédit. CC BY et CC BY-SA : lien canonique dérivé du nom (jamais `LicenseUrl`),
+ * null s'il ne peut pas l'être (la photo est alors écartée). CC0 et domaine public : `LicenseUrl` s'il
+ * est sur creativecommons.org (`http` réécrit en `https`), sinon pas de lien.
+ */
+export function licenseLinkFor(license: string, apiUrl: string): string | undefined | null {
+  if (/^(?:CC0(?: 1\.0)?|Public domain)$/i.test(license.trim())) {
+    const url = apiUrl.trim().replace(/^http:\/\/creativecommons\.org\//i, 'https://creativecommons.org/');
+    return isHttpsUrlOn(url, [LICENSE_HOST]) ? url : undefined;
+  }
+  return ccLicenseUrl(license) ?? null;
+}
 
 /** Photo d'une page de résultat si elle convient (format, cadrage, licence, auteur, hôtes), sinon null. */
 function toPhoto(page: z.infer<typeof PageSchema>): Photo | null {
@@ -120,7 +136,8 @@ function toPhoto(page: z.infer<typeof PageSchema>): Photo | null {
   // sinon l'API renvoie l'original, qui doit alors tenir sous la limite de téléchargement.
   const scaled = ii.width > THUMB_WIDTH && ii.thumburl !== undefined && ii.thumbwidth !== undefined && ii.thumbheight !== undefined;
   if (!scaled && ii.size > MAX_IMAGE_BYTES) return null;
-  const licenseUrl = licenseLink(str(m.LicenseUrl));
+  const licenseUrl = licenseLinkFor(license, str(m.LicenseUrl));
+  if (licenseUrl === null) return null;
   const photo = {
     provider: 'wikimedia' as const,
     src: bare(scaled ? ii.thumburl! : ii.url),

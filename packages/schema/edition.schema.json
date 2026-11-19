@@ -235,8 +235,7 @@
                               "const": "wikimedia"
                             },
                             "src": {
-                              "type": "string",
-                              "format": "uri"
+                              "type": "string"
                             },
                             "width": {
                               "type": "integer",
@@ -257,12 +256,10 @@
                               "type": "string"
                             },
                             "licenseUrl": {
-                              "type": "string",
-                              "format": "uri"
+                              "type": "string"
                             },
                             "pageUrl": {
-                              "type": "string",
-                              "format": "uri"
+                              "type": "string"
                             }
                           },
                           "required": [

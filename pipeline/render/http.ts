@@ -1,10 +1,12 @@
 /** Sous-ensemble de `fetch` utilisé par le rendu : injectable dans les tests, aucun appel réseau réel. */
 export type FetchLike = (
   url: string,
-  init?: { headers?: Record<string, string>; signal?: AbortSignal },
+  init?: { headers?: Record<string, string>; signal?: AbortSignal; redirect?: 'follow' | 'manual' | 'error' },
 ) => Promise<{
   ok: boolean;
   status: number;
+  /** URL finale de la réponse (fetch de Node), après une éventuelle redirection. */
+  url?: string;
   headers: { get(name: string): string | null };
   json(): Promise<unknown>;
   arrayBuffer(): Promise<ArrayBuffer>;

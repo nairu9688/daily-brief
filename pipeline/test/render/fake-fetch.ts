@@ -1,12 +1,12 @@
 import type { FetchLike } from '../../render/http';
 
-type Reply = { status?: number; json?: unknown; body?: Uint8Array; type?: string | null; length?: string; hang?: boolean };
+type Reply = { status?: number; json?: unknown; body?: Uint8Array; type?: string | null; length?: string; hang?: boolean; /** URL finale (après redirection) rendue par la réponse. */ finalUrl?: string };
 
 /** Faux `fetch` : associe un préfixe d'URL à une réponse et enregistre les appels. */
 export function fakeFetch(routes: Record<string, Reply | (() => never)>) {
-  const calls: { url: string; headers?: Record<string, string> }[] = [];
+  const calls: { url: string; headers?: Record<string, string>; redirect?: string }[] = [];
   const fetch: FetchLike = async (url, init) => {
-    calls.push({ url, headers: init?.headers });
+    calls.push({ url, headers: init?.headers, redirect: init?.redirect });
     const hangKey = Object.keys(routes).find((k) => url.startsWith(k));
     if (hangKey && (routes[hangKey] as Reply).hang) {
       await new Promise((_, reject) => {
@@ -25,6 +25,7 @@ export function fakeFetch(routes: Record<string, Reply | (() => never)>) {
     return {
       ok: status < 400,
       status,
+      url: reply.finalUrl ?? url,
       headers: {
         get: (n: string) => {
           const k = n.toLowerCase();

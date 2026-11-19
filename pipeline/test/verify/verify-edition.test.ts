@@ -84,6 +84,20 @@ describe('verifyEdition', () => {
     }
   });
 
+  it('retire aussi photo et pexels d’un visuel carte, sans invalider l’édition (R11)', () => {
+    const e = fixtureEdition('fr');
+    const st = e.sections.flatMap((s) => s.stories).find((x) => x.visual.type === 'map')!;
+    const before = structuredClone(st.visual);
+    Object.assign(st.visual, { photo: { provider: 'wikimedia', src: 'http://169.254.169.254/x.jpg' }, pexels: { id: 1 } });
+    const r = verifyEdition(e, ctx);
+    expect(r.edition).not.toBeNull();
+    const v = r.edition!.sections.flatMap((s) => s.stories).find((x) => x.id === st.id)!.visual;
+    expect(v).not.toHaveProperty('photo');
+    expect(v).not.toHaveProperty('pexels');
+    expect(v.type).toBe(before.type);
+    expect(r.issues).toContainEqual(expect.objectContaining({ rule: 'R11', level: 'fixed', storyId: st.id, message: expect.stringContaining('photo fournie par la rédaction retirée') }));
+  });
+
   it('ne modifie pas l’entrée en retirant une photo écrite par la rédaction', () => {
     const e = fixtureEdition('fr');
     const eco = e.sections.find((s) => s.key === 'eco')!;

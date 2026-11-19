@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { PhotoSchema } from '@daily-brief/schema';
 import { HttpError } from '../../collect/http';
-import { cleanAuthor, COMMONS_API, findCommonsPhoto, pickPhoto, WIKIMEDIA_USER_AGENT } from '../../render/commons';
+import { cleanAuthor, COMMONS_API, findCommonsPhoto, licenseLinkFor, pickPhoto, WIKIMEDIA_USER_AGENT } from '../../render/commons';
 import { repoPath } from '../helpers';
 import { fakeFetch } from './fake-fetch';
 
@@ -17,7 +17,7 @@ const TGV = {
   height: 1067,
   author: 'Kabelleger / David Gubler (http://www.bahnbilder.ch)',
   license: 'CC BY-SA 3.0',
-  licenseUrl: 'https://creativecommons.org/licenses/by-sa/3.0',
+  licenseUrl: 'https://creativecommons.org/licenses/by-sa/3.0/',
   pageUrl: 'https://commons.wikimedia.org/wiki/File:SNCF_TGV_Duplex_Viaduc_de_Cize_-_Bolozon.jpg',
 };
 
@@ -98,13 +98,34 @@ describe('pickPhoto', () => {
     expect(pickPhoto(cc0)).toMatchObject({ license: 'CC0', licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/deed.en' });
   });
 
-  it('omet un lien de licence hors de creativecommons.org', () => {
+  it('dérive le lien canonique d’une licence CC BY ou CC BY-SA de son nom, sans se fier à LicenseUrl', () => {
     const r = pickPhoto(withPages((ps) => {
       meta(tgv(ps)).LicenseUrl = { value: 'https://evil.example/licence' };
       return [tgv(ps)];
     }));
-    expect(r).not.toBeNull();
-    expect(r).not.toHaveProperty('licenseUrl');
+    expect(r?.licenseUrl).toBe('https://creativecommons.org/licenses/by-sa/3.0/');
+    const ported = pickPhoto(withPages((ps) => {
+      Object.assign(meta(tgv(ps)), { LicenseShortName: { value: 'CC BY-SA 2.5 nl' }, LicenseUrl: undefined });
+      return [tgv(ps)];
+    }));
+    expect(ported).toMatchObject({ license: 'CC BY-SA 2.5 nl', licenseUrl: 'https://creativecommons.org/licenses/by-sa/2.5/nl/' });
+    expect(licenseLinkFor('CC BY 4.0', '')).toBe('https://creativecommons.org/licenses/by/4.0/');
+    expect(licenseLinkFor('CC BY-SA 3.0 igo', '')).toBe('https://creativecommons.org/licenses/by-sa/3.0/igo/');
+  });
+
+  it('sans lien dérivable pour une licence CC BY : pas de photo', () => {
+    expect(licenseLinkFor('CC BY', 'https://creativecommons.org/licenses/by/4.0')).toBeNull();
+    const r = pickPhoto(withPages((ps) => {
+      meta(tgv(ps)).LicenseShortName = { value: 'CC BY-SA' };
+      return [tgv(ps)];
+    }));
+    expect(r).toBeNull();
+  });
+
+  it('CC0 et domaine public : lien de l’API seulement s’il est sur creativecommons.org', () => {
+    expect(licenseLinkFor('CC0', 'https://evil.example/licence')).toBeUndefined();
+    expect(licenseLinkFor('Public domain', '')).toBeUndefined();
+    expect(licenseLinkFor('CC0', 'http://creativecommons.org/publicdomain/zero/1.0/deed.en')).toBe('https://creativecommons.org/publicdomain/zero/1.0/deed.en');
   });
 
   it('refuse une image ou une page hors des hôtes Wikimedia (jamais téléchargée)', () => {
@@ -157,6 +178,12 @@ describe('cleanAuthor', () => {
     expect(cleanAuthor('&lt;script&gt;alert(1)&lt;/script&gt; &#233;t&#xE9;')).toBe('<script>alert(1)</script> été');
     expect(cleanAuthor('<script>alert(1)</script>Nom<style>x{}</style>')).toBe('Nom');
     expect(cleanAuthor('a\u0000b​c')).toBe('a b c');
+    expect(cleanAuthor('Jo<!-- <b>caché</b> -->Ana')).toBe('JoAna');
+    expect(cleanAuthor('<a title="a>b" href=\'x>y\'>Nom</a>')).toBe('Nom');
+    expect(cleanAuthor('a\uD800b\uDC00c')).toBe('a b c');
+    const emoji = cleanAuthor('x'.repeat(78) + '😀😀😀');
+    expect(emoji).toBe('x'.repeat(78) + '…');
+    expect(/\p{Cs}/u.test(emoji)).toBe(false);
     const long = cleanAuthor('x'.repeat(200));
     expect(long).toHaveLength(80);
     expect(long.endsWith('…')).toBe(true);

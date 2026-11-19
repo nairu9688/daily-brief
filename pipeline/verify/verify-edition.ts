@@ -52,7 +52,8 @@ function withoutEditorPhotos(input: unknown): { input: unknown; ids: string[] } 
     if (!Array.isArray(stories)) continue;
     for (const story of stories) {
       const v = (story as { visual?: unknown } | null)?.visual as Record<string, unknown> | undefined;
-      if (!v || typeof v !== 'object' || v.type !== 'photo' || !('photo' in v || 'pexels' in v)) continue;
+      // Quel que soit le type : un `photo` sur une carte rendrait sinon l'édition entière invalide.
+      if (!v || typeof v !== 'object' || !('photo' in v || 'pexels' in v)) continue;
       delete v.photo;
       delete v.pexels;
       ids.push(String((story as { id?: unknown }).id ?? '?'));
