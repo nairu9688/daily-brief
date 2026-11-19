@@ -25,10 +25,10 @@ function write(cfg: unknown): string {
 }
 
 describe('voices.json', () => {
-  it('le fichier du dépôt est valide : une voix Chirp 3 HD par édition, non encore confirmée', () => {
+  it('le fichier du dépôt est valide et confirmé : une voix Chirp 3 HD par édition, de la bonne langue', () => {
     const v = loadVoices();
     expect(VOICES_PATH).toMatch(/pipeline\/config\/voices\.json$/);
-    expect(v.confirmed).toBe(false);
+    expect(v.confirmed).toBe(true);
     for (const lang of ['fr', 'en', 'es'] as const) {
       expect(LANGUAGE_CODES[lang]).toContain(v[lang].languageCode);
       expect(v[lang].name).toMatch(new RegExp(`^${v[lang].languageCode}-Chirp3-HD-`));

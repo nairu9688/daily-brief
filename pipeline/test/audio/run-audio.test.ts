@@ -25,7 +25,20 @@ function makeDay(langs: Lang[] = ['fr', 'en', 'es']) {
   return { outDir, dayDir };
 }
 
-const run = (outDir: string, net: ReturnType<typeof fakeTts>, over: Partial<RunAudioOptions> = {}) => runAudio({ outDir, date: DAY, apiKey: KEY, fetch: net.fetch, ffmpeg: null, ...over });
+/** voices.json propre au test (voix non confirmées) : indépendant du choix fait dans pipeline/config/voices.json. */
+const VOICES_FIXTURE = join(mkdtempSync(join(tmpdir(), 'audio-voices-')), 'voices.json');
+writeFileSync(
+  VOICES_FIXTURE,
+  JSON.stringify({
+    confirmed: false,
+    fr: { languageCode: 'fr-FR', name: 'fr-FR-Chirp3-HD-Aoede' },
+    en: { languageCode: 'en-US', name: 'en-US-Chirp3-HD-Charon' },
+    es: { languageCode: 'es-ES', name: 'es-ES-Chirp3-HD-Kore' },
+  }),
+);
+
+const run = (outDir: string, net: ReturnType<typeof fakeTts>, over: Partial<RunAudioOptions> = {}) =>
+  runAudio({ outDir, date: DAY, apiKey: KEY, fetch: net.fetch, ffmpeg: null, voicesPath: VOICES_FIXTURE, ...over });
 const readJson = (path: string) => JSON.parse(readFileSync(path, 'utf8'));
 
 /** Forme lue par brief:render (pipeline/render/run-render.ts). */
@@ -116,7 +129,7 @@ describe('runAudio', () => {
 
   it('entrée invalide : date incorrecte (rien n’est créé), aucune édition vérifiée, voices.json invalide : code 2', async () => {
     const outDir = mkdtempSync(join(tmpdir(), 'audio-'));
-    const bad = await runAudio({ outDir, date: '2026-02-30', apiKey: KEY, fetch: fakeTts().fetch, ffmpeg: null });
+    const bad = await runAudio({ outDir, date: '2026-02-30', apiKey: KEY, fetch: fakeTts().fetch, ffmpeg: null, voicesPath: VOICES_FIXTURE });
     expect([bad.exitCode, bad.report.status, bad.reportWritten]).toEqual([2, 'invalid', false]);
     expect(readdirSync(outDir)).toEqual([]);
 

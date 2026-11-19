@@ -4,11 +4,18 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { pickSampleVoices, runVoiceSamples, SAMPLE_TEXTS } from '../../audio/samples';
 import { chirp3HdVoices, type VoiceInfo } from '../../audio/tts';
-import { loadVoices } from '../../audio/voices';
+import type { Voices } from '../../audio/voices';
 import { looksLikeMp3 } from '../../publish/files';
 import { fakeTts, okSynth, voicesOf } from './fake-tts';
 
 const KEY = 'AIzaSy-cle-de-test-0123456789';
+/** Voix configurées propres au test : indépendantes du choix fait dans pipeline/config/voices.json. */
+const VOICES: Voices = {
+  confirmed: false,
+  fr: { languageCode: 'fr-FR', name: 'fr-FR-Chirp3-HD-Aoede' },
+  en: { languageCode: 'en-US', name: 'en-US-Chirp3-HD-Charon' },
+  es: { languageCode: 'es-ES', name: 'es-ES-Chirp3-HD-Kore' },
+};
 const names = (code: string) => chirp3HdVoices((voicesOf(code).json as { voices: VoiceInfo[] }).voices, code);
 
 describe('pickSampleVoices', () => {
@@ -29,7 +36,7 @@ describe('runVoiceSamples', () => {
     mkdirSync(join(outDir, 'voice-samples'));
     writeFileSync(join(outDir, 'voice-samples', 'ancien.mp3'), 'x');
     const net = fakeTts();
-    const r = await runVoiceSamples({ apiKey: KEY, fetch: net.fetch, outDir, voices: loadVoices() });
+    const r = await runVoiceSamples({ apiKey: KEY, fetch: net.fetch, outDir, voices: VOICES });
     expect(r.exitCode).toBe(0);
     expect(net.calls.filter((c) => c.url.includes('/voices?')).map((c) => new URL(c.url).searchParams.get('languageCode'))).toEqual(['fr-FR', 'en-US', 'en-GB', 'es-ES']);
     expect(r.index.voices.fr).toEqual(['fr-FR-Chirp3-HD-Aoede', 'fr-FR-Chirp3-HD-Charon', 'fr-FR-Chirp3-HD-Kore', 'fr-FR-Chirp3-HD-Puck']);
@@ -50,7 +57,7 @@ describe('runVoiceSamples', () => {
   it('un échantillon en échec : code 1, erreur notée sans la clé ; voix configurée absente signalée', async () => {
     const outDir = mkdtempSync(join(tmpdir(), 'samples-'));
     const net = fakeTts((q) => (q.voice.name.endsWith('Charon') && q.voice.languageCode === 'fr-FR' ? { error: new Error(`reset ${KEY}`) } : okSynth()));
-    const voices = { ...loadVoices(), es: { languageCode: 'es-ES', name: 'es-ES-Chirp3-HD-Inconnue' } };
+    const voices = { ...VOICES, es: { languageCode: 'es-ES', name: 'es-ES-Chirp3-HD-Inconnue' } };
     const r = await runVoiceSamples({ apiKey: KEY, fetch: net.fetch, outDir, voices, count: 2 });
     expect(r.exitCode).toBe(1);
     expect(r.index.samples.find((s) => s.voice === 'fr-FR-Chirp3-HD-Charon')).toEqual({ lang: 'fr', voice: 'fr-FR-Chirp3-HD-Charon', file: null, error: 'reset ***' });
@@ -60,19 +67,19 @@ describe('runVoiceSamples', () => {
 
   it('--count au-delà du maximum : ramené à 10 avec un avertissement', async () => {
     const outDir = mkdtempSync(join(tmpdir(), 'samples-'));
-    const r = await runVoiceSamples({ apiKey: KEY, fetch: fakeTts().fetch, outDir, voices: loadVoices(), count: 50 });
+    const r = await runVoiceSamples({ apiKey: KEY, fetch: fakeTts().fetch, outDir, voices: VOICES, count: 50 });
     expect(r.index.issues).toContain('--count 50 ramené à 10 (maximum)');
     expect(r.index.samples.filter((s) => s.lang === 'en')).toHaveLength(8);
   });
 
   it('clé refusée : les échantillons d’un passage précédent restent intacts', async () => {
     const outDir = mkdtempSync(join(tmpdir(), 'samples-'));
-    await runVoiceSamples({ apiKey: KEY, fetch: fakeTts().fetch, outDir, voices: loadVoices(), count: 1 });
+    await runVoiceSamples({ apiKey: KEY, fetch: fakeTts().fetch, outDir, voices: VOICES, count: 1 });
     const dir = join(outDir, 'voice-samples');
     const before = readdirSync(dir).sort();
     const indexBefore = readFileSync(join(dir, 'index.json'), 'utf8');
     expect(before).toHaveLength(4);
-    const r = await runVoiceSamples({ apiKey: KEY, fetch: fakeTts(undefined, () => ({ status: 403, json: {} })).fetch, outDir, voices: loadVoices() });
+    const r = await runVoiceSamples({ apiKey: KEY, fetch: fakeTts(undefined, () => ({ status: 403, json: {} })).fetch, outDir, voices: VOICES });
     expect(r.exitCode).toBe(2);
     expect(readdirSync(dir).sort()).toEqual(before);
     expect(readFileSync(join(dir, 'index.json'), 'utf8')).toBe(indexBefore);
@@ -83,7 +90,7 @@ describe('runVoiceSamples', () => {
     const outDir = mkdtempSync(join(tmpdir(), 'samples-'));
     mkdirSync(join(outDir, 'voice-samples'));
     writeFileSync(join(outDir, 'voice-samples', 'ancien.mp3'), 'x');
-    await runVoiceSamples({ apiKey: KEY, fetch: fakeTts().fetch, outDir, voices: loadVoices(), count: 1 });
+    await runVoiceSamples({ apiKey: KEY, fetch: fakeTts().fetch, outDir, voices: VOICES, count: 1 });
     expect(readdirSync(join(outDir, 'voice-samples'))).not.toContain('ancien.mp3');
     expect(readdirSync(outDir)).toEqual(['voice-samples']);
   });
@@ -91,7 +98,7 @@ describe('runVoiceSamples', () => {
   it('clé refusée : le service est coupé dès la première liste, aucun échantillon, code 2', async () => {
     const outDir = mkdtempSync(join(tmpdir(), 'samples-'));
     const net = fakeTts(undefined, () => ({ status: 403, json: {} }));
-    const r = await runVoiceSamples({ apiKey: KEY, fetch: net.fetch, outDir, voices: loadVoices() });
+    const r = await runVoiceSamples({ apiKey: KEY, fetch: net.fetch, outDir, voices: VOICES });
     expect(r.exitCode).toBe(2);
     expect(net.calls).toHaveLength(1);
     expect(r.index.issues).toEqual(['voices.list fr-FR : HTTP 403 (https://texttospeech.googleapis.com/v1/voices?languageCode=fr-FR)']);
