@@ -39,6 +39,7 @@ describe('carte d’un sujet', () => {
     expect(container.querySelector('img')?.getAttribute('src')).toBe(photo.src);
     const credit = container.querySelector('.credit')!;
     expect(credit.textContent).toBe('Photo : Ana — CC BY-SA 4.0 · Wikimedia Commons');
+    expect(credit.querySelector('.au')?.getAttribute('title')).toBe('Ana');
     expect(within(credit as HTMLElement).getByRole('link', { name: 'Ana' }).getAttribute('href')).toBe(photo.pageUrl);
     expect(within(credit as HTMLElement).getByRole('link', { name: 'CC BY-SA 4.0' }).getAttribute('href')).toBe(photo.licenseUrl);
     unmount();

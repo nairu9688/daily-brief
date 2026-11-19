@@ -42,7 +42,7 @@ function Visual({ story }: { story: StoryView }) {
       {src ? <img src={src} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" /> : <div className="ph" style={{ background: 'linear-gradient(165deg,var(--surface-2) 0%,var(--line-2) 100%)' }} />}
       {p && src ? (
         <span className="credit mono">
-          Photo : <span className="au">{page ? link(page, p.author) : p.author}</span> — {license ? link(license, p.license) : p.license} · Wikimedia Commons
+          Photo : <span className="au" title={p.author}>{page ? link(page, p.author) : p.author}</span> — {license ? link(license, p.license) : p.license} · Wikimedia Commons
         </span>
       ) : null}
       <span className="cap mono">Photo libre · « {v.query} »</span>
