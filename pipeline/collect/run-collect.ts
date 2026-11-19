@@ -3,10 +3,12 @@ import { join } from 'node:path';
 import { IsoDateSchema, LANGS, RawCollectionSchema, type Lang, type RawArticle } from '@daily-brief/schema';
 import { parisToday } from '../lib/date';
 import { writeAtomic } from '../lib/fs';
+import { hostOf } from '../lib/url';
 import { canReadFull, loadWhitelist } from '../lib/whitelist';
 import { RequestBudget } from './budget';
 import { loadCollectConfig, THENEWSAPI_DAILY_CAP, type BudgetBucket, type CollectConfig } from './config';
 import { dedupe } from './dedupe';
+import { dropWrongLanguage } from './language';
 import { applyEditionPerimeter } from './perimeter';
 import { collectExa } from './exa';
 import { fillFullTexts, type FullTextStats } from './fulltext';
@@ -315,6 +317,14 @@ export async function runCollect(opts: RunCollectOptions): Promise<RunCollectRes
       report.discardedTexts++;
       return { ...a, text: null };
     });
+
+    // Langue : un article dont le texte est nettement dans une autre langue que celle annoncée est écarté.
+    const language = dropWrongLanguage(articles);
+    articles = language.kept;
+    if (language.dropped.length > 0) {
+      const hosts = [...new Set(language.dropped.map((a) => hostOf(a.url)))].join(', ');
+      issue('warning', `langue : ${language.dropped.length} article(s) dans une autre langue que celle annoncée écarté(s) (${hosts})`);
+    }
 
     if (global.aborted) {
       report.degraded = true;

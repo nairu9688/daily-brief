@@ -286,6 +286,18 @@ describe('runCollect', () => {
     expect(raw.report.perLang.fr.light).toBe(true);
   });
 
+  it('langue : un article espagnol dont le texte est en anglais est écarté, avec un avertissement', async () => {
+    const english = '<html><head><title>x</title></head><body><article>' + '<p>The government said on Tuesday that the plan was approved by the parliament, which has been debating it for a year, and that it will be in force from January.</p>'.repeat(6) + '</article></body></html>';
+    const feed = '<?xml version="1.0"?><rss version="2.0"><channel><title>elDiario.es</title><item><title>The government approves the plan</title><link>https://www.eldiario.es/en/plan</link><pubDate>Fri, 06 Nov 2026 03:00:00 GMT</pubDate></item></channel></rss>';
+    const { dayDir, run } = setup();
+    const r = await run(network({ 'https://www.eldiario.es/rss/': { body: feed, type: 'application/rss+xml' }, 'https://eldiario.es/en/': { body: english } }).fetch);
+    const articles: { url: string; lang: string; text: string | null }[] = read(join(dayDir, 'raw.json')).articles;
+    expect(articles.filter((a) => a.url.includes('/en/'))).toEqual([]);
+    // Le texte espagnol fourni par Webz pour eldiario.es reste.
+    expect(articles.some((a) => a.url.includes('eldiario.es') && a.lang === 'es' && a.text !== null)).toBe(true);
+    expect(r.report.issues.some((i) => i.level === 'warning' && /^langue : 1 article\(s\).*\(eldiario\.es\)$/.test(i.message))).toBe(true);
+  });
+
   it('un registre illisible du jour (quota réputé épuisé) rend le rapport dégradé', async () => {
     const { outDir, run } = setup();
     writeFileSync(join(outDir, 'thenewsapi-usage.json'), '{tronqué');
