@@ -28,7 +28,8 @@ function Visual({ story }: { story: StoryView }) {
   }
   const p = v.photo;
   const src = photoSrc(p?.src);
-  // Crédit exigé par la licence : auteur (vers la page du fichier), licence (vers son texte), source. Sans image, rien à créditer.
+  // Crédit exigé par la licence : auteur (vers la page du fichier, tronqué au besoin), licence (vers son texte)
+  // et source, toujours lisibles. Sans image, rien à créditer.
   const page = p && isHttpsUrlOn(p.pageUrl, [PHOTO_PAGE_HOST]) ? p.pageUrl : null;
   const license = p?.licenseUrl && isHttpsUrlOn(p.licenseUrl, [LICENSE_HOST]) ? p.licenseUrl : null;
   const link = (href: string, text: string) => (
@@ -41,7 +42,7 @@ function Visual({ story }: { story: StoryView }) {
       {src ? <img src={src} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" /> : <div className="ph" style={{ background: 'linear-gradient(165deg,var(--surface-2) 0%,var(--line-2) 100%)' }} />}
       {p && src ? (
         <span className="credit mono">
-          Photo : {page ? link(page, p.author) : p.author} — {license ? link(license, p.license) : p.license} · Wikimedia Commons
+          Photo : <span className="au">{page ? link(page, p.author) : p.author}</span> — {license ? link(license, p.license) : p.license} · Wikimedia Commons
         </span>
       ) : null}
       <span className="cap mono">Photo libre · « {v.query} »</span>

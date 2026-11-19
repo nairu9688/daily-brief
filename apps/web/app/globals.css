@@ -105,7 +105,8 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .photo{position:relative;aspect-ratio:16/10;overflow:hidden;border-bottom:1px solid var(--line)}
 .photo .ph{position:absolute;inset:0}
 .photo .cap{color:#fff;background:rgba(0,0,0,.35);backdrop-filter:blur(6px)}
-.photo .credit{position:absolute;left:12px;right:12px;bottom:10px;font-size:9px;line-height:1.3;color:rgba(255,255,255,.92);text-shadow:0 1px 2px rgba(0,0,0,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.photo .credit{position:absolute;left:12px;bottom:10px;max-width:calc(100% - 24px);font-size:9px;line-height:1.35;color:#fff;background:rgba(0,0,0,.45);backdrop-filter:blur(6px);padding:4px 7px;border-radius:6px}
+.photo .credit .au{display:inline-block;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
 
 .body{padding:16px 16px 14px}
 .card h3{font-size:21px;line-height:1.2;letter-spacing:-.02em;font-weight:420;margin:8px 0 10px;text-wrap:balance}
