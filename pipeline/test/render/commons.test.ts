@@ -159,13 +159,13 @@ describe('pickPhoto', () => {
   it('prend l’original quand il n’y a pas de vignette plus petite, et ses dimensions', () => {
     const r = pickPhoto(withPages((ps) => {
       const p = tgv(ps);
-      Object.assign(p.imageinfo[0], { width: 1500, height: 1000, size: 900_000, thumburl: p.imageinfo[0].url, thumbwidth: 1600, thumbheight: 1067 });
+      Object.assign(p.imageinfo[0], { width: 1200, height: 800, size: 900_000, thumburl: p.imageinfo[0].url, thumbwidth: 1280, thumbheight: 853 });
       return [p];
     }));
-    expect(r).toMatchObject({ src: 'https://upload.wikimedia.org/wikipedia/commons/6/6f/SNCF_TGV_Duplex_Viaduc_de_Cize_-_Bolozon.jpg', width: 1500, height: 1000 });
+    expect(r).toMatchObject({ src: 'https://upload.wikimedia.org/wikipedia/commons/6/6f/SNCF_TGV_Duplex_Viaduc_de_Cize_-_Bolozon.jpg', width: 1200, height: 800 });
     const heavy = pickPhoto(withPages((ps) => {
       const p = tgv(ps);
-      Object.assign(p.imageinfo[0], { width: 1500, height: 1000, size: 4_000_000, thumburl: p.imageinfo[0].url });
+      Object.assign(p.imageinfo[0], { width: 1200, height: 800, size: 4_000_000, thumburl: p.imageinfo[0].url });
       return [p];
     }));
     expect(heavy).toBeNull();
@@ -191,7 +191,7 @@ describe('cleanAuthor', () => {
 });
 
 describe('findCommonsPhoto', () => {
-  it('interroge l’API de Commons (fichiers, bitmaps, vignette 1600 px) avec un agent générique', async () => {
+  it('interroge l’API de Commons (fichiers, bitmaps, vignette 1280 px) avec un agent générique', async () => {
     const { fetch, calls } = fakeFetch({ [COMMONS_API]: { json: search } });
     expect(await findCommonsPhoto('high-speed train', { fetch })).toEqual(TGV);
     const url = new URL(calls[0].url);
@@ -205,7 +205,7 @@ describe('findCommonsPhoto', () => {
       gsrnamespace: '6',
       prop: 'imageinfo',
       iiprop: 'url|extmetadata|mime|size',
-      iiurlwidth: '1600',
+      iiurlwidth: '1280',
     });
     expect(calls[0].headers).toMatchObject({ 'User-Agent': WIKIMEDIA_USER_AGENT, 'Api-User-Agent': WIKIMEDIA_USER_AGENT });
     expect(WIKIMEDIA_USER_AGENT).toBe('DailyBrief/1.0 (personal news digest)');

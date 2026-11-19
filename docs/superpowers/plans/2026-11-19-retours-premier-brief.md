@@ -33,6 +33,26 @@ Non vérifiés, faute de requêtes : La Croix et Libération (paywall), The Inde
 
 **Configuration.** Les flux sont ajoutés à `feeds.json`. Les domaines `full` sont ajoutés à `exa.fullDomains` dans `collect.json`. Le nombre de requêtes Exa ne change pas : une recherche par rubrique et par langue. The Conversation n'est pas dans Exa : le domaine sert plusieurs langues, son flux FR suffit. Chaque édition dispose maintenant d'au moins 6 médias `full` distincts (test `config.test.ts`) : FR 6, EN 7, ES 7. La collecte lit 21 flux au lieu de 12.
 
+## 2. PDF trop lourd (23 Mo)
+
+**Constat.** Le PDF du 19/11 pesait 23 220 287 octets. On en a extrait les images : 38 JPEG, soit 21,4 Mo. La plupart font 1920 px de large et pèsent 0,5 à 0,8 Mo chacune. Le reste du PDF (polices, cartes, texte) pèse 1,8 Mo. La recherche demandait `iiurlwidth=1600`, mais Commons arrondit à une taille de vignette standard supérieure. Il livrait donc des fichiers `1920px-…` en annonçant `thumbwidth: 1600`. Un original large de 1000 à 1600 px était même inséré tel quel, jusqu'à 3 Mo.
+
+**Correction.**
+- `packages/render-pdf/src/shrink.ts` (`shrinkImages`) réduit chaque photo avant de l'insérer : au plus 1000 px de large, JPEG de qualité 0,75 sur fond blanc. Le travail passe par le canvas de Chromium, que Playwright fournit déjà pour l'impression : aucune dépendance native de plus. `sharp` n'est présent que comme dépendance optionnelle de Next, donc on ne s'y fie pas.
+- Une image n'est remplacée que si le résultat est plus léger. Une image illisible reste telle quelle. La page refuse tout accès réseau.
+- En cas d'échec ou de délai dépassé, le PDF est produit avec les originaux et un avertissement (« photos non réduites… »).
+- `brief:render` l'appelle juste avant de construire le HTML.
+- La recherche demande désormais `iiurlwidth=1280`, une taille standard. On télécharge moins, et la carte de l'appli reçoit une image plus légère.
+- L'appel de contrôle à l'API de Commons du 19/11 a reçu une limite de débit (« too many requests »). On n'a pas réessayé. L'arrondi à 1920 px est constaté sur les URL du brief réel ; la réduction côté Chromium ne dépend pas du comportement de Commons.
+
+**Mesure, hors ligne.** On a refait le rendu des éditions finales du 19/11 avec les 38 images extraites :
+- **avant** : 23 220 287 octets (identique au PDF réel) ;
+- **après** : 6 104 629 octets, dont 4,3 Mo de photos (114 Ko en moyenne).
+
+Avec 10 sujets par édition au lieu de 20 (point 4), le PDF devrait peser 3 à 4 Mo.
+
+**Test.** `packages/render-pdf/test/shrink.test.ts` illustre chaque sujet de la fixture par une image lourde générée (1920 × 1280). Il vérifie que le PDF gagne au moins un facteur 4 et reste sous 200 Ko par photo.
+
 ## 5. Source dans la mauvaise langue
 
 **Constat.** democrata.es publie aussi en anglais (`/en/…`). Exa a renvoyé 10 de ces pages pour l'édition ES, dont une a fini dans le brief avec un titre anglais. Le flux de democrata.es a répondu 403.

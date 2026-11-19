@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { basename, join } from 'node:path';
 import { z } from 'zod';
 import { IsoDateSchema, LANGS, parseEdition, stripInvalidPhotos, type Edition, type Lang, type Photo } from '@daily-brief/schema';
-import { printPdf, renderPdfHtml, type FooterInfo } from '@daily-brief/render-pdf';
+import { printPdf, renderPdfHtml, shrinkImages, type FooterInfo } from '@daily-brief/render-pdf';
 import { Breaker, describeError } from '../collect/breaker';
 import { HttpError } from '../collect/http';
 import { findCommonsPhoto } from './commons';
@@ -28,6 +28,8 @@ export type RunRenderOptions = {
   findPhoto?: typeof findCommonsPhoto;
   /** Délai d'une requête Commons (10 s par défaut). */
   photoTimeoutMs?: number;
+  /** Réduction des photos avant insertion dans le PDF (Chromium), remplaçable dans les tests. */
+  shrink?: typeof shrinkImages;
 };
 
 export type RunRenderResult = { issues: RenderIssue[]; exitCode: 0 | 2; pdfPath: string | null; langs: Lang[]; finals: Lang[] };
@@ -153,6 +155,10 @@ export async function runRender(opts: RunRenderOptions): Promise<RunRenderResult
       else issues.push({ level: 'warning', message: `image Wikimedia non téléchargée : ${src}` });
     }
 
+    // Les vignettes Commons pèsent 0,5 à 0,8 Mo : réduites à 1000 px en JPEG, le PDF passe de ~23 Mo à quelques Mo.
+    const shrunk = await (opts.shrink ?? shrinkImages)(images);
+    if (shrunk.error) issues.push({ level: 'warning', message: `photos non réduites (${shrunk.error}) : PDF plus lourd` });
+
     let audio: z.infer<typeof AudioSchema> | undefined;
     const audioPath = join(dayDir, 'audio.json');
     if (existsSync(audioPath)) {
@@ -165,7 +171,7 @@ export async function runRender(opts: RunRenderOptions): Promise<RunRenderResult
 
     const langs = editions.map((e) => e.lang);
     try {
-      const html = await renderPdfHtml({ date: opts.date, issue, editions }, { images, audio });
+      const html = await renderPdfHtml({ date: opts.date, issue, editions }, { images: shrunk.images, audio });
       await (opts.print ?? printPdf)(html, pdfPath, { date: opts.date, langs });
     } catch (e) {
       rmSync(pdfPath, { force: true });

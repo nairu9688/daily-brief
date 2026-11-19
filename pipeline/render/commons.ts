@@ -10,8 +10,12 @@ export const COMMONS_API = 'https://commons.wikimedia.org/w/api.php';
 export const WIKIMEDIA_HEADERS = { 'User-Agent': WIKIMEDIA_USER_AGENT, 'Api-User-Agent': WIKIMEDIA_USER_AGENT } as const;
 /** Réponse de 10 fichiers avec métadonnées filtrées : environ 20 Ko ; au-delà de 1 Mo, elle est refusée. */
 export const MAX_COMMONS_BYTES = 1_000_000;
-/** Largeur demandée pour la vignette (carte de l'appli et colonne du PDF). */
-export const THUMB_WIDTH = 1600;
+/**
+ * Largeur demandée pour la vignette (carte de l'appli ; le PDF la réduit encore à 1000 px). Commons arrondit
+ * la largeur demandée à une taille standard supérieure : 1600 donnait des fichiers de 1920 px (0,5 à 0,8 Mo,
+ * constat du 19/11/2026). 1280 est une taille standard : le fichier fait la largeur annoncée.
+ */
+export const THUMB_WIDTH = 1280;
 
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp'];
 const MIN_WIDTH = 1000;
@@ -43,7 +47,7 @@ const ResponseSchema = z.object({
   query: z.object({ pages: z.array(z.unknown()) }).optional(),
 });
 
-/** Paramètres de la recherche : fichiers (espace 6) matriciels, vignette de 1600 px, métadonnées utiles seulement. */
+/** Paramètres de la recherche : fichiers (espace 6) matriciels, vignette de THUMB_WIDTH px, métadonnées utiles seulement. */
 export function commonsSearchUrl(query: string): string {
   const params = new URLSearchParams({
     action: 'query',

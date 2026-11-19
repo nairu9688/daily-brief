@@ -151,6 +151,38 @@ describe('runRender', () => {
     expect(msgs).toEqual(['Wikimedia Commons indisponible (HTTP 429) : photos omises']);
   });
 
+  it('réduit les photos avant de les insérer dans le PDF ; un échec de réduction garde les originaux avec un avertissement', async () => {
+    const { outDir } = day(['fr']);
+    const seen: Record<string, string>[] = [];
+    const { print, printed } = printer();
+    await runRender({
+      outDir,
+      date: '2026-11-06',
+      fetch: net().fetch,
+      print,
+      shrink: async (images) => {
+        seen.push(images);
+        return { images: Object.fromEntries(Object.keys(images).map((k) => [k, 'data:image/jpeg;base64,UkVEVUlU'])), stats: { images: 1, before: 3, after: 2 } };
+      },
+    });
+    expect(Object.values(seen[0])).toEqual(['data:image/jpeg;base64,/9j/']);
+    expect(printed[0].html).toContain('src="data:image/jpeg;base64,UkVEVUlU"');
+    expect(printed[0].html).not.toContain('base64,/9j/"');
+
+    const second = day(['fr']);
+    const p2 = printer();
+    const r = await runRender({
+      outDir: second.outDir,
+      date: '2026-11-06',
+      fetch: net().fetch,
+      print: p2.print,
+      shrink: async (images) => ({ images, stats: { images: 1, before: 3, after: 3 }, error: 'réduction des photos : délai dépassé' }),
+    });
+    expect(r.exitCode).toBe(0);
+    expect(p2.printed[0].html).toContain('src="data:image/jpeg;base64,/9j/"');
+    expect(r.issues).toContainEqual({ level: 'warning', message: 'photos non réduites (réduction des photos : délai dépassé) : PDF plus lourd' });
+  });
+
   it('une image non téléchargée donne un avertissement et le PDF est quand même produit', async () => {
     const { outDir } = day(['fr']);
     const n = fakeFetch({

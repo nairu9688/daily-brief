@@ -29,7 +29,7 @@
 |---|---|---|
 | `action`, `format`, `formatversion` | `query`, `json`, `2` | `pages` en tableau, booléens natifs |
 | `generator`, `gsrsearch`, `gsrnamespace`, `gsrlimit` | `search`, `<query> filetype:bitmap`, `6`, `10` | Fichiers seulement (espace 6), images matricielles seulement |
-| `prop`, `iiprop`, `iiurlwidth` | `imageinfo`, `url\|extmetadata\|mime\|size`, `1600` | Vignette de 1600 px au lieu de l'original (souvent plus de 3 Mo) |
+| `prop`, `iiprop`, `iiurlwidth` | `imageinfo`, `url\|extmetadata\|mime\|size`, `1280` | Vignette au lieu de l'original (souvent plus de 3 Mo). *1600 jusqu'au 19/11/2026 : Commons livrait alors des fichiers de 1920 px, voir `2026-11-19-retours-premier-brief.md`.* |
 | `iiextmetadatafilter`, `iiextmetadatalanguage` | `Artist\|LicenseShortName\|LicenseUrl\|License\|Restrictions\|NonFree\|AttributionRequired`, `en` | Réponse courte (environ 20 Ko pour 10 fichiers) |
 
 En-têtes : `User-Agent: DailyBrief/1.0 (personal news digest)` et `Api-User-Agent` identique, comme l'exige la politique de Wikimedia. Ils sont génériques : jamais de nom ni d'adresse. Le même agent est envoyé au téléchargement des images. Le corps est lu par `readCapped` (1 Mo au plus) avec un délai de 10 s. Une erreur HTTP lève `HttpError`, dont le message ne contient que l'URL masquée.
@@ -114,7 +114,7 @@ Le plan a été exécuté d'une traite, tests d'abord. **Le dépôt fait foi** ;
 
 | Zone | Écart par rapport à la demande ou au lot 2 | Raison |
 |---|---|---|
-| Hôtes d'image | `thumb.wikimedia.org` admis en plus de `upload.wikimedia.org` (schéma, téléchargement, CSP) | L'appel réel montre que `thumburl` est désormais sur `thumb.wikimedia.org` ; seul un original plus étroit que 1600 px reste sur `upload.wikimedia.org`. Les deux hôtes sont à Wikimedia et fixés dans le schéma |
+| Hôtes d'image | `thumb.wikimedia.org` admis en plus de `upload.wikimedia.org` (schéma, téléchargement, CSP) | L'appel réel montre que `thumburl` est désormais sur `thumb.wikimedia.org` ; seul un original plus étroit que la vignette demandée (1280 px depuis le 19/11/2026) reste sur `upload.wikimedia.org`. Les deux hôtes sont à Wikimedia et fixés dans le schéma |
 | Image | Original pris tel quel (dimensions d'origine) quand il n'y a pas de vignette plus petite, et seulement s'il pèse au plus 3 Mo ; paramètres `utm_*` retirés de l'URL | L'API renvoie alors l'original avec des `thumbwidth`/`thumbheight` agrandis ; au-delà de 3 Mo il ne serait pas téléchargé |
 | Objet `photo` | Ni `query` (déjà dans `visual.query`, qui sert aussi d'`alt`) ni `alt` | Pas de doublon ; la description de Commons est du HTML long |
 | Choix | Premier JPEG convenable avant les PNG ou WebP ; rapport largeur / hauteur entre 1,2 et 2,2 ; largeur d'origine d'au moins 1000 px | La réponse réelle contient un « line scan » de 5836 × 1640, un schéma presque carré et des PNG de plus de 3 Mo |
