@@ -15,10 +15,10 @@ describe('liste blanche (R1)', () => {
   });
 
   it('refuse les domaines « feed », « meta » et inconnus', () => {
-    expect(canReadFull(wl, 'https://www.npr.org/x')).toBe(false);
+    expect(canReadFull(wl, 'https://thehill.com/x')).toBe(false);
     expect(canReadFull(wl, 'https://news.sky.com/story/x')).toBe(false);
     expect(canReadFull(wl, 'https://www.lemonde.fr/x')).toBe(false);
-    expect(canReadFull(wl, 'https://www.bbc.co.uk/news/x')).toBe(false);
+    expect(canReadFull(wl, 'https://www.france24.com/fr/x')).toBe(false);
     expect(canReadFull(wl, 'https://inconnu.example/x')).toBe(false);
   });
 

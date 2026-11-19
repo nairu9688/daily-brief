@@ -73,7 +73,7 @@ describe('extractText', () => {
 describe('fetchFullText : garde R1', () => {
   it('n’envoie aucune requête pour un domaine meta, feed, inconnu ou non http(s)', async () => {
     const { fetch, calls } = fakeHttp({ 'https://': { body: PAGE } });
-    for (const url of ['https://www.lemonde.fr/a', 'https://www.npr.org/a', 'https://inconnu.example/a', 'ftp://fr.euronews.com/a', 'pas une url']) {
+    for (const url of ['https://www.lemonde.fr/a', 'https://thehill.com/a', 'https://inconnu.example/a', 'ftp://fr.euronews.com/a', 'pas une url']) {
       await expect(fetchFullText(url, { ...base, fetch })).rejects.toBeInstanceOf(NotFullError);
     }
     expect(calls).toEqual([]);
@@ -232,7 +232,7 @@ describe('fillFullTexts', () => {
 
   it('ne complète que les articles full sans texte, en gardant l’ordre', async () => {
     const { fetch, calls } = fakeHttp({ 'https://fr.euronews.com/': { body: PAGE }, 'https://sudradio.fr/': { body: PAGE } });
-    const input = [art('https://lemonde.fr/a'), art('https://fr.euronews.com/b'), art('https://sudradio.fr/c', 'déjà lu'), art('https://npr.org/d'), art('https://sudradio.fr/e')];
+    const input = [art('https://lemonde.fr/a'), art('https://fr.euronews.com/b'), art('https://sudradio.fr/c', 'déjà lu'), art('https://thehill.com/d'), art('https://sudradio.fr/e')];
     const { articles, stats } = await fillFullTexts(input, { ...opts, fetch });
     expect(calls.map((c) => c.url)).toEqual(['https://fr.euronews.com/b', 'https://sudradio.fr/e']);
     expect(articles.map((a) => (a.text ? a.text.slice(0, 4) : null))).toEqual([null, 'Les ', 'déjà', null, 'Les ']);

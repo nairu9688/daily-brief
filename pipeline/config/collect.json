@@ -14,9 +14,9 @@
     "numResults": 10,
     "maxRequests": 60,
     "fullDomains": {
-      "fr": ["fr.euronews.com", "sudradio.fr"],
-      "en": ["www.euronews.com", "aljazeera.com", "cbsnews.com", "pbs.org"],
-      "es": ["eldiario.es", "elsaltodiario.com", "alicanteplaza.es", "democrata.es"]
+      "fr": ["fr.euronews.com", "sudradio.fr", "franceinfo.fr", "20minutes.fr", "huffingtonpost.fr"],
+      "en": ["www.euronews.com", "aljazeera.com", "cbsnews.com", "pbs.org", "bbc.co.uk", "bbc.com", "theguardian.com", "npr.org"],
+      "es": ["eldiario.es", "elsaltodiario.com", "alicanteplaza.es", "democrata.es", "20minutos.es", "europapress.es", "elconfidencial.com"]
     }
   },
   "webz": {

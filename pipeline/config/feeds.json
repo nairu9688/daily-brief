@@ -1,17 +1,26 @@
 {
-  "note": "Flux RSS/Atom lus par brief:collect. Uniquement des domaines au statut full ou feed de whitelist.json (test pipeline/test/collect/rss.test.ts). Le flux ne donne que des métadonnées ; le texte intégral passe par fulltext.ts, pour les domaines full seulement (R1). URL vérifiées le 06/11/2026 (thehill.com a répondu 429 ce jour-là).",
+  "note": "Flux RSS/Atom lus par brief:collect. Uniquement des domaines au statut full ou feed de whitelist.json (test pipeline/test/collect/rss.test.ts). Le flux ne donne que des métadonnées ; le texte intégral passe par fulltext.ts, pour les domaines full seulement (R1). URL vérifiées le 06/11/2026 (thehill.com a répondu 429 ce jour-là). Ajouts du 19/11/2026, chacun vérifié par une requête publique (flux RSS/Atom lu par feed-parse.ts, articles du jour) : franceinfo, 20 Minutes, Le HuffPost, The Conversation FR, BBC News, The Guardian, 20minutos, Europa Press, El Confidencial (voir docs/superpowers/plans/2026-11-19-retours-premier-brief.md). democrata.es a répondu 403 le 19/11/2026.",
   "feeds": [
     { "url": "https://fr.euronews.com/rss", "outlet": "Euronews", "lang": "fr" },
     { "url": "https://www.sudradio.fr/feed", "outlet": "Sud Radio", "lang": "fr" },
+    { "url": "https://www.franceinfo.fr/titres.rss", "outlet": "franceinfo", "lang": "fr" },
+    { "url": "https://www.20minutes.fr/feeds/rss-une.xml", "outlet": "20 Minutes", "lang": "fr" },
+    { "url": "https://www.huffingtonpost.fr/rss/all_headline.xml", "outlet": "Le HuffPost", "lang": "fr" },
+    { "url": "https://theconversation.com/fr/articles.atom", "outlet": "The Conversation", "lang": "fr" },
     { "url": "https://www.euronews.com/rss", "outlet": "Euronews", "lang": "en" },
     { "url": "https://www.aljazeera.com/xml/rss/all.xml", "outlet": "Al Jazeera", "lang": "en" },
     { "url": "https://www.cbsnews.com/latest/rss/main", "outlet": "CBS News", "lang": "en" },
     { "url": "https://www.pbs.org/newshour/feeds/rss/headlines", "outlet": "PBS NewsHour", "lang": "en" },
     { "url": "https://feeds.npr.org/1001/rss.xml", "outlet": "NPR", "lang": "en" },
     { "url": "https://thehill.com/feed/", "outlet": "The Hill", "lang": "en" },
+    { "url": "https://feeds.bbci.co.uk/news/rss.xml", "outlet": "BBC News", "lang": "en" },
+    { "url": "https://www.theguardian.com/world/rss", "outlet": "The Guardian", "lang": "en" },
     { "url": "https://www.eldiario.es/rss/", "outlet": "elDiario.es", "lang": "es" },
     { "url": "https://www.elsaltodiario.com/general/feed", "outlet": "El Salto", "lang": "es" },
     { "url": "https://alicanteplaza.es/rss", "outlet": "Alicante Plaza", "lang": "es" },
-    { "url": "https://www.democrata.es/feed/", "outlet": "Demócrata", "lang": "es" }
+    { "url": "https://www.democrata.es/feed/", "outlet": "Demócrata", "lang": "es" },
+    { "url": "https://www.20minutos.es/rss", "outlet": "20minutos", "lang": "es" },
+    { "url": "https://www.europapress.es/rss/rss.aspx", "outlet": "Europa Press", "lang": "es" },
+    { "url": "https://rss.elconfidencial.com/espana/", "outlet": "El Confidencial", "lang": "es" }
   ]
 }

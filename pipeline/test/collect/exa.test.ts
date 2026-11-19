@@ -12,7 +12,7 @@ describe('R1 : texte Exa', () => {
   it('ne demande le texte que pour des domaines tous full', () => {
     expect(canRequestText(wl, ['fr.euronews.com', 'sudradio.fr'])).toBe(true);
     expect(canRequestText(wl, ['fr.euronews.com', 'lemonde.fr'])).toBe(false);
-    expect(canRequestText(wl, ['npr.org'])).toBe(false);
+    expect(canRequestText(wl, ['thehill.com'])).toBe(false);
     expect(canRequestText(wl, ['inconnu.example'])).toBe(false);
     expect(canRequestText(wl, [])).toBe(false);
     expect(canRequestText(wl, undefined)).toBe(false);

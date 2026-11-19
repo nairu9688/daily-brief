@@ -35,7 +35,7 @@ describe('makeArticle', () => {
     const meta = makeArticle({ url: 'https://lemonde.fr/a', title: 'T', lang: 'fr', origin: 'webz', text: 'Texte intégral.' }, wl);
     expect(meta.article?.text).toBeNull();
     expect(meta.discardedText).toBe(true);
-    const feed = makeArticle({ url: 'https://npr.org/a', title: 'T', lang: 'en', origin: 'webz', text: 'Full text.' }, wl);
+    const feed = makeArticle({ url: 'https://thehill.com/a', title: 'T', lang: 'en', origin: 'webz', text: 'Full text.' }, wl);
     expect(feed.article?.text).toBeNull();
     const unknown = makeArticle({ url: 'https://inconnu.example/a', title: 'T', lang: 'en', origin: 'exa', text: 'x' }, wl);
     expect(unknown.article?.text).toBeNull();

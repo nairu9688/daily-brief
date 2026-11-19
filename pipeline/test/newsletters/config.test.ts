@@ -31,7 +31,8 @@ describe('newsletters.json', () => {
   it('R1 : être dans le fichier ne donne pas le statut full à un domaine (seule la newsletter compte comme lue)', () => {
     const wl = loadWhitelist(WHITELIST_PATH);
     const full = loadNewsletters().newsletters.filter((n) => lookupDomain(wl, `https://${n.domain}/`)?.status === 'full');
-    expect(full.map((n) => n.domain)).toEqual(['eldiario.es']);
+    // Ces domaines sont full parce qu'ils ont été vérifiés (whitelist.json), pas parce qu'ils envoient une newsletter.
+    expect(full.map((n) => n.domain).sort()).toEqual(['eldiario.es', 'theconversation.com', 'theguardian.com']);
   });
 
   it('refuse un plafond au-delà de 8, trop de newsletters actives, un identifiant ou un expéditeur en double, une inscription en http', () => {

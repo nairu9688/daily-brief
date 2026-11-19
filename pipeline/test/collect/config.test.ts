@@ -40,6 +40,31 @@ describe('collect.json', () => {
   });
 });
 
+describe('diversité des médias lisibles en entier (R3)', () => {
+  it('chaque édition puise dans au moins 6 médias full distincts (flux RSS ou Exa), pour qu’aucun ne dépasse ~30 %', () => {
+    const wl = loadWhitelist(WHITELIST_PATH);
+    const c = loadCollectConfig(CONFIG_PATH);
+    const feeds = JSON.parse(readFileSync(repoPath('pipeline/config/feeds.json'), 'utf8')).feeds as { url: string; lang: 'fr' | 'en' | 'es' }[];
+    for (const lang of ['fr', 'en', 'es'] as const) {
+      const domains = new Set<string>();
+      for (const d of c.exa.fullDomains[lang]) domains.add(lookupDomain(wl, `https://${d}/`)!.domain);
+      for (const f of feeds.filter((x) => x.lang === lang)) {
+        const e = lookupDomain(wl, f.url);
+        if (e?.status === 'full') domains.add(e.domain);
+      }
+      expect(domains.size, `${lang} : ${[...domains].join(', ')}`).toBeGreaterThanOrEqual(6);
+    }
+  });
+
+  it('les médias vérifiés le 19/11/2026 sont lisibles en entier ; ceux qui refusent l’agent (403) ne le sont pas', () => {
+    const wl = loadWhitelist(WHITELIST_PATH);
+    for (const d of ['franceinfo.fr', '20minutes.fr', 'huffingtonpost.fr', 'theconversation.com', 'bbc.co.uk', 'theguardian.com', 'npr.org', '20minutos.es', 'europapress.es', 'elconfidencial.com']) {
+      expect(lookupDomain(wl, `https://www.${d}/x`)?.status, d).toBe('full');
+    }
+    for (const d of ['france24.com', 'rfi.fr', 'ouest-france.fr', 'lemonde.fr', 'elpais.com']) expect(lookupDomain(wl, `https://www.${d}/x`)?.status, d).toBe('meta');
+  });
+});
+
 describe('rubriques.json', () => {
   it('couvre les 9 rubriques dans les 3 langues', () => {
     const r = loadRubriques(repoPath('pipeline/editorial/rubriques.json'));
