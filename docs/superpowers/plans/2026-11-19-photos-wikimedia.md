@@ -68,7 +68,7 @@ Photo = { provider: 'wikimedia'; src; width; height; author; license; licenseUrl
 ### Crédit
 
 - **PDF :** `Photo : <a href=pageUrl>auteur</a> — <a href=licenseUrl>licence</a> · Wikimedia Commons` (licence sans lien si pas d'URL).
-- **Appli :** même texte, en bas de la photo, sur une ligne tronquée ; l'auteur mène à la page du fichier. Sans photo, l'aplat neutre n'affiche plus de crédit (il n'y a rien à créditer).
+- **Appli :** même texte, en pastille en bas de la photo ; seul l’auteur est tronqué au besoin et mène à la page du fichier. Sans photo, l'aplat neutre n'affiche plus de crédit (il n'y a rien à créditer).
 - Pour CC BY-SA, l'attribution et le lien vers la licence suffisent à notre usage (pas d'œuvre dérivée).
 
 ### Appli web
@@ -101,13 +101,29 @@ fixtures/api/commons-search.json     réponse enregistrée (remplace pexels-sear
 
 ## Tâches
 
-- [ ] **1. Schéma.** Tests d'abord : hôtes acceptés et refusés (http, autre hôte, sous-domaine piège, identifiants, port), licences admises et refusées, lecture de l'ancienne forme `pexels`, `sanitizeVisual`. Puis `PhotoSchema` et les aides, `npm run schema:emit`.
-- [ ] **2. Client Commons.** Enregistrer la réponse (un seul appel réel), puis tests sur la fixture : paramètres et agent, choix de la photo, filtres (portrait, carré, svg, NC, ND, licence inconnue, `personality`, auteur vide), HTML de l'auteur, statut HTTP, corps trop lourd, délai.
-- [ ] **3. Bascule.** `fillPhotos`, `images.ts`, `runRender` (disjoncteur, `photoLookup`, retrait), `brief:verify`, PDF, appli (CSP, `photoSrc`, carte, CSS), avec leurs tests.
-- [ ] **4. Environnement.** `env:check`, `brief:finish` (répétition sans recherche), `brief:render` sans `.env`.
-- [ ] **5. Documentation.** Spec (R11), `PROMPT.md`, `ROUTINE.md`, README, `docs/setup*.md`, `env-from-vault.md`, feuille de route, `fixtures/api/README.md`.
-- [ ] **6. Vérification finale.** `npm test`, `npm run typecheck`, `npm run web:build`, `npm run web:e2e -- --trace off`, `npm run web:check-bundle` ; regarder les captures régénérées.
+- [x] **1. Schéma.** Tests d'abord : hôtes acceptés et refusés (http, autre hôte, sous-domaine piège, identifiants, port), licences admises et refusées, lecture de l'ancienne forme `pexels`, `sanitizeVisual`. Puis `PhotoSchema` et les aides, `npm run schema:emit`.
+- [x] **2. Client Commons.** Enregistrer la réponse (un seul appel réel), puis tests sur la fixture : paramètres et agent, choix de la photo, filtres (portrait, carré, svg, NC, ND, licence inconnue, `personality`, auteur vide), HTML de l'auteur, statut HTTP, corps trop lourd, délai.
+- [x] **3. Bascule.** `fillPhotos`, `images.ts`, `runRender` (disjoncteur, `photoLookup`, retrait), `brief:verify`, PDF, appli (CSP, `photoSrc`, carte, CSS), avec leurs tests.
+- [x] **4. Environnement.** `env:check`, `brief:finish` (répétition sans recherche), `brief:render` sans `.env`.
+- [x] **5. Documentation.** Spec (R11), `PROMPT.md`, `ROUTINE.md`, README, `docs/setup*.md`, `env-from-vault.md`, feuille de route, `fixtures/api/README.md`.
+- [x] **6. Vérification finale.** `npm test`, `npm run typecheck`, `npm run web:build`, `npm run web:e2e -- --trace off`, `npm run web:check-bundle` ; regarder les captures régénérées.
 
 ## Écarts après exécution
 
-À compléter à la fin de l'exécution.
+Le plan a été exécuté d'une traite, tests d'abord. **Le dépôt fait foi** ; ce plan reste la trace de la conception. Résultat : 110 fichiers de test et 1095 tests Vitest (contre 109 et 1069 : `pexels.test.ts` retiré, `commons.test.ts` et `packages/schema/test/photo.test.ts` ajoutés), typage strict propre, `web:build` et `web:check-bundle` propres, 44 tests Playwright réussis et 2 ignorés.
+
+| Zone | Écart par rapport à la demande ou au lot 2 | Raison |
+|---|---|---|
+| Hôtes d'image | `thumb.wikimedia.org` admis en plus de `upload.wikimedia.org` (schéma, téléchargement, CSP) | L'appel réel montre que `thumburl` est désormais sur `thumb.wikimedia.org` ; seul un original plus étroit que 1600 px reste sur `upload.wikimedia.org`. Les deux hôtes sont à Wikimedia et fixés dans le schéma |
+| Image | Original pris tel quel (dimensions d'origine) quand il n'y a pas de vignette plus petite, et seulement s'il pèse au plus 3 Mo ; paramètres `utm_*` retirés de l'URL | L'API renvoie alors l'original avec des `thumbwidth`/`thumbheight` agrandis ; au-delà de 3 Mo il ne serait pas téléchargé |
+| Objet `photo` | Ni `query` (déjà dans `visual.query`, qui sert aussi d'`alt`) ni `alt` | Pas de doublon ; la description de Commons est du HTML long |
+| Choix | Premier JPEG convenable avant les PNG ou WebP ; rapport largeur / hauteur entre 1,2 et 2,2 ; largeur d'origine d'au moins 1000 px | La réponse réelle contient un « line scan » de 5836 × 1640, un schéma presque carré et des PNG de plus de 3 Mo |
+| Licence | Filtre sur `LicenseShortName` ; `NonFree` et la restriction `personality` refusés ; lien de licence gardé seulement sur `creativecommons.org` (`http` réécrit en `https`) | Liste blanche stricte ; R11 (personne identifiable) ; un lien de crédit ne mène jamais ailleurs |
+| Disjoncteur | Celui de la collecte (`Breaker`) au lieu du code propre au lot 2 : 403 et 402 coupent aussi, ainsi que trois échecs de suite | Wikimedia répond 403 à un agent refusé ; même règle que les autres clients |
+| Lecture bornée | `readCapped` pour la recherche (1 Mo) et les images (3 Mo, en flux) ; le faux `fetch` des tests sert le JSON par `arrayBuffer` | Plus de `res.json()` ni de tampon non borné |
+| `brief:verify` | Photo et ancien `pexels` retirés de l'entrée **avant** l'analyse (correction R11), même s'ils sont conformes | Avec des hôtes vérifiés par le schéma, une photo du modèle rendait sinon l'édition entière invalide |
+| Appli | Crédit en pastille sombre en bas à gauche (comme la légende), auteur seul tronqué ; l'aplat n'affiche plus « Pexels » | Le badge en haut à droite chevauchait la légende ; la licence et la source doivent rester lisibles ; rien à créditer sans photo |
+| Captures | Aucune capture de référence régénérée : aucune ne montre un sujet illustré par une photo | La fixture n'a pas de photo renseignée ; le crédit a été regardé sur une page statique (clair, auteur long) |
+| `env:check` | `PEXELS_API_KEY` restée dans un `.env` est signalée « plus utilisée …, à retirer de Vault » plutôt que « variable inconnue » | Message utile pendant la transition |
+
+**Non vérifié hors ligne** (à contrôler au premier passage, `docs/setup.md` étape 12) : le téléchargement réel d'une vignette sur `thumb.wikimedia.org` avec l'agent générique (un 403 couperait les photos) ; l'accès réseau de la session de la routine à `commons.wikimedia.org`, `upload.wikimedia.org` et `thumb.wikimedia.org` ; la pertinence des résultats de Commons pour les requêtes du modèle (ce n'est pas une banque d'images : schémas, affiches ou personnes non marquées `personality` restent possibles).
