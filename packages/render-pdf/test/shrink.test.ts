@@ -36,6 +36,8 @@ beforeAll(async () => {
   heavy = (width, height, type = 'jpeg') =>
     page.evaluate(
       ({ width, height, type, start }) => {
+        // Code exécuté dans la page : le projet ne charge pas les types DOM.
+        const { document } = globalThis as unknown as { document: { createElement(tag: 'canvas'): any } };
         const c = document.createElement('canvas');
         c.width = width;
         c.height = height;

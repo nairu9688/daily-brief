@@ -8,6 +8,16 @@ export const PHOTO_QUALITY = 0.75;
 export type ShrinkStats = { images: number; before: number; after: number };
 export type ShrinkResult = { images: Record<string, string>; stats: ShrinkStats; error?: string };
 
+/** Types DOM minimaux du code exécuté dans la page (le projet ne charge pas la bibliothèque DOM). */
+type PageImage = { src: string; naturalWidth: number; naturalHeight: number; decode(): Promise<void> };
+type PageCanvas = {
+  width: number;
+  height: number;
+  getContext(kind: '2d'): { fillStyle: string; imageSmoothingQuality: string; fillRect(x: number, y: number, w: number, h: number): void; drawImage(img: PageImage, x: number, y: number, w: number, h: number): void } | null;
+  toDataURL(type: string, quality: number): string;
+};
+type PageGlobals = { Image: new () => PageImage; document: { createElement(tag: 'canvas'): PageCanvas } };
+
 const bytesOf = (dataUri: string): number => Buffer.byteLength(dataUri.slice(dataUri.indexOf(',') + 1), 'base64');
 
 /**
@@ -41,6 +51,7 @@ export async function shrinkImages(
         try {
           shrunk = await page.evaluate(
             async ({ src, maxWidth, quality }) => {
+              const { Image, document } = globalThis as unknown as PageGlobals;
               const img = new Image();
               img.src = src;
               await img.decode();
