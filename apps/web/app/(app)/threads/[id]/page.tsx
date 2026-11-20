@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { z } from 'zod';
 import { FollowButton } from '@/components/FollowButton';
 import { MapSvg } from '@/components/MapSvg';
+import { currentUser } from '@/lib/auth';
 import { getDataSource } from '@/lib/data';
 import { shortDate } from '@/lib/dates';
 import { CHIP_LABELS, T } from '@/lib/i18n';
@@ -13,6 +14,7 @@ const LATEST = { fr: 'Dernier épisode', en: 'Latest', es: 'Último' } as const;
  * Frise d'un Thread (maquette, écran 2) : retour au Brief, titre (h1), description du Thread, « Suivre ce
  * thread », puis les épisodes du plus récent au plus ancien, chacun avec son texte ; l'épisode du jour
  * porte « Aujourd'hui », sinon le plus récent porte « Dernier épisode ». `lang` : langue du Thread.
+ * « Suivre ce thread » : seulement pour l'utilisateur autorisé connecté (page publique sinon).
  */
 export default async function ThreadPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -21,6 +23,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
   const thread = await ds.thread(id);
   if (!thread) notFound();
   const today = ds.today();
+  const editable = (await currentUser()) !== null;
   const t = T[thread.lang];
   const rubric = thread.events.find((e) => e.rubric)?.rubric;
   return (
@@ -42,7 +45,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
         </div>
         <h1>{thread.title}</h1>
         {thread.description && <p>{thread.description}</p>}
-        <FollowButton id={thread.id} followed={thread.followed} followLabel={t.follow} followingLabel={t.following} />
+        {editable && <FollowButton id={thread.id} followed={thread.followed} followLabel={t.follow} followingLabel={t.following} />}
       </div>
       <ol className="timeline">
         {thread.events.map((e, i) => (

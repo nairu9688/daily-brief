@@ -39,4 +39,10 @@ describe('aller-retour Supabase ↔ fixture', () => {
       expect(mapped.value.generatedAt).toMatch(/^2026-11-06T04:41:00/);
     });
   }
+
+  it('un visiteur sans session (anon) relit exactement les mêmes lignes que l’utilisateur autorisé', async () => {
+    for (const lang of ['fr', 'en', 'es'] as Lang[]) {
+      expect(await editionRows(db, '2026-11-06', lang, 'anon')).toEqual(await editionRows(db, '2026-11-06', lang));
+    }
+  });
 });

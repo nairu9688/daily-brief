@@ -15,8 +15,10 @@ const FAILED = 'Enregistrement impossible, réessaie.';
  * Mots à cocher, « Tout cocher » et « Ajouter N mots à Anki ». Chaque case écrit `selected` par une
  * action serveur ; le bouton Anki passe `anki_status` à `queued` (phase 1 : simple mise en file).
  * En cas d'échec, la case revient à son état et un message s'affiche.
+ * `editable` faux (visiteur sans session, lecture publique) : les mots seuls, sans case, sans « Tout
+ * cocher », sans pied Anki ni état Anki ; aucune action serveur n'est appelée.
  */
-export function VocabCard({ kicker, title, titleLang, words }: { kicker: string; title: string; titleLang?: string; words: VocabCardWord[] }) {
+export function VocabCard({ kicker, title, titleLang, words, editable }: { kicker: string; title: string; titleLang?: string; words: VocabCardWord[]; editable: boolean }) {
   const [checked, setChecked] = useState(() => new Set(words.filter((w) => w.selected).map((w) => w.id)));
   const [status, setStatus] = useState(() => new Map(words.map((w) => [w.id, w.ankiStatus])));
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
@@ -66,7 +68,7 @@ export function VocabCard({ kicker, title, titleLang, words }: { kicker: string;
 
   return (
     // Interface en français (maquette) ; le titre et chaque mot portent leur propre langue.
-    <div className="vocab" lang="fr">
+    <div className={editable ? 'vocab' : 'vocab ro'} lang="fr">
       <header>
         <div>
           <div className="kicker mono">
@@ -74,14 +76,14 @@ export function VocabCard({ kicker, title, titleLang, words }: { kicker: string;
           </div>
           <h3 lang={titleLang}>{title}</h3>
         </div>
-        <button type="button" className="selall mono" onClick={() => select(words.map((w) => w.id), !allChecked)}>
-          {allChecked ? 'Tout décocher' : 'Tout cocher'}
-        </button>
+        {editable && (
+          <button type="button" className="selall mono" onClick={() => select(words.map((w) => w.id), !allChecked)}>
+            {allChecked ? 'Tout décocher' : 'Tout cocher'}
+          </button>
+        )}
       </header>
-      {words.map((w) => (
-        <label className="vrow" key={w.id} lang={w.lang}>
-          <input type="checkbox" className="vchk" checked={checked.has(w.id)} onChange={(e) => select([w.id], e.currentTarget.checked)} />
-          <span className="box" />
+      {words.map((w) => {
+        const text = (
           <span className="vt">
             <b>
               {w.term}
@@ -91,16 +93,34 @@ export function VocabCard({ kicker, title, titleLang, words }: { kicker: string;
               {w.translation}
             </span>
             <p>{w.example}</p>
-            {w.meta && <span className="vmeta mono" lang="fr">{w.meta}{status.get(w.id) !== 'none' ? ` · Anki : ${status.get(w.id)}` : ''}</span>}
+            {w.meta && (
+              <span className="vmeta mono" lang="fr">
+                {w.meta}
+                {editable && status.get(w.id) !== 'none' ? ` · Anki : ${status.get(w.id)}` : ''}
+              </span>
+            )}
           </span>
-        </label>
-      ))}
-      <footer>
-        <button type="button" className="anki" disabled={toQueue.length === 0 || busy} onClick={anki}>
-          {toQueue.length ? `Ajouter ${toQueue.length} mot${plural(toQueue.length)} à Anki` : 'Ajouter à Anki'}
-        </button>
-        <span className="soon mono">Synchro Anki · phase 2</span>
-      </footer>
+        );
+        return editable ? (
+          <label className="vrow" key={w.id} lang={w.lang}>
+            <input type="checkbox" className="vchk" checked={checked.has(w.id)} onChange={(e) => select([w.id], e.currentTarget.checked)} />
+            <span className="box" />
+            {text}
+          </label>
+        ) : (
+          <div className="vrow" key={w.id} lang={w.lang}>
+            {text}
+          </div>
+        );
+      })}
+      {editable && (
+        <footer>
+          <button type="button" className="anki" disabled={toQueue.length === 0 || busy} onClick={anki}>
+            {toQueue.length ? `Ajouter ${toQueue.length} mot${plural(toQueue.length)} à Anki` : 'Ajouter à Anki'}
+          </button>
+          <span className="soon mono">Synchro Anki · phase 2</span>
+        </footer>
+      )}
       {message && (
         <p className="anki-msg mono" role={message.error ? 'alert' : 'status'}>
           {message.text}

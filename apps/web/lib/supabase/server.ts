@@ -4,8 +4,10 @@ import { cookies } from 'next/headers';
 import { supabaseConfig } from '@/lib/env';
 
 /**
- * Client Supabase d'une requête : clé publique et session de l'utilisateur lue dans ses cookies.
- * Toutes les lectures et écritures passent donc par la RLS (private.is_allowed_user()).
+ * Client Supabase d'une requête : clé publique et session de l'utilisateur lue dans ses cookies, s'il
+ * y en a une. Sans session, PostgREST répond au rôle `anon` (lecture publique du contenu, 0005) ; avec
+ * la session de l'adresse autorisée, `authenticated` (Santé et écritures, private.is_allowed_user()).
+ * Toutes les lectures et écritures passent donc par la RLS.
  */
 export async function createSupabase() {
   const { url, anonKey } = supabaseConfig();

@@ -1,7 +1,7 @@
 /**
  * Configuration lue dans l'environnement du serveur. Rien ici n'est secret : l'URL du projet et la
  * clé publique sont publiques par nature, ALLOWED_EMAIL ne protège rien à lui seul (c'est la RLS qui
- * protège les données). Ce module refuse en revanche toute clé de service : l'appli ne doit jamais
+ * protège les données : contenu public, runs et écritures réservés à l'adresse autorisée). Ce module refuse en revanche toute clé de service : l'appli ne doit jamais
  * contourner la RLS, même mal configurée.
  */
 
@@ -30,6 +30,14 @@ export function fixtureMode(env: Env = process.env): boolean {
     throw new ConfigError('FIXTURE=1 est interdit en production : ce mode désactive la connexion (FIXTURE_ALLOW_START=1 pour les tests de bout en bout).');
   }
   return true;
+}
+
+/**
+ * FIXTURE_VISITOR=1 (mode fixture seulement) : simule un visiteur sans session, pour vérifier la
+ * lecture publique (pas d'actions personnelles, Santé renvoyée vers /login) sans Supabase.
+ */
+export function fixtureVisitor(env: Env = process.env): boolean {
+  return fixtureMode(env) && env.FIXTURE_VISITOR === '1';
 }
 
 /** « Aujourd'hui » du mode fixture : FIXTURE_TODAY (AAAA-MM-JJ) ou la date de la fixture. */

@@ -2,13 +2,17 @@ import { render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FixtureDataSource, resetFixtureState } from '@/lib/data/fixture';
 
-const m = vi.hoisted(() => ({ today: '2026-11-06', light: [] as ('fr' | 'en' | 'es')[], ed: undefined as string | undefined }));
+const m = vi.hoisted(() => ({ today: '2026-11-06', light: [] as ('fr' | 'en' | 'es')[], ed: undefined as string | undefined, user: { email: 'nanigeek@gmail.com' } as { email: string } | null }));
 vi.mock('@/lib/data', () => ({ getDataSource: async () => new FixtureDataSource({ today: m.today, light: m.light }) }));
+vi.mock('@/lib/auth', () => ({ currentUser: async () => m.user }));
 vi.mock('next/headers', () => ({ cookies: async () => ({ get: () => (m.ed ? { value: m.ed } : undefined) }) }));
 vi.mock('next/navigation', () => ({
   usePathname: () => '/',
   notFound: () => {
     throw new Error('NOT_FOUND');
+  },
+  redirect: (to: string) => {
+    throw new Error(`REDIRECT ${to}`);
   },
 }));
 vi.mock('@/app/actions', () => ({ setVocabSelected: vi.fn(), queueAnki: vi.fn(), setThreadFollowed: vi.fn() }));
@@ -23,7 +27,7 @@ import VocabPage from '@/app/(app)/vocab/page';
 
 beforeEach(() => {
   resetFixtureState();
-  Object.assign(m, { today: '2026-11-06', light: [], ed: undefined });
+  Object.assign(m, { today: '2026-11-06', light: [], ed: undefined, user: { email: 'nanigeek@gmail.com' } });
 });
 
 describe('pages', () => {
@@ -108,7 +112,59 @@ describe('pages', () => {
     render(await ArchivePage({ searchParams: Promise.resolve({ m: '2026-11' }) }));
     expect(screen.getByRole('link', { name: /Édition du 2026-11-06/ }).getAttribute('href')).toBe('/edition/2026-11-06');
     expect(screen.getByText('novembre 2026')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Santé →' }).getAttribute('href')).toBe('/sante');
+    expect(screen.queryByRole('link', { name: 'Se connecter' })).toBeNull();
     const { container } = render(await SantePage());
     expect([...container.querySelectorAll('.run')].map((r) => r.getAttribute('data-status'))).toEqual(['ok', 'degraded', 'interrupted']);
+  });
+});
+
+describe('pages, visiteur sans session (lecture publique)', () => {
+  beforeEach(() => {
+    m.user = null;
+  });
+
+  it('le Brief se lit, sans case à cocher, sans « Tout cocher » ni « Ajouter à Anki »', async () => {
+    m.ed = 'en';
+    const { container } = render(await BriefPage());
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('A blue wave sweeps Congress');
+    expect(container.querySelectorAll('.vocab .vrow')).toHaveLength(6);
+    expect(screen.queryAllByRole('checkbox')).toEqual([]);
+    expect(screen.queryByRole('button', { name: /Tout cocher|Ajouter/ })).toBeNull();
+    expect(container.querySelector('.player')).not.toBeNull();
+  });
+
+  it('une édition archivée se lit aussi en lecture seule', async () => {
+    m.ed = 'es';
+    const { container } = render(await EditionPage({ params: Promise.resolve({ date: '2026-11-06' }) }));
+    expect(container.querySelectorAll('.vocab .vrow')).toHaveLength(6);
+    expect(screen.queryAllByRole('checkbox')).toEqual([]);
+  });
+
+  it('la frise d’un Thread se lit, sans « Suivre ce thread »', async () => {
+    render(await ThreadsPage());
+    const id = screen.getByRole('link', { name: /Épisodes méditerranéens 2026/ }).getAttribute('href')!.split('/').pop()!;
+    const { container } = render(await ThreadPage({ params: Promise.resolve({ id }) }));
+    expect(container.querySelectorAll('.timeline li')).toHaveLength(2);
+    expect(screen.queryByRole('button', { name: /Suivre|suivi/ })).toBeNull();
+  });
+
+  it('le vocabulaire se lit, sans cases ni filtre « Coché » (personnel)', async () => {
+    const { container } = render(await VocabPage({ searchParams: Promise.resolve({ langue: 'es', date: '2026-11-06' }) }));
+    expect(container.querySelectorAll('.vrow')).toHaveLength(6);
+    expect(screen.queryAllByRole('checkbox')).toEqual([]);
+    expect(screen.queryByRole('navigation', { name: 'Coché' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Cochés' })).toBeNull();
+  });
+
+  it('l’archive propose « Se connecter » à la place du lien Santé', async () => {
+    render(await ArchivePage({ searchParams: Promise.resolve({ m: '2026-11' }) }));
+    expect(screen.getByRole('link', { name: /Édition du 2026-11-06/ })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Se connecter' }).getAttribute('href')).toBe('/login');
+    expect(screen.queryByRole('link', { name: 'Santé →' })).toBeNull();
+  });
+
+  it('la page Santé renvoie vers /login (défense en profondeur, en plus du proxy)', async () => {
+    await expect(SantePage()).rejects.toThrow('REDIRECT /login');
   });
 });

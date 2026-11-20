@@ -1,9 +1,16 @@
+import { redirect } from 'next/navigation';
+import { currentUser } from '@/lib/auth';
 import { getDataSource } from '@/lib/data';
 import { longDateFr, parisTime } from '@/lib/dates';
 import { runView } from '@/lib/runs';
 
-/** Santé : derniers passages de la routine (table `runs`), étape par étape. */
+/**
+ * Santé : derniers passages de la routine (table `runs`), étape par étape. Réservée à l'utilisateur
+ * autorisé : le proxy renvoie déjà les autres vers /login, la page le revérifie (défense en profondeur),
+ * et la RLS ne leur montrerait de toute façon aucun passage.
+ */
 export default async function SantePage() {
+  if (!(await currentUser())) redirect('/login');
   const now = new Date();
   const runs = (await (await getDataSource()).runs(14)).map((r) => runView(r, now));
   return (

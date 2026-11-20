@@ -14,8 +14,9 @@ import { VocabCard } from './VocabCard';
  * Écran d'une édition (spec §8.3) : en-tête, bandeaux, Morning Brief, puces, rubriques et « En bref »,
  * Vocab du jour, colophon. `stale` : bandeau « brief de la veille » ou « dernier brief » quand l'édition
  * affichée n'est pas celle du jour (absent de l'archive). `lang` sur la section : lecteurs d'écran et césure.
+ * `editable` : utilisateur autorisé connecté (cases et Anki) ; faux pour un visiteur (lecture seule).
  */
-export function EditionScreen({ edition, basePath, stale }: { edition: EditionView; basePath: string; stale?: 'yesterday' | 'latest' }) {
+export function EditionScreen({ edition, basePath, stale, editable }: { edition: EditionView; basePath: string; stale?: 'yesterday' | 'latest'; editable: boolean }) {
   const t = T[edition.lang];
   const present = new Set(edition.sections.map((s) => s.key));
   const outlets = uniqueOutlets(edition.sections.flatMap((s) => [...s.stories.flatMap((x) => x.sources), ...s.briefs]));
@@ -46,7 +47,7 @@ export function EditionScreen({ edition, basePath, stale }: { edition: EditionVi
                 <h2>Vocab du jour</h2>
                 <span className="mono">{edition.vocab.words.length} mots</span>
               </div>
-              <VocabCard kicker="Tirés des articles du jour" title={edition.vocab.title} titleLang={edition.lang} words={edition.vocab.words.map((w) => ({ ...w, lang: edition.lang }))} />
+              <VocabCard kicker="Tirés des articles du jour" title={edition.vocab.title} titleLang={edition.lang} words={edition.vocab.words.map((w) => ({ ...w, lang: edition.lang }))} editable={editable} />
             </div>
           )}
         </RubricFilter>

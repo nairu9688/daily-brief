@@ -2,7 +2,7 @@
 import { unstable_doesMiddlewareMatch } from 'next/experimental/testing/server';
 import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { access, isPublicPath } from '@/lib/access';
+import { access, isPrivatePath, isPublicPath } from '@/lib/access';
 import { buildCsp } from '@/lib/csp';
 
 const m = vi.hoisted(() => ({ email: null as string | null, refreshed: false }));
@@ -26,18 +26,24 @@ beforeEach(() => {
   m.refreshed = false;
   vi.stubEnv('FIXTURE', '');
   vi.stubEnv('VERCEL', '');
+  vi.stubEnv('FIXTURE_VISITOR', '');
   vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://ref.supabase.co');
   vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'sb_publishable_test');
   vi.stubEnv('ALLOWED_EMAIL', 'nanigeek@gmail.com');
 });
 
 describe('décision d’accès', () => {
-  it('laisse passer les chemins publics, renvoie vers /login sans session ou avec une autre adresse', () => {
+  it('le contenu est public ; seule la page Santé demande l’utilisateur autorisé', () => {
     for (const p of ['/login', '/auth/confirm', '/manifest.webmanifest', '/icons/icon-192.png']) expect(isPublicPath(p)).toBe(true);
-    expect(access('/', null, false)).toBe('login');
-    expect(access('/', 'intrus@exemple.fr', false)).toBe('refuse');
-    expect(access('/vocab', 'nanigeek@gmail.com', true)).toBe('allow');
-    expect(access('/auth/signout', null, false)).toBe('login');
+    for (const p of ['/', '/vocab', '/threads', '/threads/x', '/archive', '/edition/2026-11-06', '/audio/2026-11-06/fr', '/pdf/2026-11-06', '/auth/signout', '/santeX']) {
+      expect(isPrivatePath(p), p).toBe(false);
+      expect(access(p, null, false), p).toBe('public');
+      expect(access(p, 'intrus@exemple.fr', false), p).toBe('public');
+    }
+    for (const p of ['/sante', '/sante/', '/sante/x']) expect(isPrivatePath(p), p).toBe(true);
+    expect(access('/sante', null, false)).toBe('login');
+    expect(access('/sante', 'intrus@exemple.fr', false)).toBe('refuse');
+    expect(access('/sante', 'nanigeek@gmail.com', true)).toBe('allow');
   });
 });
 
@@ -62,12 +68,25 @@ describe('proxy', () => {
     for (const url of ['/', '/vocab', '/favicon.icoX', '/manifest.webmanifest/x', '/manifest.webmanifestX', '/audio/2026-11-06/fr']) expect(runs(url), url).toBe(true);
   });
 
-  it('renvoie vers /login sans session, et vers /login?erreur=refuse pour une autre adresse', async () => {
-    const login = await proxy(req('/vocab'));
+  it('ouvre les pages de contenu sans session, avec une CSP à nonce', async () => {
+    for (const path of ['/', '/vocab', '/threads', '/archive', '/edition/2026-11-06', '/audio/2026-11-06/fr', '/pdf/2026-11-06']) {
+      const r = await proxy(req(path));
+      expect(r.status, path).toBe(200);
+      expect(r.headers.get('location'), path).toBeNull();
+      expect(r.headers.get('content-security-policy'), path).toMatch(/'nonce-[A-Za-z0-9+/=]+'/);
+    }
+    m.email = 'intrus@exemple.fr';
+    expect((await proxy(req('/vocab'))).headers.get('location')).toBeNull();
+  });
+
+  it('renvoie /sante vers /login sans session, et vers /login?erreur=refuse pour une autre adresse', async () => {
+    const login = await proxy(req('/sante'));
     expect(login.status).toBe(303);
     expect(login.headers.get('location')).toBe('http://brief.example/login');
     m.email = 'intrus@exemple.fr';
-    expect((await proxy(req('/'))).headers.get('location')).toBe('http://brief.example/login?erreur=refuse');
+    expect((await proxy(req('/sante'))).headers.get('location')).toBe('http://brief.example/login?erreur=refuse');
+    m.email = 'nanigeek@gmail.com';
+    expect((await proxy(req('/sante'))).headers.get('location')).toBeNull();
   });
 
   it('laisse passer l’utilisateur autorisé avec une CSP à nonce, et recopie la session rafraîchie', async () => {
@@ -79,16 +98,17 @@ describe('proxy', () => {
     expect(r.cookies.get('sb-ref-auth-token')?.value).toBe('neuf');
   });
 
-  it('laisse passer une action serveur sans session (l’action répond « Session expirée »), mais pas une page', async () => {
-    const action = new NextRequest('http://brief.example/vocab', { method: 'POST', headers: { 'next-action': 'abc123', 'content-type': 'text/plain' } });
-    const r = await proxy(action);
-    expect(r.headers.get('location')).toBeNull();
-    expect(r.status).toBe(200);
-    expect(r.headers.get('content-security-policy')).toContain('nonce-');
-    const page = await proxy(req('/vocab'));
-    expect(page.status).toBe(303);
+  it('laisse passer une action serveur sans session (l’action répond « Session expirée »), même sur /sante', async () => {
+    const action = (path: string) => new NextRequest(`http://brief.example${path}`, { method: 'POST', headers: { 'next-action': 'abc123', 'content-type': 'text/plain' } });
+    for (const path of ['/vocab', '/sante']) {
+      const r = await proxy(action(path));
+      expect(r.headers.get('location'), path).toBeNull();
+      expect(r.status, path).toBe(200);
+      expect(r.headers.get('content-security-policy'), path).toContain('nonce-');
+    }
+    expect((await proxy(req('/sante'))).status).toBe(303);
     m.email = 'intrus@exemple.fr';
-    expect((await proxy(action)).headers.get('location')).toBeNull();
+    expect((await proxy(action('/sante'))).headers.get('location')).toBeNull();
   });
 
   it('laisse /login ouvert sans session', async () => {
@@ -105,9 +125,19 @@ describe('proxy', () => {
   it('en mode fixture, n’appelle pas Supabase et ne demande pas de connexion', async () => {
     vi.stubEnv('FIXTURE', '1');
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', '');
-    const r = await proxy(req('/'));
-    expect(r.headers.get('location')).toBeNull();
-    expect(r.headers.get('content-security-policy')).toContain("media-src 'self';");
+    for (const path of ['/', '/sante']) {
+      const r = await proxy(req(path));
+      expect(r.headers.get('location'), path).toBeNull();
+      expect(r.headers.get('content-security-policy')).toContain("media-src 'self';");
+    }
+  });
+
+  it('en mode fixture visiteur (FIXTURE_VISITOR=1), /sante renvoie vers /login comme sans session', async () => {
+    vi.stubEnv('FIXTURE', '1');
+    vi.stubEnv('FIXTURE_VISITOR', '1');
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', '');
+    expect((await proxy(req('/'))).headers.get('location')).toBeNull();
+    expect((await proxy(req('/sante'))).headers.get('location')).toBe('http://brief.example/login');
   });
 
   it('refuse le mode fixture sur Vercel', async () => {

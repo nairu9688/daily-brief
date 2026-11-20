@@ -23,8 +23,9 @@ import {
 import type { DataSource, EditionDay, EditionView, FileTarget, RunRecord, ThreadDetail, ThreadSummary, VocabEntry, VocabFilter } from './types';
 
 /**
- * Source de données Supabase : clé publique et session de l'utilisateur (client de lib/supabase/server.ts),
- * donc toujours sous RLS. Jamais de clé de service ici. Les écritures ne nomment que les colonnes que
+ * Source de données Supabase : clé publique et session de l'utilisateur s'il y en a une (client de
+ * lib/supabase/server.ts), donc toujours sous RLS. Sans session, le contenu se lit (0005) ; `runs` rend
+ * une erreur de droits et les écritures aussi. Jamais de clé de service ici. Les écritures ne nomment que les colonnes que
  * la migration 0001 ouvre à l'utilisateur : vocab_items.selected, vocab_items.anki_status, threads.followed.
  */
 

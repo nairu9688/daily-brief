@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { EditionScreen } from '@/components/EditionScreen';
+import { currentUser } from '@/lib/auth';
 import { getDataSource } from '@/lib/data';
 import { addDays } from '@/lib/dates';
 import { chosenLang, EDITION_COOKIE } from '@/lib/edition-choice';
@@ -7,7 +8,8 @@ import { chosenLang, EDITION_COOKIE } from '@/lib/edition-choice';
 /**
  * Brief du jour. Sans édition du jour (pipeline pas encore passé, ou échec total : spec §12), la
  * dernière édition publiée s'affiche avec un bandeau : « brief de la veille » si elle date de la veille
- * (jour de Paris), « dernier brief » si elle est plus ancienne.
+ * (jour de Paris), « dernier brief » si elle est plus ancienne. Page publique : les cases du Vocab
+ * et « Ajouter à Anki » ne s'affichent que pour l'utilisateur autorisé connecté.
  */
 export default async function BriefPage() {
   const lang = chosenLang((await cookies()).get(EDITION_COOKIE)?.value);
@@ -27,5 +29,5 @@ export default async function BriefPage() {
     );
   }
   const stale = edition.date >= today ? undefined : edition.date === addDays(today, -1) ? 'yesterday' : 'latest';
-  return <EditionScreen edition={edition} basePath="/" stale={stale} />;
+  return <EditionScreen edition={edition} basePath="/" stale={stale} editable={(await currentUser()) !== null} />;
 }

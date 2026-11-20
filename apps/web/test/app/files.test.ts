@@ -35,13 +35,23 @@ describe('routes de fichiers', () => {
     expect(new Uint8Array(await r.arrayBuffer())).toEqual(new Uint8Array([0xff, 0xf3]));
   });
 
-  it('404 pour des paramètres invalides ou un fichier absent, 401 sans utilisateur', async () => {
+  it('404 pour des paramètres invalides ou un fichier absent', async () => {
     expect((await call('2026-02-30', 'fr')).status).toBe(404);
     expect((await call('2026-11-06', 'de')).status).toBe(404);
     expect(m.calls).toEqual([]);
     expect((await call('2026-11-06', 'es')).status).toBe(404);
+  });
+
+  it('sert l’audio et le PDF sans session : lecture publique (0005), URL signée avec la clé publique', async () => {
     m.user = null;
-    expect((await call('2026-11-06', 'fr')).status).toBe(401);
-    expect((await pdf(new Request('http://x'), { params: Promise.resolve({ date: '2026-11-06' }) })).status).toBe(401);
+    m.audio = { kind: 'redirect', url: 'https://ref.supabase.co/storage/v1/object/sign/audio/2026-11-06/fr.mp3?token=t' };
+    m.pdf = { kind: 'redirect', url: 'https://ref.supabase.co/storage/v1/object/sign/pdf/2026-11-06/daily-brief-2026-11-06.pdf?token=t' };
+    const a = await call('2026-11-06', 'fr');
+    expect(a.status).toBe(307);
+    expect(a.headers.get('cache-control')).toBe('private, no-store');
+    const p = await pdf(new Request('http://x'), { params: Promise.resolve({ date: '2026-11-06' }) });
+    expect(p.status).toBe(307);
+    expect(p.headers.get('location')).toBe(m.pdf.url);
+    expect(p.headers.get('referrer-policy')).toBe('no-referrer');
   });
 });

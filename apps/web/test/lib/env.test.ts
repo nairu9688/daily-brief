@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allowedEmail, ConfigError, fixtureMode, fixtureToday, isAllowedEmail, isServiceKey, supabaseConfig } from '@/lib/env';
+import { allowedEmail, ConfigError, fixtureMode, fixtureToday, fixtureVisitor, isAllowedEmail, isServiceKey, supabaseConfig } from '@/lib/env';
 
 const jwt = (payload: object) => `eyJhbGciOiJIUzI1NiJ9.${Buffer.from(JSON.stringify(payload)).toString('base64url')}.sig`;
 
@@ -18,6 +18,14 @@ describe('configuration de l’appli', () => {
     expect(fixtureMode({ FIXTURE: '1', NODE_ENV: 'development' })).toBe(true);
     expect(fixtureMode({ NODE_ENV: 'production' })).toBe(false);
     expect(() => fixtureMode({ FIXTURE: '1', NODE_ENV: 'production', FIXTURE_ALLOW_START: '1', VERCEL: '1' })).toThrow(/Vercel/);
+  });
+
+  it('FIXTURE_VISITOR=1 simule un visiteur sans session, en mode fixture seulement', () => {
+    expect(fixtureVisitor({ FIXTURE: '1', FIXTURE_VISITOR: '1' })).toBe(true);
+    expect(fixtureVisitor({ FIXTURE: '1' })).toBe(false);
+    expect(fixtureVisitor({ FIXTURE: '1', FIXTURE_VISITOR: 'true' })).toBe(false);
+    expect(fixtureVisitor({ FIXTURE_VISITOR: '1' })).toBe(false);
+    expect(() => fixtureVisitor({ FIXTURE: '1', FIXTURE_VISITOR: '1', VERCEL: '1' })).toThrow(/Vercel/);
   });
 
   it('« aujourd’hui » du mode fixture vaut la date de la fixture, ou FIXTURE_TODAY', () => {

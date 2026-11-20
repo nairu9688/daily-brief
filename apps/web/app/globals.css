@@ -177,6 +177,8 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .vrow .box{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--line-2);margin-top:1px;display:grid;place-items:center;transition:.15s}
 .vrow input:checked+.box{background:var(--accent);border-color:var(--accent)}
 .vrow input:checked+.box:after{content:"";width:9px;height:5px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg) translate(1px,-1px)}
+/* Lecture seule (visiteur sans session) : les mots, sans case à cocher. */
+.vocab.ro .vrow{grid-template-columns:1fr;cursor:default}
 .vt{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,44%);gap:2px 10px}
 .vt b{font-size:15px;font-weight:500}
 .vt b em{font-style:normal;font-weight:400;font-size:11px;color:var(--ink-3);margin-left:6px;font-family:var(--font-geist-mono),monospace}
@@ -279,6 +281,8 @@ body{background:var(--bg)}
 .login input{font:inherit;font-size:16px;padding:12px 14px;border-radius:14px;border:1px solid var(--line-2);background:var(--surface);color:var(--ink)}
 .login button{font-size:14px;font-weight:450;padding:12px 14px;border-radius:999px;background:var(--ink);color:var(--bg)}
 .login [role="status"],.login [role="alert"]{font-size:12.5px;color:var(--ink-2);margin-top:12px}
+.login .back-home{margin-top:26px;font-size:12.5px}
+.login .back-home a{color:var(--ink-2)}
 .signout{padding:0 18px 18px}
 .signout button{font-size:11px;color:var(--ink-3);text-transform:uppercase;text-decoration:underline}
 [data-ed="fr"]{--accent:var(--fr)} [data-ed="en"]{--accent:var(--en)} [data-ed="es"]{--accent:var(--es)}

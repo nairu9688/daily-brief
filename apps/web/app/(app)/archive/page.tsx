@@ -1,13 +1,18 @@
 import Link from 'next/link';
+import { currentUser } from '@/lib/auth';
 import { getDataSource } from '@/lib/data';
 import { monthFr } from '@/lib/dates';
 import { monthBounds, monthGrid, parseMonth, shiftMonth } from '@/lib/calendar';
 
 const DAYS = ['lun', 'mar', 'mer', 'jeu', 'ven', 'sam', 'dim'];
 
-/** Archive : calendrier du mois vers les éditions passées (pointillés : édition allégée). */
+/**
+ * Archive : calendrier du mois vers les éditions passées (pointillés : édition allégée). En tête, le
+ * lien Santé pour l'utilisateur autorisé connecté, sinon un discret « Se connecter » (le brief est public).
+ */
 export default async function ArchivePage({ searchParams }: { searchParams: Promise<{ m?: string }> }) {
   const ds = await getDataSource();
+  const editable = (await currentUser()) !== null;
   const today = ds.today();
   const month = parseMonth((await searchParams).m) ?? today.slice(0, 7);
   const { first, last } = monthBounds(month);
@@ -20,7 +25,7 @@ export default async function ArchivePage({ searchParams }: { searchParams: Prom
           <i />
           {days.size} jour{days.size > 1 ? 's' : ''}
           <i />
-          <Link href="/sante">Santé →</Link>
+          {editable ? <Link href="/sante">Santé →</Link> : <Link href="/login">Se connecter</Link>}
         </div>
         <h1>Les éditions passées</h1>
       </div>

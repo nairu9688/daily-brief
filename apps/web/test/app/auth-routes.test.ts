@@ -51,9 +51,9 @@ describe('retour du lien magique', () => {
     expect(m.auth.signOut).toHaveBeenCalled();
   });
 
-  it('déconnecte en POST', async () => {
+  it('déconnecte en POST et revient au Brief, public', async () => {
     const r = await POST(new NextRequest('https://brief.example/auth/signout', { method: 'POST' }));
-    expect(r.headers.get('location')).toBe('https://brief.example/login');
+    expect(r.headers.get('location')).toBe('https://brief.example/');
     // Session de cet appareil seulement : l'appli installée (PWA) reste connectée.
     expect(m.auth.signOut).toHaveBeenCalledWith({ scope: 'local' });
   });

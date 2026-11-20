@@ -3,13 +3,14 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { access } from '@/lib/access';
 import { buildCsp } from '@/lib/csp';
 import { EDITION_COOKIE, isLang } from '@/lib/edition-choice';
-import { fixtureMode, isAllowedEmail, supabaseConfig } from '@/lib/env';
+import { fixtureMode, fixtureVisitor, isAllowedEmail, supabaseConfig } from '@/lib/env';
 
 /**
  * Proxy (ex-middleware, Next 16, runtime Node) : pour chaque page,
  * 1. retient l'onglet d'édition (`?ed=en` → cookie `ed`, visible dès cette requête) ;
- * 2. rafraîchit la session Supabase et renvoie vers /login sans session, ou avec une autre adresse
- *    que ALLOWED_EMAIL (le mode FIXTURE=1 n'a pas de connexion) ;
+ * 2. rafraîchit la session Supabase s'il y en a une. Le brief est public : seule /sante renvoie vers
+ *    /login sans session, ou avec une autre adresse que ALLOWED_EMAIL (mode FIXTURE=1 : pas de
+ *    connexion, l'utilisateur est connecté, sauf FIXTURE_VISITOR=1 qui simule un visiteur) ;
  * 3. pose la CSP avec un nonce propre à la requête.
  */
 export async function proxy(request: NextRequest) {
@@ -31,6 +32,7 @@ export async function proxy(request: NextRequest) {
   let response = next();
   const pending: { name: string; value: string; options?: Parameters<typeof response.cookies.set>[2] }[] = [];
 
+  let decision: ReturnType<typeof access> = 'public';
   if (config) {
     const supabase = createServerClient(config.url, config.anonKey, {
       cookies: {
@@ -44,18 +46,20 @@ export async function proxy(request: NextRequest) {
     });
     const { data } = await supabase.auth.getClaims();
     const email = typeof data?.claims?.email === 'string' ? data.claims.email : null;
-    const decision = access(request.nextUrl.pathname, email, isAllowedEmail(email));
-    // Une action serveur (POST avec l'en-tête Next-Action) n'est pas redirigée : le client ne saurait pas
-    // lire la page /login. L'action elle-même est le garde-fou : elle vérifie currentUser() avant tout
-    // et répond « Session expirée », sans lire ni écrire quoi que ce soit.
-    const action = request.method === 'POST' && request.headers.has('next-action');
-    if ((decision === 'login' || decision === 'refuse') && !action) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/login';
-      url.search = decision === 'refuse' ? '?erreur=refuse' : '';
-      // 303 : le navigateur suit en GET. Un 307 rejouerait vers /login le POST d'une action serveur.
-      response = NextResponse.redirect(url, 303);
-    }
+    decision = access(request.nextUrl.pathname, email, isAllowedEmail(email));
+  } else if (fixture && fixtureVisitor()) {
+    decision = access(request.nextUrl.pathname, null, false);
+  }
+  // Une action serveur (POST avec l'en-tête Next-Action) n'est pas redirigée : le client ne saurait pas
+  // lire la page /login. L'action elle-même est le garde-fou : elle vérifie currentUser() avant tout
+  // et répond « Session expirée », sans lire ni écrire quoi que ce soit.
+  const action = request.method === 'POST' && request.headers.has('next-action');
+  if ((decision === 'login' || decision === 'refuse') && !action) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/login';
+    url.search = decision === 'refuse' ? '?erreur=refuse' : '';
+    // 303 : le navigateur suit en GET. Un 307 rejouerait vers /login le POST d'une action serveur.
+    response = NextResponse.redirect(url, 303);
   }
 
   for (const { name, value, options } of pending) response.cookies.set(name, value, options);
