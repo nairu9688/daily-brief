@@ -257,6 +257,18 @@ describe('runCollect', () => {
     expect((await setup().run(network().fetch)).report.degraded).toBe(false);
   });
 
+  it('Webz refuse le jeton (401, 20/11/2026) : le rapport nomme la clé à corriger, en première erreur', async () => {
+    const { run } = setup();
+    const r = await run(network({ [WEBZ_LITE]: { status: 401, json: {} } }).fetch);
+    expect(r.exitCode).toBe(0);
+    expect(r.report.degraded).toBe(true);
+    expect(r.report.sources.webz.stoppedBy).toBe('HTTP 401');
+    const errors = r.report.issues.filter((i) => i.level === 'error');
+    expect(errors[0]).toEqual({ level: 'error', source: 'webz', message: 'WEBZ_TOKEN refusée par Webz (HTTP 401) : clé invalide, expirée ou mal copiée, à corriger dans Vault' });
+    const quota = await setup().run(network({ [`${THENEWSAPI_BASE}/top`]: { status: 402, json: {} } }).fetch);
+    expect(quota.report.issues.find((i) => i.level === 'error')?.message).toBe('THENEWSAPI_KEY : quota épuisé chez TheNewsAPI (HTTP 402)');
+  });
+
   it('échéance globale : les appels restants s’arrêtent et le rapport le dit', async () => {
     const { run } = setup();
     const net = network({ [`${THENEWSAPI_BASE}/top`]: { hang: true } });

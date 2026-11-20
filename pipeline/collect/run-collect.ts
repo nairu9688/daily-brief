@@ -79,6 +79,7 @@ export type RunCollectResult = {
 
 const SOURCES: SourceName[] = ['thenewsapi', 'exa', 'rss', 'webz'];
 const KEY_NAMES: Record<keyof CollectKeys, string> = { thenewsapi: 'THENEWSAPI_KEY', exa: 'EXA_API_KEY', webz: 'WEBZ_TOKEN' };
+const SOURCE_LABELS: Record<keyof CollectKeys, string> = { thenewsapi: 'TheNewsAPI', exa: 'Exa', webz: 'Webz' };
 
 function emptyReport(date: string, now: Date): CollectReport {
   return {
@@ -214,6 +215,12 @@ export async function runCollect(opts: RunCollectOptions): Promise<RunCollectRes
       report.discardedTexts += run.discardedTexts;
       const authCut = run.stoppedBy !== null && /^HTTP (401|402|403)$/.test(run.stoppedBy);
       if (authCut) report.degraded = true;
+      // Clé refusée ou quota épuisé : d'abord un message qui nomme la clé à corriger (repris par la notification finale).
+      if (authCut && name !== 'rss') {
+        const status = run.stoppedBy!.slice(5);
+        const key = KEY_NAMES[name];
+        issue('error', status === '402' ? `${key} : quota épuisé chez ${SOURCE_LABELS[name]} (HTTP 402)` : `${key} refusée par ${SOURCE_LABELS[name]} (HTTP ${status}) : clé invalide, expirée ou mal copiée, à corriger dans Vault`, name);
+      }
       // La coupure par clé refusée ou quota épuisé est une erreur, pas un simple avertissement.
       for (const m of run.errors) issue(authCut && m.endsWith('source coupée') ? 'error' : 'warning', m, name);
       if (run.undated > 0) issue('warning', `${run.undated} article(s) sans date écarté(s)`, name);
