@@ -1,10 +1,11 @@
 import { z } from 'zod';
-import { ccLicenseUrl, isFreeLicense, isHttpsUrlOn, LICENSE_HOST, MAX_AUTHOR_LENGTH, PhotoSchema, type Photo } from '@daily-brief/schema';
+import { ccLicenseUrl, isFreeLicense, isHttpsUrlOn, LICENSE_HOST, MAX_AUTHOR_LENGTH, PhotoSchema, type Lang, type Photo } from '@daily-brief/schema';
 import { fetchJson } from '../collect/http';
 import { WIKIMEDIA_USER_AGENT, type FetchLike } from './http';
 
 export { WIKIMEDIA_USER_AGENT };
 import { MAX_IMAGE_BYTES } from './images';
+import { assessCandidate, queryProfile } from './relevance';
 
 export const COMMONS_API = 'https://commons.wikimedia.org/w/api.php';
 export const WIKIMEDIA_HEADERS = { 'User-Agent': WIKIMEDIA_USER_AGENT, 'Api-User-Agent': WIKIMEDIA_USER_AGENT } as const;
@@ -25,6 +26,7 @@ const MAX_RATIO = 2.2;
 const Meta = z.object({ value: z.unknown() }).optional();
 const PageSchema = z.object({
   index: z.number(),
+  title: z.string().optional(),
   imageinfo: z
     .array(
       z.object({
@@ -37,7 +39,9 @@ const PageSchema = z.object({
         thumburl: z.string().optional(),
         thumbwidth: z.number().optional(),
         thumbheight: z.number().optional(),
-        extmetadata: z.object({ Artist: Meta, LicenseShortName: Meta, LicenseUrl: Meta, Restrictions: Meta, NonFree: Meta }).partial(),
+        extmetadata: z
+          .object({ Artist: Meta, LicenseShortName: Meta, LicenseUrl: Meta, Restrictions: Meta, NonFree: Meta, ObjectName: Meta, Categories: Meta, ImageDescription: Meta })
+          .partial(),
       }),
     )
     .min(1),
@@ -47,7 +51,11 @@ const ResponseSchema = z.object({
   query: z.object({ pages: z.array(z.unknown()) }).optional(),
 });
 
-/** Paramètres de la recherche : fichiers (espace 6) matriciels, vignette de THUMB_WIDTH px, métadonnées utiles seulement. */
+/**
+ * Paramètres de la recherche : fichiers (espace 6) matriciels, 20 résultats (le contrôle de pertinence en écarte
+ * beaucoup), vignette de THUMB_WIDTH px, métadonnées utiles seulement (licence, auteur, puis titre, description et
+ * catégories pour la pertinence).
+ */
 export function commonsSearchUrl(query: string): string {
   const params = new URLSearchParams({
     action: 'query',
@@ -56,11 +64,11 @@ export function commonsSearchUrl(query: string): string {
     generator: 'search',
     gsrsearch: `${query.slice(0, 100)} filetype:bitmap`,
     gsrnamespace: '6',
-    gsrlimit: '10',
+    gsrlimit: '20',
     prop: 'imageinfo',
     iiprop: 'url|extmetadata|mime|size',
     iiurlwidth: String(THUMB_WIDTH),
-    iiextmetadatafilter: 'Artist|LicenseShortName|LicenseUrl|License|Restrictions|NonFree|AttributionRequired',
+    iiextmetadatafilter: 'Artist|LicenseShortName|LicenseUrl|License|Restrictions|NonFree|AttributionRequired|ObjectName|ImageDescription|Categories',
     iiextmetadatalanguage: 'en',
   });
   return `${COMMONS_API}?${params}`;
@@ -156,31 +164,53 @@ function toPhoto(page: z.infer<typeof PageSchema>): Photo | null {
   return parsed.success ? parsed.data : null;
 }
 
-/**
- * Meilleure photo d'une réponse de recherche : dans l'ordre du moteur, le premier JPEG qui convient,
- * sinon le premier PNG ou WebP (une vignette PNG de photo dépasse vite 3 Mo). Null si aucune.
- */
-export function pickPhoto(json: unknown): Photo | null {
+/** Photos libres et bien cadrées d'une réponse, dans l'ordre du moteur, avec leur page. */
+function freeCandidates(json: unknown): { page: z.infer<typeof PageSchema>; photo: Photo; jpeg: boolean }[] {
   const pages = ResponseSchema.parse(json).query?.pages ?? [];
-  const candidates = pages
+  return pages
     .flatMap((p) => {
       const parsed = PageSchema.safeParse(p);
       return parsed.success ? [parsed.data] : [];
     })
     .sort((a, b) => a.index - b.index)
-    .flatMap((p) => {
-      const photo = toPhoto(p);
-      return photo ? [{ photo, jpeg: p.imageinfo[0].mime === 'image/jpeg' }] : [];
+    .flatMap((page) => {
+      const photo = toPhoto(page);
+      return photo ? [{ page, photo, jpeg: page.imageinfo[0].mime === 'image/jpeg' }] : [];
     });
+}
+
+/**
+ * Première photo libre d'une réponse, **sans contrôle de pertinence** (format, cadrage, licence seulement) :
+ * dans l'ordre du moteur, le premier JPEG qui convient, sinon le premier PNG ou WebP (une vignette PNG de
+ * photo dépasse vite 3 Mo). Null si aucune. Le rendu passe par pickRelevantPhoto.
+ */
+export function pickPhoto(json: unknown): Photo | null {
+  const candidates = freeCandidates(json);
   return (candidates.find((c) => c.jpeg) ?? candidates[0])?.photo ?? null;
 }
 
 /**
- * Cherche une photo libre sur Wikimedia Commons (R11 : la requête a déjà été validée par brief:verify).
+ * Photo libre **et pertinente** pour la requête d'un sujet de l'édition `lang` (R11, voir relevance.ts) :
+ * la mieux notée, puis un JPEG plutôt qu'un PNG, puis l'ordre du moteur. Null si aucune ne convient :
+ * le sujet reste sans photo (aplat), ce qui vaut mieux qu'une photo trompeuse.
+ */
+export function pickRelevantPhoto(json: unknown, query: string, lang: Lang): Photo | null {
+  const profile = queryProfile(query);
+  const kept = freeCandidates(json).flatMap((c) => {
+    const v = assessCandidate(c.page, profile, lang);
+    return v.ok ? [{ ...c, score: v.score }] : [];
+  });
+  kept.sort((a, b) => b.score - a.score || Number(b.jpeg) - Number(a.jpeg) || a.page.index - b.page.index);
+  return kept[0]?.photo ?? null;
+}
+
+/**
+ * Cherche une photo libre et pertinente sur Wikimedia Commons pour un sujet de l'édition `lang`
+ * (R11 : la requête a déjà été validée par brief:verify ; la pertinence est jugée ici, voir pickRelevantPhoto).
  * L'URL d'image vient uniquement de la réponse de l'API. Renvoie null sans photo convenable ; lève
  * `HttpError` sur un statut en erreur, une erreur sur une réponse d'erreur de l'API, trop lourde ou hors délai.
  */
-export async function findCommonsPhoto(query: string, opts: { fetch: FetchLike; timeoutMs?: number }): Promise<Photo | null> {
+export async function findCommonsPhoto(query: string, opts: { fetch: FetchLike; timeoutMs?: number; lang: Lang }): Promise<Photo | null> {
   const json = await fetchJson(opts.fetch, commonsSearchUrl(query), {
     headers: { ...WIKIMEDIA_HEADERS, Accept: 'application/json' },
     timeoutMs: opts.timeoutMs ?? 10_000,
@@ -188,5 +218,5 @@ export async function findCommonsPhoto(query: string, opts: { fetch: FetchLike; 
   });
   const err = ResponseSchema.parse(json).error;
   if (err) throw new Error(`Commons : ${err.code.slice(0, 40)}`);
-  return pickPhoto(json);
+  return pickRelevantPhoto(json, query, opts.lang);
 }

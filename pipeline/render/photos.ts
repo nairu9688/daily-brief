@@ -1,6 +1,7 @@
-import type { Edition, Photo } from '@daily-brief/schema';
+import type { Edition, Lang, Photo } from '@daily-brief/schema';
 
-export type PhotoFinder = (query: string) => Promise<Photo | null>;
+/** Recherche d'une photo pour la requête d'un sujet de l'édition `lang` (la langue fixe le pays implicite, R11). */
+export type PhotoFinder = (query: string, lang: Lang) => Promise<Photo | null>;
 
 /**
  * Renseigne `visual.photo` des sujets illustrés par une photo qui n'en ont pas encore.
@@ -15,7 +16,7 @@ export async function fillPhotos(ed: Edition, find: PhotoFinder): Promise<{ edit
     if (v.type !== 'photo' || v.photo) continue;
     if (!cache.has(v.query)) {
       try {
-        cache.set(v.query, await find(v.query));
+        cache.set(v.query, await find(v.query, out.lang));
       } catch (e) {
         cache.set(v.query, null);
         problems.push(`${story.id} : ${(e as Error).message}`);
@@ -24,7 +25,7 @@ export async function fillPhotos(ed: Edition, find: PhotoFinder): Promise<{ edit
     }
     const photo = cache.get(v.query);
     if (photo) v.photo = photo;
-    else problems.push(`${story.id} : aucune photo libre sur Wikimedia Commons pour « ${v.query} »`);
+    else problems.push(`${story.id} : aucune photo libre et pertinente sur Wikimedia Commons pour « ${v.query} » : sujet sans photo`);
   }
   return { edition: out, problems };
 }

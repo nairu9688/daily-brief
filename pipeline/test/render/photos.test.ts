@@ -28,7 +28,7 @@ describe('fillPhotos', () => {
     });
     expect(r.problems).toEqual([
       '2026-11-06-fr-5 : HTTP 500',
-      '2026-11-06-fr-6 : aucune photo libre sur Wikimedia Commons pour « high-speed train »',
+      '2026-11-06-fr-6 : aucune photo libre et pertinente sur Wikimedia Commons pour « high-speed train » : sujet sans photo',
     ]);
     for (const st of photoStories(r.edition)) expect(st.visual.type === 'photo' && st.visual.photo).toBeFalsy();
   });

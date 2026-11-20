@@ -75,17 +75,19 @@ export async function runRender(opts: RunRenderOptions): Promise<RunRenderResult
     const cache = new Map<string, { photo?: Photo | null; error?: Error }>();
     const breaker = new Breaker();
     const search = opts.findPhoto ?? findCommonsPhoto;
-    const finder: PhotoFinder = async (q) => {
+    const finder: PhotoFinder = async (q, lang) => {
       if (breaker.open) throw new Error(COMMONS_DOWN);
-      const hit = cache.get(q);
+      // La pertinence dépend de l'édition (pays implicite) : une même requête est cherchée une fois par langue.
+      const key = `${lang}\n${q}`;
+      const hit = cache.get(key);
       if (hit) {
         if (hit.error) throw hit.error;
         return hit.photo!;
       }
       try {
-        const photo = await search(q, { fetch: opts.fetch, timeoutMs: opts.photoTimeoutMs });
+        const photo = await search(q, { fetch: opts.fetch, timeoutMs: opts.photoTimeoutMs, lang });
         breaker.success();
-        cache.set(q, { photo });
+        cache.set(key, { photo });
         return photo;
       } catch (e) {
         if (breaker.trip(e)) {
@@ -93,7 +95,7 @@ export async function runRender(opts: RunRenderOptions): Promise<RunRenderResult
           throw new Error(COMMONS_DOWN);
         }
         const error = new Error(searchError(e));
-        cache.set(q, { error });
+        cache.set(key, { error });
         throw error;
       }
     };

@@ -1,0 +1,82 @@
+{
+ "batchcomplete": true,
+ "query": {
+  "pages": [
+   {
+    "pageid": 79216024,
+    "ns": 6,
+    "title": "File:10.26.2010 -scenes from a rally- 284 365 (5120602428).jpg",
+    "index": 1,
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 2913829,
+      "width": 4200,
+      "height": 2800,
+      "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c2/10.26.2010_-scenes_from_a_rally-_284_365_%285120602428%29.jpg/1280px-10.26.2010_-scenes_from_a_rally-_284_365_%285120602428%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "thumbwidth": 1280,
+      "thumbheight": 853,
+      "responsiveUrls": {
+       "2": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c2/10.26.2010_-scenes_from_a_rally-_284_365_%285120602428%29.jpg/3840px-10.26.2010_-scenes_from_a_rally-_284_365_%285120602428%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+      },
+      "thumbattribs": {
+       "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c2/10.26.2010_-scenes_from_a_rally-_284_365_%285120602428%29.jpg/1280px-10.26.2010_-scenes_from_a_rally-_284_365_%285120602428%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 1280,
+       "height": 853,
+       "srcset": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c2/10.26.2010_-scenes_from_a_rally-_284_365_%285120602428%29.jpg/3840px-10.26.2010_-scenes_from_a_rally-_284_365_%285120602428%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail 2x"
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/c/c2/10.26.2010_-scenes_from_a_rally-_284_365_%285120602428%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:10.26.2010_-scenes_from_a_rally-_284_365_(5120602428).jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/wiki/Special:Redirect/page/79216024",
+      "extmetadata": {
+       "ObjectName": {
+        "value": "10.26.2010 -scenes from a rally- 284 365 (5120602428)",
+        "source": "mediawiki-metadata"
+       },
+       "Categories": {
+        "value": "Photographs by Phil Roeder|Files with coordinates missing SDC location of creation|Flickr images reviewed by FlickreviewR 2|Roxanne Conlin Senate campaign, 2010",
+        "source": "commons-categories",
+        "hidden": ""
+       },
+       "ImageDescription": {
+        "value": "<p>The election is a week from today. Driving home from work I passed by a radio station where the two candidates for the U.S. Senate - Democrat Roxanne Conlin and Republican Chuck Grassley - were about to have a debate. The debate was aired by WHO Radio and broadcast from their studios by Iowa Public Television.\n</p><p>A tradition in politics now seems to be seeing which campaign can get the most supporters waving signs at the site of debates. I figured this might make for the most interesting thing today for my 365 project. I was hoping to get both campaigns in one shot, but that was only possible by standing in the middle of a busy street so I stayed at the end of the crowd that reflects my own politics (no offense to my friends in the GOP, but Republicans waving signs on wooden stakes kind of scares me :) ).\n</p>\nHaving spent a lot of time on campaigns myself in one way or another, I'd love to do a photo documentary some time of the day-to-day work of a political campaign.",
+        "source": "commons-desc-page"
+       },
+       "Artist": {
+        "value": "<a rel=\"nofollow\" class=\"external text\" href=\"https://www.flickr.com/people/88876166@N00\">Phil Roeder</a> from Des Moines, IA, USA",
+        "source": "commons-desc-page"
+       },
+       "LicenseShortName": {
+        "value": "CC BY 2.0",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "AttributionRequired": {
+        "value": "true",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "LicenseUrl": {
+        "value": "https://creativecommons.org/licenses/by/2.0",
+        "source": "commons-desc-page"
+       },
+       "Restrictions": {
+        "value": "",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "License": {
+        "value": "cc-by-2.0",
+        "source": "commons-templates",
+        "hidden": ""
+       }
+      },
+      "mime": "image/jpeg"
+     }
+    ]
+   }
+  ]
+ }
+}

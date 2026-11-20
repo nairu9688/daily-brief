@@ -1,0 +1,1471 @@
+{
+ "batchcomplete": true,
+ "continue": {
+  "gsroffset": 20,
+  "continue": "gsroffset||"
+ },
+ "query": {
+  "pages": [
+   {
+    "pageid": 6345384,
+    "ns": 6,
+    "title": "File:Irish Embassy in Madrid (Spain) 01.jpg",
+    "index": 2,
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 1750311,
+      "width": 2240,
+      "height": 2796,
+      "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c7/Irish_Embassy_in_Madrid_%28Spain%29_01.jpg/1280px-Irish_Embassy_in_Madrid_%28Spain%29_01.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "thumbwidth": 1280,
+      "thumbheight": 1598,
+      "responsiveUrls": {
+       "2": "https://upload.wikimedia.org/wikipedia/commons/c/c7/Irish_Embassy_in_Madrid_%28Spain%29_01.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
+      },
+      "thumbattribs": {
+       "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c7/Irish_Embassy_in_Madrid_%28Spain%29_01.jpg/1280px-Irish_Embassy_in_Madrid_%28Spain%29_01.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 1280,
+       "height": 1598,
+       "srcset": "https://upload.wikimedia.org/wikipedia/commons/c/c7/Irish_Embassy_in_Madrid_%28Spain%29_01.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled 2x"
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/c/c7/Irish_Embassy_in_Madrid_%28Spain%29_01.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:Irish_Embassy_in_Madrid_(Spain)_01.jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/wiki/Special:Redirect/page/6345384",
+      "extmetadata": {
+       "ObjectName": {
+        "value": "Irish Embassy in Madrid (Spain) 01",
+        "source": "mediawiki-metadata"
+       },
+       "Categories": {
+        "value": "GFDL|Taken with Kodak EasyShare C713|Edificio Bankunión, Madrid|CC-BY-SA-3.0,2.5,2.0,1.0|License migration redundant|Self-published work|Files by User:Zaqarbal",
+        "source": "commons-categories",
+        "hidden": ""
+       },
+       "ImageDescription": {
+        "value": "Seat of the <a href=\"//commons.wikimedia.org/wiki/Ireland_-_%C3%89ire\" class=\"mw-redirect\" title=\"Ireland - Éire\"><b>Irish</b></a> <a href=\"//commons.wikimedia.org/wiki/Category:Embassies_of_Ireland\" title=\"Category:Embassies of Ireland\"><b>Embassy</b></a> in <b><a href=\"//commons.wikimedia.org/wiki/Madrid\" title=\"Madrid\">Madrid</a></b> (<a href=\"//commons.wikimedia.org/wiki/Spain\" class=\"mw-redirect\" title=\"Spain\">Spain</a>) and offices of the <a href=\"//commons.wikimedia.org/wiki/European_Parliament\" title=\"European Parliament\">European Parliament</a>, at 46 <a href=\"//commons.wikimedia.org/wiki/Category:Paseo_de_la_Castellana\" title=\"Category:Paseo de la Castellana\">Paseo de la Castellana</a> (avenue), in <a href=\"//commons.wikimedia.org/wiki/Category:Salamanca_district,_Madrid\" title=\"Category:Salamanca district, Madrid\">Salamanca district</a>. Building was projected in 1972 by architects José Antonio Corrales Gutiérrez and Ramón Vázquez Molezún, and built from 1973 to 1975 for <i>Bankunión</i> (a former bank).",
+        "source": "commons-desc-page"
+       },
+       "Artist": {
+        "value": "Luis García (<a href=\"//commons.wikimedia.org/wiki/User:Zaqarbal\" title=\"User:Zaqarbal\">Zaqarbal</a>)",
+        "source": "commons-desc-page"
+       },
+       "LicenseShortName": {
+        "value": "CC BY-SA 3.0",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "AttributionRequired": {
+        "value": "true",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "LicenseUrl": {
+        "value": "https://creativecommons.org/licenses/by-sa/3.0",
+        "source": "commons-desc-page"
+       },
+       "Restrictions": {
+        "value": "",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "License": {
+        "value": "cc-by-sa-3.0",
+        "source": "commons-templates",
+        "hidden": ""
+       }
+      },
+      "mime": "image/jpeg"
+     }
+    ]
+   },
+   {
+    "pageid": 36418259,
+    "ns": 6,
+    "title": "File:Localización de la fachada y primera crujía del edificio del Banco Hispano Americano (Madrid).jpg",
+    "index": 4,
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 102244,
+      "width": 592,
+      "height": 800,
+      "thumburl": "https://upload.wikimedia.org/wikipedia/commons/f/fc/Localizaci%C3%B3n_de_la_fachada_y_primera_cruj%C3%ADa_del_edificio_del_Banco_Hispano_Americano_%28Madrid%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+      "thumbwidth": 1280,
+      "thumbheight": 1730,
+      "thumbattribs": {
+       "src": "https://upload.wikimedia.org/wikipedia/commons/f/fc/Localizaci%C3%B3n_de_la_fachada_y_primera_cruj%C3%ADa_del_edificio_del_Banco_Hispano_Americano_%28Madrid%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 1280,
+       "height": 1730
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/f/fc/Localizaci%C3%B3n_de_la_fachada_y_primera_cruj%C3%ADa_del_edificio_del_Banco_Hispano_Americano_%28Madrid%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:Localizaci%C3%B3n_de_la_fachada_y_primera_cruj%C3%ADa_del_edificio_del_Banco_Hispano_Americano_(Madrid).jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/wiki/Special:Redirect/page/36418259",
+      "extmetadata": {
+       "ObjectName": {
+        "value": "Localización de la fachada y primera crujía del edificio del Banco Hispano Americano (Madrid)",
+        "source": "mediawiki-metadata"
+       },
+       "Categories": {
+        "value": "Boletín Oficial de la Comunidad de Madrid|Banco Hispano Americano building (1905), Madrid|Maps of Madrid|Files uploaded by User:Discasto|PD Spain government",
+        "source": "commons-categories",
+        "hidden": ""
+       },
+       "ImageDescription": {
+        "value": "Localización del bien de interés cultural descrito en el <i>Decreto 31/2013, de 11 de abril, del Consejo de Gobierno, por el que se modifica la declaración de Bien de Interés Cultural, en la categoría de Monumento, del edificio del Banco Central Hispano, en Madrid.</i>",
+        "source": "commons-desc-page"
+       },
+       "Artist": {
+        "value": "Consejería de Empleo, Turismo y Cultura de la Comunidad de Madrid",
+        "source": "commons-desc-page"
+       },
+       "LicenseShortName": {
+        "value": "Public domain",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "AttributionRequired": {
+        "value": "false",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "Restrictions": {
+        "value": "",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "License": {
+        "value": "pd",
+        "source": "commons-templates",
+        "hidden": ""
+       }
+      },
+      "mime": "image/jpeg"
+     }
+    ]
+   },
+   {
+    "pageid": 36418365,
+    "ns": 6,
+    "title": "File:Localización del edificio del Banco Hispano Americano (Madrid).jpg",
+    "index": 3,
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 177860,
+      "width": 722,
+      "height": 946,
+      "thumburl": "https://upload.wikimedia.org/wikipedia/commons/a/a1/Localizaci%C3%B3n_del_edificio_del_Banco_Hispano_Americano_%28Madrid%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+      "thumbwidth": 1280,
+      "thumbheight": 1677,
+      "thumbattribs": {
+       "src": "https://upload.wikimedia.org/wikipedia/commons/a/a1/Localizaci%C3%B3n_del_edificio_del_Banco_Hispano_Americano_%28Madrid%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 1280,
+       "height": 1677
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/a/a1/Localizaci%C3%B3n_del_edificio_del_Banco_Hispano_Americano_%28Madrid%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:Localizaci%C3%B3n_del_edificio_del_Banco_Hispano_Americano_(Madrid).jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/wiki/Special:Redirect/page/36418365",
+      "extmetadata": {
+       "ObjectName": {
+        "value": "Localización del edificio del Banco Hispano Americano (Madrid)",
+        "source": "mediawiki-metadata"
+       },
+       "Categories": {
+        "value": "Boletín Oficial de la Comunidad de Madrid|Banco Hispano Americano building (1905), Madrid|Maps of Madrid|Files uploaded by User:Discasto|PD Spain government",
+        "source": "commons-categories",
+        "hidden": ""
+       },
+       "ImageDescription": {
+        "value": "Localización del bien de interés cultural descrito en el <i>Decreto del Consejo de Gobierno de la Comunidad de Madrid 14/1999, por el que se declara bien de interés cultural, en la categoría de monumento, el edificio del Banco Central Hispano, sito en la plaza de Canalejas, número 1, con vuelta a la Carrera de San Jerónimo, número 7 bis, y a la calle de Sevilla, número 1, del municipio de Madrid.</i>",
+        "source": "commons-desc-page"
+       },
+       "Artist": {
+        "value": "Consejería de Educación y Cultura de la Comunidad de Madrid",
+        "source": "commons-desc-page"
+       },
+       "LicenseShortName": {
+        "value": "Public domain",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "AttributionRequired": {
+        "value": "false",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "Restrictions": {
+        "value": "",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "License": {
+        "value": "pd",
+        "source": "commons-templates",
+        "hidden": ""
+       }
+      },
+      "mime": "image/jpeg"
+     }
+    ]
+   },
+   {
+    "pageid": 36418444,
+    "ns": 6,
+    "title": "File:Evolución BIC Banco Hispano Americano.jpg",
+    "index": 15,
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 103915,
+      "width": 990,
+      "height": 380,
+      "thumburl": "https://upload.wikimedia.org/wikipedia/commons/2/2b/Evoluci%C3%B3n_BIC_Banco_Hispano_Americano.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+      "thumbwidth": 1280,
+      "thumbheight": 491,
+      "thumbattribs": {
+       "src": "https://upload.wikimedia.org/wikipedia/commons/2/2b/Evoluci%C3%B3n_BIC_Banco_Hispano_Americano.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 1280,
+       "height": 491
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/2/2b/Evoluci%C3%B3n_BIC_Banco_Hispano_Americano.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:Evoluci%C3%B3n_BIC_Banco_Hispano_Americano.jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/wiki/Special:Redirect/page/36418444",
+      "extmetadata": {
+       "ObjectName": {
+        "value": "Evolución BIC Banco Hispano Americano",
+        "source": "mediawiki-metadata"
+       },
+       "Categories": {
+        "value": "Banco Hispano Americano building (1905), Madrid|Derivative versions|Files uploaded by User:Discasto|PD Spain government",
+        "source": "commons-categories",
+        "hidden": ""
+       },
+       "ImageDescription": {
+        "value": "Imagen mostrando los mapas de protección como bien de interés cultural del edificio del Banco Hispano Americano. A la izquierda, la declaración de 1999, que protegía todo el edificio. A la derecha, la de 2013, que la circunscribía a la fachada y primera crujía.",
+        "source": "commons-desc-page"
+       },
+       "Artist": {
+        "value": "<ul><li><a href=\"//commons.wikimedia.org/wiki/File:Localizaci%C3%B3n_del_edificio_del_Banco_Hispano_Americano_(Madrid).jpg\" title=\"File:Localización del edificio del Banco Hispano Americano (Madrid).jpg\">Localización del edificio del Banco Hispano Americano (Madrid).jpg</a>: Consejería de Educación y Cultura de la Comunidad de Madrid</li>\n<li><a href=\"//commons.wikimedia.org/wiki/File:Localizaci%C3%B3n_de_la_fachada_y_primera_cruj%C3%ADa_del_edificio_del_Banco_Hispano_Americano_(Madrid).jpg\" title=\"File:Localización de la fachada y primera crujía del edificio del Banco Hispano Americano (Madrid).jpg\">Localización de la fachada y primera crujía del edificio del Banco Hispano Americano (Madrid).jpg</a>: Consejería de Empleo, Turismo y Cultura de la Comunidad de Madrid</li>\n<li>derivative work: <a href=\"//commons.wikimedia.org/wiki/User:Discasto\" title=\"User:Discasto\">Discasto</a></li></ul>",
+        "source": "commons-desc-page"
+       },
+       "LicenseShortName": {
+        "value": "Public domain",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "AttributionRequired": {
+        "value": "false",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "Restrictions": {
+        "value": "",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "License": {
+        "value": "pd",
+        "source": "commons-templates",
+        "hidden": ""
+       }
+      },
+      "mime": "image/jpeg"
+     }
+    ]
+   },
+   {
+    "pageid": 49960781,
+    "ns": 6,
+    "title": "File:Madrid 2015 10 24 2560 (26447855761).jpg",
+    "index": 13,
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 57285853,
+      "width": 7360,
+      "height": 4912,
+      "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2b/Madrid_2015_10_24_2560_%2826447855761%29.jpg/1280px-Madrid_2015_10_24_2560_%2826447855761%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "thumbwidth": 1280,
+      "thumbheight": 854,
+      "responsiveUrls": {
+       "2": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2b/Madrid_2015_10_24_2560_%2826447855761%29.jpg/3840px-Madrid_2015_10_24_2560_%2826447855761%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+      },
+      "thumbattribs": {
+       "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2b/Madrid_2015_10_24_2560_%2826447855761%29.jpg/1280px-Madrid_2015_10_24_2560_%2826447855761%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 1280,
+       "height": 854,
+       "srcset": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2b/Madrid_2015_10_24_2560_%2826447855761%29.jpg/3840px-Madrid_2015_10_24_2560_%2826447855761%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail 2x"
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/2/2b/Madrid_2015_10_24_2560_%2826447855761%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:Madrid_2015_10_24_2560_(26447855761).jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/wiki/Special:Redirect/page/49960781",
+      "extmetadata": {
+       "ObjectName": {
+        "value": "Madrid 2015 10 24 2560 (26447855761)",
+        "source": "mediawiki-metadata"
+       },
+       "Categories": {
+        "value": "Flickr images reviewed by FlickreviewR|Files created by Harvey Barrison|Spain photographs taken on 2015-10-24|Files with coordinates missing SDC location of creation|Tympanum of Palacio de las Cortes",
+        "source": "commons-categories",
+        "hidden": ""
+       },
+       "ImageDescription": {
+        "value": "The Congress of Deputies is the lower house of Parliament; it meets for sessions at the Palacio de las Cortes, located in the Plaza de las Cortes.  The building, Congreso de los Diputados, has a neoclassical style designed by Narciso Pascual Colomer, and built between 1843 and 1850. The relief on the facade by sculptor Ponciano Ponzano centers on a sculpture of Spain embracing the constitutional state, represented by a woman with her arm around a young girl. Surrounding the pair are figures that represent in allegorical form Justice and Peace, Science, Agriculture, Fine Arts, Navigation, Industry, Commerce and so on. Ponzano also executed two bronze lions for the building's access stairway in a more realistic manner.",
+        "source": "commons-desc-page"
+       },
+       "Artist": {
+        "value": "<a rel=\"nofollow\" class=\"external text\" href=\"https://www.flickr.com/people/10299779@N03\">Harvey Barrison</a> from Massapequa, NY, USA",
+        "source": "commons-desc-page"
+       },
+       "LicenseShortName": {
+        "value": "CC BY-SA 2.0",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "AttributionRequired": {
+        "value": "true",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "LicenseUrl": {
+        "value": "https://creativecommons.org/licenses/by-sa/2.0",
+        "source": "commons-desc-page"
+       },
+       "Restrictions": {
+        "value": "",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "License": {
+        "value": "cc-by-sa-2.0",
+        "source": "commons-templates",
+        "hidden": ""
+       }
+      },
+      "mime": "image/jpeg"
+     }
+    ]
+   },
+   {
+    "pageid": 49960796,
+    "ns": 6,
+    "title": "File:Madrid 2015 10 24 2561 (26421625192).jpg",
+    "index": 9,
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 58320133,
+      "width": 7360,
+      "height": 4912,
+      "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/00/Madrid_2015_10_24_2561_%2826421625192%29.jpg/1280px-Madrid_2015_10_24_2561_%2826421625192%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "thumbwidth": 1280,
+      "thumbheight": 854,
+      "responsiveUrls": {
+       "2": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/00/Madrid_2015_10_24_2561_%2826421625192%29.jpg/3840px-Madrid_2015_10_24_2561_%2826421625192%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+      },
+      "thumbattribs": {
+       "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/00/Madrid_2015_10_24_2561_%2826421625192%29.jpg/1280px-Madrid_2015_10_24_2561_%2826421625192%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 1280,
+       "height": 854,
+       "srcset": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/00/Madrid_2015_10_24_2561_%2826421625192%29.jpg/3840px-Madrid_2015_10_24_2561_%2826421625192%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail 2x"
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/0/00/Madrid_2015_10_24_2561_%2826421625192%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:Madrid_2015_10_24_2561_(26421625192).jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/wiki/Special:Redirect/page/49960796",
+      "extmetadata": {
+       "ObjectName": {
+        "value": "Madrid 2015 10 24 2561 (26421625192)",
+        "source": "mediawiki-metadata"
+       },
+       "Categories": {
+        "value": "Statues of lions at the Congress of Deputies of Spain|Flickr images reviewed by FlickreviewR|Files created by Harvey Barrison|Spain photographs taken on 2015-10-24|Files with coordinates missing SDC location of creation|Flickr images missing SDC Flickr photo ID|Flickr images missing SDC published in",
+        "source": "commons-categories",
+        "hidden": ""
+       },
+       "ImageDescription": {
+        "value": "The Congress of Deputies is the lower house of Parliament; it meets for sessions at the Palacio de las Cortes, located in the Plaza de las Cortes.  The building, Congreso de los Diputados, has a neoclassical style designed by Narciso Pascual Colomer, and built between 1843 and 1850. The relief on the facade by sculptor Ponciano Ponzano centers on a sculpture of Spain embracing the constitutional state, represented by a woman with her arm around a young girl. Surrounding the pair are figures that represent in allegorical form Justice and Peace, Science, Agriculture, Fine Arts, Navigation, Industry, Commerce and so on. Ponzano also executed two bronze lions for the building's access stairway in a more realistic manner.",
+        "source": "commons-desc-page"
+       },
+       "Artist": {
+        "value": "<a rel=\"nofollow\" class=\"external text\" href=\"https://www.flickr.com/people/10299779@N03\">Harvey Barrison</a> from Massapequa, NY, USA",
+        "source": "commons-desc-page"
+       },
+       "LicenseShortName": {
+        "value": "CC BY-SA 2.0",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "AttributionRequired": {
+        "value": "true",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "LicenseUrl": {
+        "value": "https://creativecommons.org/licenses/by-sa/2.0",
+        "source": "commons-desc-page"
+       },
+       "Restrictions": {
+        "value": "",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "License": {
+        "value": "cc-by-sa-2.0",
+        "source": "commons-templates",
+        "hidden": ""
+       }
+      },
+      "mime": "image/jpeg"
+     }
+    ]
+   },
+   {
+    "pageid": 49960799,
+    "ns": 6,
+    "title": "File:Madrid 2015 10 24 2566 (26241110650).jpg",
+    "index": 11,
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 70491165,
+      "width": 7360,
+      "height": 4912,
+      "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f4/Madrid_2015_10_24_2566_%2826241110650%29.jpg/1280px-Madrid_2015_10_24_2566_%2826241110650%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "thumbwidth": 1280,
+      "thumbheight": 854,
+      "responsiveUrls": {
+       "2": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f4/Madrid_2015_10_24_2566_%2826241110650%29.jpg/3840px-Madrid_2015_10_24_2566_%2826241110650%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+      },
+      "thumbattribs": {
+       "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f4/Madrid_2015_10_24_2566_%2826241110650%29.jpg/1280px-Madrid_2015_10_24_2566_%2826241110650%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 1280,
+       "height": 854,
+       "srcset": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f4/Madrid_2015_10_24_2566_%2826241110650%29.jpg/3840px-Madrid_2015_10_24_2566_%2826241110650%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail 2x"
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/f/f4/Madrid_2015_10_24_2566_%2826241110650%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:Madrid_2015_10_24_2566_(26241110650).jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/wiki/Special:Redirect/page/49960799",
+      "extmetadata": {
+       "ObjectName": {
+        "value": "Madrid 2015 10 24 2566 (26241110650)",
+        "source": "mediawiki-metadata"
+       },
+       "Categories": {
+        "value": "Exterior of Palacio de las Cortes|Flickr images reviewed by FlickreviewR|Files created by Harvey Barrison|Spain photographs taken on 2015-10-24|Files with coordinates missing SDC location of creation",
+        "source": "commons-categories",
+        "hidden": ""
+       },
+       "ImageDescription": {
+        "value": "The Congress of Deputies is the lower house of Parliament; it meets for sessions at the Palacio de las Cortes, located in the Plaza de las Cortes.  The building, Congreso de los Diputados, has a neoclassical style designed by Narciso Pascual Colomer, and built between 1843 and 1850. The relief on the facade by sculptor Ponciano Ponzano centers on a sculpture of Spain embracing the constitutional state, represented by a woman with her arm around a young girl. Surrounding the pair are figures that represent in allegorical form Justice and Peace, Science, Agriculture, Fine Arts, Navigation, Industry, Commerce and so on. Ponzano also executed two bronze lions for the building's access stairway in a more realistic manner.",
+        "source": "commons-desc-page"
+       },
+       "Artist": {
+        "value": "<a rel=\"nofollow\" class=\"external text\" href=\"https://www.flickr.com/people/10299779@N03\">Harvey Barrison</a> from Massapequa, NY, USA",
+        "source": "commons-desc-page"
+       },
+       "LicenseShortName": {
+        "value": "CC BY-SA 2.0",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "AttributionRequired": {
+        "value": "true",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "LicenseUrl": {
+        "value": "https://creativecommons.org/licenses/by-sa/2.0",
+        "source": "commons-desc-page"
+       },
+       "Restrictions": {
+        "value": "",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "License": {
+        "value": "cc-by-sa-2.0",
+        "source": "commons-templates",
+        "hidden": ""
+       }
+      },
+      "mime": "image/jpeg"
+     }
+    ]
+   },
+   {
+    "pageid": 49960801,
+    "ns": 6,
+    "title": "File:Madrid 2015 10 24 2563 (26513957145).jpg",
+    "index": 12,
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 64170911,
+      "width": 7360,
+      "height": 4912,
+      "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1b/Madrid_2015_10_24_2563_%2826513957145%29.jpg/1280px-Madrid_2015_10_24_2563_%2826513957145%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "thumbwidth": 1280,
+      "thumbheight": 854,
+      "responsiveUrls": {
+       "2": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1b/Madrid_2015_10_24_2563_%2826513957145%29.jpg/3840px-Madrid_2015_10_24_2563_%2826513957145%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+      },
+      "thumbattribs": {
+       "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1b/Madrid_2015_10_24_2563_%2826513957145%29.jpg/1280px-Madrid_2015_10_24_2563_%2826513957145%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 1280,
+       "height": 854,
+       "srcset": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1b/Madrid_2015_10_24_2563_%2826513957145%29.jpg/3840px-Madrid_2015_10_24_2563_%2826513957145%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail 2x"
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/1/1b/Madrid_2015_10_24_2563_%2826513957145%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:Madrid_2015_10_24_2563_(26513957145).jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/wiki/Special:Redirect/page/49960801",
+      "extmetadata": {
+       "ObjectName": {
+        "value": "Madrid 2015 10 24 2563 (26513957145)",
+        "source": "mediawiki-metadata"
+       },
+       "Categories": {
+        "value": "Flickr images reviewed by FlickreviewR|Files created by Harvey Barrison|Spain photographs taken on 2015-10-24|Files with coordinates missing SDC location of creation|Tympanum of Palacio de las Cortes",
+        "source": "commons-categories",
+        "hidden": ""
+       },
+       "ImageDescription": {
+        "value": "The Congress of Deputies is the lower house of Parliament; it meets for sessions at the Palacio de las Cortes, located in the Plaza de las Cortes.  The building, Congreso de los Diputados, has a neoclassical style designed by Narciso Pascual Colomer, and built between 1843 and 1850. The relief on the facade by sculptor Ponciano Ponzano centers on a sculpture of Spain embracing the constitutional state, represented by a woman with her arm around a young girl. Surrounding the pair are figures that represent in allegorical form Justice and Peace, Science, Agriculture, Fine Arts, Navigation, Industry, Commerce and so on. Ponzano also executed two bronze lions for the building's access stairway in a more realistic manner.",
+        "source": "commons-desc-page"
+       },
+       "Artist": {
+        "value": "<a rel=\"nofollow\" class=\"external text\" href=\"https://www.flickr.com/people/10299779@N03\">Harvey Barrison</a> from Massapequa, NY, USA",
+        "source": "commons-desc-page"
+       },
+       "LicenseShortName": {
+        "value": "CC BY-SA 2.0",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "AttributionRequired": {
+        "value": "true",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "LicenseUrl": {
+        "value": "https://creativecommons.org/licenses/by-sa/2.0",
+        "source": "commons-desc-page"
+       },
+       "Restrictions": {
+        "value": "",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "License": {
+        "value": "cc-by-sa-2.0",
+        "source": "commons-templates",
+        "hidden": ""
+       }
+      },
+      "mime": "image/jpeg"
+     }
+    ]
+   },
+   {
+    "pageid": 49960803,
+    "ns": 6,
+    "title": "File:Madrid 2015 10 24 2565 (26241112890).jpg",
+    "index": 6,
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 72085804,
+      "width": 7360,
+      "height": 4912,
+      "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ea/Madrid_2015_10_24_2565_%2826241112890%29.jpg/1280px-Madrid_2015_10_24_2565_%2826241112890%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "thumbwidth": 1280,
+      "thumbheight": 854,
+      "responsiveUrls": {
+       "2": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ea/Madrid_2015_10_24_2565_%2826241112890%29.jpg/3840px-Madrid_2015_10_24_2565_%2826241112890%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+      },
+      "thumbattribs": {
+       "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ea/Madrid_2015_10_24_2565_%2826241112890%29.jpg/1280px-Madrid_2015_10_24_2565_%2826241112890%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 1280,
+       "height": 854,
+       "srcset": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ea/Madrid_2015_10_24_2565_%2826241112890%29.jpg/3840px-Madrid_2015_10_24_2565_%2826241112890%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail 2x"
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/e/ea/Madrid_2015_10_24_2565_%2826241112890%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:Madrid_2015_10_24_2565_(26241112890).jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/wiki/Special:Redirect/page/49960803",
+      "extmetadata": {
+       "ObjectName": {
+        "value": "Madrid 2015 10 24 2565 (26241112890)",
+        "source": "mediawiki-metadata"
+       },
+       "Categories": {
+        "value": "Statues of lions at the Congress of Deputies of Spain|Flickr images reviewed by FlickreviewR|Files created by Harvey Barrison|Spain photographs taken on 2015-10-24|Files with coordinates missing SDC location of creation",
+        "source": "commons-categories",
+        "hidden": ""
+       },
+       "ImageDescription": {
+        "value": "The Congress of Deputies is the lower house of Parliament; it meets for sessions at the Palacio de las Cortes, located in the Plaza de las Cortes.  The building, Congreso de los Diputados, has a neoclassical style designed by Narciso Pascual Colomer, and built between 1843 and 1850. The relief on the facade by sculptor Ponciano Ponzano centers on a sculpture of Spain embracing the constitutional state, represented by a woman with her arm around a young girl. Surrounding the pair are figures that represent in allegorical form Justice and Peace, Science, Agriculture, Fine Arts, Navigation, Industry, Commerce and so on. Ponzano also executed two bronze lions for the building's access stairway in a more realistic manner.",
+        "source": "commons-desc-page"
+       },
+       "Artist": {
+        "value": "<a rel=\"nofollow\" class=\"external text\" href=\"https://www.flickr.com/people/10299779@N03\">Harvey Barrison</a> from Massapequa, NY, USA",
+        "source": "commons-desc-page"
+       },
+       "LicenseShortName": {
+        "value": "CC BY-SA 2.0",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "AttributionRequired": {
+        "value": "true",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "LicenseUrl": {
+        "value": "https://creativecommons.org/licenses/by-sa/2.0",
+        "source": "commons-desc-page"
+       },
+       "Restrictions": {
+        "value": "",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "License": {
+        "value": "cc-by-sa-2.0",
+        "source": "commons-templates",
+        "hidden": ""
+       }
+      },
+      "mime": "image/jpeg"
+     }
+    ]
+   },
+   {
+    "pageid": 49960860,
+    "ns": 6,
+    "title": "File:Madrid 2015 10 24 2564 (26488016646).jpg",
+    "index": 7,
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 64892244,
+      "width": 7360,
+      "height": 4912,
+      "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8c/Madrid_2015_10_24_2564_%2826488016646%29.jpg/1280px-Madrid_2015_10_24_2564_%2826488016646%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "thumbwidth": 1280,
+      "thumbheight": 854,
+      "responsiveUrls": {
+       "2": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8c/Madrid_2015_10_24_2564_%2826488016646%29.jpg/3840px-Madrid_2015_10_24_2564_%2826488016646%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+      },
+      "thumbattribs": {
+       "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8c/Madrid_2015_10_24_2564_%2826488016646%29.jpg/1280px-Madrid_2015_10_24_2564_%2826488016646%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 1280,
+       "height": 854,
+       "srcset": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8c/Madrid_2015_10_24_2564_%2826488016646%29.jpg/3840px-Madrid_2015_10_24_2564_%2826488016646%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail 2x"
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/8/8c/Madrid_2015_10_24_2564_%2826488016646%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:Madrid_2015_10_24_2564_(26488016646).jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/wiki/Special:Redirect/page/49960860",
+      "extmetadata": {
+       "ObjectName": {
+        "value": "Madrid 2015 10 24 2564 (26488016646)",
+        "source": "mediawiki-metadata"
+       },
+       "Categories": {
+        "value": "Taken with Nikon D800|Statues of lions at the Congress of Deputies of Spain|Flickr images reviewed by FlickreviewR|Files created by Harvey Barrison|Spain photographs taken on 2015-10-24|Files with coordinates missing SDC location of creation",
+        "source": "commons-categories",
+        "hidden": ""
+       },
+       "ImageDescription": {
+        "value": "The Congress of Deputies is the lower house of Parliament; it meets for sessions at the Palacio de las Cortes, located in the Plaza de las Cortes.  The building, Congreso de los Diputados, has a neoclassical style designed by Narciso Pascual Colomer, and built between 1843 and 1850. The relief on the facade by sculptor Ponciano Ponzano centers on a sculpture of Spain embracing the constitutional state, represented by a woman with her arm around a young girl. Surrounding the pair are figures that represent in allegorical form Justice and Peace, Science, Agriculture, Fine Arts, Navigation, Industry, Commerce and so on. Ponzano also executed two bronze lions for the building's access stairway in a more realistic manner.",
+        "source": "commons-desc-page"
+       },
+       "Artist": {
+        "value": "<a rel=\"nofollow\" class=\"external text\" href=\"https://www.flickr.com/people/10299779@N03\">Harvey Barrison</a> from Massapequa, NY, USA",
+        "source": "commons-desc-page"
+       },
+       "LicenseShortName": {
+        "value": "CC BY-SA 2.0",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "AttributionRequired": {
+        "value": "true",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "LicenseUrl": {
+        "value": "https://creativecommons.org/licenses/by-sa/2.0",
+        "source": "commons-desc-page"
+       },
+       "Restrictions": {
+        "value": "",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "License": {
+        "value": "cc-by-sa-2.0",
+        "source": "commons-templates",
+        "hidden": ""
+       }
+      },
+      "mime": "image/jpeg"
+     }
+    ]
+   },
+   {
+    "pageid": 67945680,
+    "ns": 6,
+    "title": "File:Spanish Parliament building .jpg",
+    "index": 1,
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 6270552,
+      "width": 4096,
+      "height": 2833,
+      "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0a/Spanish_Parliament_building_.jpg/1280px-Spanish_Parliament_building_.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "thumbwidth": 1280,
+      "thumbheight": 885,
+      "responsiveUrls": {
+       "2": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0a/Spanish_Parliament_building_.jpg/3840px-Spanish_Parliament_building_.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+      },
+      "thumbattribs": {
+       "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0a/Spanish_Parliament_building_.jpg/1280px-Spanish_Parliament_building_.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 1280,
+       "height": 885,
+       "srcset": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0a/Spanish_Parliament_building_.jpg/3840px-Spanish_Parliament_building_.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail 2x"
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/0/0a/Spanish_Parliament_building_.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:Spanish_Parliament_building_.jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/wiki/Special:Redirect/page/67945680",
+      "extmetadata": {
+       "ObjectName": {
+        "value": "Spanish Parliament building ",
+        "source": "mediawiki-metadata"
+       },
+       "Categories": {
+        "value": "Exterior of Palacio de las Cortes|Self-published work|Uploaded with Mobile/Android|Uploaded with Mobile/Android (Nov 2017-Aug 2019)|Photographs taken on 2017-08-24",
+        "source": "commons-categories",
+        "hidden": ""
+       },
+       "ImageDescription": {
+        "value": "Spanish Parliament building in Madrid",
+        "source": "commons-desc-page"
+       },
+       "Artist": {
+        "value": "<a href=\"//commons.wikimedia.org/wiki/User:Emnamizouni\" title=\"User:Emnamizouni\">Emnamizouni</a>",
+        "source": "commons-desc-page"
+       },
+       "LicenseShortName": {
+        "value": "CC BY-SA 4.0",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "AttributionRequired": {
+        "value": "true",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "LicenseUrl": {
+        "value": "https://creativecommons.org/licenses/by-sa/4.0",
+        "source": "commons-desc-page"
+       },
+       "Restrictions": {
+        "value": "",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "License": {
+        "value": "cc-by-sa-4.0",
+        "source": "commons-templates",
+        "hidden": ""
+       }
+      },
+      "mime": "image/jpeg"
+     }
+    ]
+   },
+   {
+    "pageid": 79942011,
+    "ns": 6,
+    "title": "File:Marta Rosique.jpg",
+    "index": 16,
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 1295390,
+      "width": 1680,
+      "height": 2112,
+      "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/15/Marta_Rosique.jpg/1280px-Marta_Rosique.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "thumbwidth": 1280,
+      "thumbheight": 1609,
+      "responsiveUrls": {
+       "2": "https://upload.wikimedia.org/wikipedia/commons/1/15/Marta_Rosique.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
+      },
+      "thumbattribs": {
+       "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/15/Marta_Rosique.jpg/1280px-Marta_Rosique.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 1280,
+       "height": 1609,
+       "srcset": "https://upload.wikimedia.org/wikipedia/commons/1/15/Marta_Rosique.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled 2x"
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/1/15/Marta_Rosique.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:Marta_Rosique.jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/wiki/Special:Redirect/page/79942011",
+      "extmetadata": {
+       "ObjectName": {
+        "value": "Marta Rosique",
+        "source": "mediawiki-metadata"
+       },
+       "Categories": {
+        "value": "Marta Rosique|Self-published work|May 2019 in Madrid|Files with coordinates missing SDC location of creation",
+        "source": "commons-categories",
+        "hidden": ""
+       },
+       "ImageDescription": {
+        "value": "The Spanish politician Marta Rosique leaves the Parliament building after the first session of the newly elected Congress.",
+        "source": "commons-desc-page"
+       },
+       "Artist": {
+        "value": "<a href=\"//commons.wikimedia.org/wiki/User:Tomukas\" title=\"User:Tomukas\">Thomas Holbach</a>",
+        "source": "commons-desc-page"
+       },
+       "LicenseShortName": {
+        "value": "CC BY-SA 4.0",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "AttributionRequired": {
+        "value": "true",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "LicenseUrl": {
+        "value": "https://creativecommons.org/licenses/by-sa/4.0",
+        "source": "commons-desc-page"
+       },
+       "Restrictions": {
+        "value": "",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "License": {
+        "value": "cc-by-sa-4.0",
+        "source": "commons-templates",
+        "hidden": ""
+       }
+      },
+      "mime": "image/jpeg"
+     }
+    ]
+   },
+   {
+    "pageid": 79961206,
+    "ns": 6,
+    "title": "File:Patricia Reyes Rivera.jpg",
+    "index": 19,
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 361614,
+      "width": 1007,
+      "height": 940,
+      "thumburl": "https://upload.wikimedia.org/wikipedia/commons/d/d8/Patricia_Reyes_Rivera.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+      "thumbwidth": 1280,
+      "thumbheight": 1195,
+      "thumbattribs": {
+       "src": "https://upload.wikimedia.org/wikipedia/commons/d/d8/Patricia_Reyes_Rivera.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 1280,
+       "height": 1195
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/d/d8/Patricia_Reyes_Rivera.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:Patricia_Reyes_Rivera.jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/wiki/Special:Redirect/page/79961206",
+      "extmetadata": {
+       "ObjectName": {
+        "value": "Patricia Reyes Rivera",
+        "source": "mediawiki-metadata"
+       },
+       "Categories": {
+        "value": "Patricia Reyes Rivera|Self-published work|May 2019 in Madrid|Files with coordinates missing SDC location of creation",
+        "source": "commons-categories",
+        "hidden": ""
+       },
+       "ImageDescription": {
+        "value": "Patricia Reyes Rivera leaves the Parliament building after the first day of the newly elected Spanish Congress. During the session she was elected fourth secretary.",
+        "source": "commons-desc-page"
+       },
+       "Artist": {
+        "value": "<a href=\"//commons.wikimedia.org/wiki/User:Tomukas\" title=\"User:Tomukas\">Thomas Holbach</a>",
+        "source": "commons-desc-page"
+       },
+       "LicenseShortName": {
+        "value": "CC BY-SA 4.0",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "AttributionRequired": {
+        "value": "true",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "LicenseUrl": {
+        "value": "https://creativecommons.org/licenses/by-sa/4.0",
+        "source": "commons-desc-page"
+       },
+       "Restrictions": {
+        "value": "",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "License": {
+        "value": "cc-by-sa-4.0",
+        "source": "commons-templates",
+        "hidden": ""
+       }
+      },
+      "mime": "image/jpeg"
+     }
+    ]
+   },
+   {
+    "pageid": 80894653,
+    "ns": 6,
+    "title": "File:Lucía Muñoz.jpg",
+    "index": 10,
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 864539,
+      "width": 1448,
+      "height": 1552,
+      "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e6/Luc%C3%ADa_Mu%C3%B1oz.jpg/1280px-Luc%C3%ADa_Mu%C3%B1oz.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "thumbwidth": 1280,
+      "thumbheight": 1372,
+      "responsiveUrls": {
+       "2": "https://upload.wikimedia.org/wikipedia/commons/e/e6/Luc%C3%ADa_Mu%C3%B1oz.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
+      },
+      "thumbattribs": {
+       "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e6/Luc%C3%ADa_Mu%C3%B1oz.jpg/1280px-Luc%C3%ADa_Mu%C3%B1oz.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 1280,
+       "height": 1372,
+       "srcset": "https://upload.wikimedia.org/wikipedia/commons/e/e6/Luc%C3%ADa_Mu%C3%B1oz.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled 2x"
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/e/e6/Luc%C3%ADa_Mu%C3%B1oz.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:Luc%C3%ADa_Mu%C3%B1oz.jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/wiki/Special:Redirect/page/80894653",
+      "extmetadata": {
+       "ObjectName": {
+        "value": "Lucía Muñoz",
+        "source": "mediawiki-metadata"
+       },
+       "Categories": {
+        "value": "Lucía Muñoz|Self-published work|July 2019 in Madrid|Files with coordinates missing SDC location of creation|Women holding smartphones|People calling with smartphones",
+        "source": "commons-categories",
+        "hidden": ""
+       },
+       "ImageDescription": {
+        "value": "Lucía Muñoz leaves the Parliament building in Madrid after the first debate on the re-election of the Spanish President.",
+        "source": "commons-desc-page"
+       },
+       "Artist": {
+        "value": "<a href=\"//commons.wikimedia.org/wiki/User:Tomukas\" title=\"User:Tomukas\">Thomas Holbach</a>",
+        "source": "commons-desc-page"
+       },
+       "LicenseShortName": {
+        "value": "CC BY-SA 4.0",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "AttributionRequired": {
+        "value": "true",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "LicenseUrl": {
+        "value": "https://creativecommons.org/licenses/by-sa/4.0",
+        "source": "commons-desc-page"
+       },
+       "Restrictions": {
+        "value": "",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "License": {
+        "value": "cc-by-sa-4.0",
+        "source": "commons-templates",
+        "hidden": ""
+       }
+      },
+      "mime": "image/jpeg"
+     }
+    ]
+   },
+   {
+    "pageid": 80925087,
+    "ns": 6,
+    "title": "File:Paloma Gázquez.jpg",
+    "index": 8,
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 216544,
+      "width": 1089,
+      "height": 1039,
+      "thumburl": "https://upload.wikimedia.org/wikipedia/commons/5/5c/Paloma_G%C3%A1zquez.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+      "thumbwidth": 1280,
+      "thumbheight": 1221,
+      "thumbattribs": {
+       "src": "https://upload.wikimedia.org/wikipedia/commons/5/5c/Paloma_G%C3%A1zquez.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 1280,
+       "height": 1221
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/5/5c/Paloma_G%C3%A1zquez.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:Paloma_G%C3%A1zquez.jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/wiki/Special:Redirect/page/80925087",
+      "extmetadata": {
+       "ObjectName": {
+        "value": "Paloma Gázquez",
+        "source": "mediawiki-metadata"
+       },
+       "Categories": {
+        "value": "Paloma Gázquez|Self-published work|July 2019 in Madrid|Files with coordinates missing SDC location of creation",
+        "source": "commons-categories",
+        "hidden": ""
+       },
+       "ImageDescription": {
+        "value": "Paloma Gázquez leaves the Parliament building in Madrid after the first debate on the re-election of the Spanish President.",
+        "source": "commons-desc-page"
+       },
+       "Artist": {
+        "value": "<a href=\"//commons.wikimedia.org/wiki/User:Tomukas\" title=\"User:Tomukas\">Thomas Holbach</a>",
+        "source": "commons-desc-page"
+       },
+       "LicenseShortName": {
+        "value": "CC BY-SA 4.0",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "AttributionRequired": {
+        "value": "true",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "LicenseUrl": {
+        "value": "https://creativecommons.org/licenses/by-sa/4.0",
+        "source": "commons-desc-page"
+       },
+       "Restrictions": {
+        "value": "",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "License": {
+        "value": "cc-by-sa-4.0",
+        "source": "commons-templates",
+        "hidden": ""
+       }
+      },
+      "mime": "image/jpeg"
+     }
+    ]
+   },
+   {
+    "pageid": 84590015,
+    "ns": 6,
+    "title": "File:Tomás Guitarte.jpg",
+    "index": 18,
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 1772244,
+      "width": 2976,
+      "height": 2542,
+      "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9f/Tom%C3%A1s_Guitarte.jpg/1280px-Tom%C3%A1s_Guitarte.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "thumbwidth": 1280,
+      "thumbheight": 1093,
+      "responsiveUrls": {
+       "2": "https://upload.wikimedia.org/wikipedia/commons/9/9f/Tom%C3%A1s_Guitarte.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
+      },
+      "thumbattribs": {
+       "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9f/Tom%C3%A1s_Guitarte.jpg/1280px-Tom%C3%A1s_Guitarte.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 1280,
+       "height": 1093,
+       "srcset": "https://upload.wikimedia.org/wikipedia/commons/9/9f/Tom%C3%A1s_Guitarte.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled 2x"
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/9/9f/Tom%C3%A1s_Guitarte.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:Tom%C3%A1s_Guitarte.jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/wiki/Special:Redirect/page/84590015",
+      "extmetadata": {
+       "ObjectName": {
+        "value": "Tomás Guitarte",
+        "source": "mediawiki-metadata"
+       },
+       "Categories": {
+        "value": "Tomás Guitarte|Self-published work|December 2019 in Madrid|Files with coordinates missing SDC location of creation",
+        "source": "commons-categories",
+        "hidden": ""
+       },
+       "ImageDescription": {
+        "value": "Tomás Guitarte leaves the parliament building after the first session of the newly elected congress.",
+        "source": "commons-desc-page"
+       },
+       "Artist": {
+        "value": "<a href=\"//commons.wikimedia.org/wiki/User:Tomukas\" title=\"User:Tomukas\">Thomas Holbach</a>",
+        "source": "commons-desc-page"
+       },
+       "LicenseShortName": {
+        "value": "CC BY-SA 4.0",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "AttributionRequired": {
+        "value": "true",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "LicenseUrl": {
+        "value": "https://creativecommons.org/licenses/by-sa/4.0",
+        "source": "commons-desc-page"
+       },
+       "Restrictions": {
+        "value": "",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "License": {
+        "value": "cc-by-sa-4.0",
+        "source": "commons-templates",
+        "hidden": ""
+       }
+      },
+      "mime": "image/jpeg"
+     }
+    ]
+   },
+   {
+    "pageid": 84591463,
+    "ns": 6,
+    "title": "File:Agustín Javier Zamarrón.jpg",
+    "index": 14,
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 2672679,
+      "width": 3585,
+      "height": 2949,
+      "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/93/Agust%C3%ADn_Javier_Zamarr%C3%B3n.jpg/1280px-Agust%C3%ADn_Javier_Zamarr%C3%B3n.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "thumbwidth": 1280,
+      "thumbheight": 1053,
+      "responsiveUrls": {
+       "2": "https://upload.wikimedia.org/wikipedia/commons/9/93/Agust%C3%ADn_Javier_Zamarr%C3%B3n.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
+      },
+      "thumbattribs": {
+       "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/93/Agust%C3%ADn_Javier_Zamarr%C3%B3n.jpg/1280px-Agust%C3%ADn_Javier_Zamarr%C3%B3n.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 1280,
+       "height": 1053,
+       "srcset": "https://upload.wikimedia.org/wikipedia/commons/9/93/Agust%C3%ADn_Javier_Zamarr%C3%B3n.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled 2x"
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/9/93/Agust%C3%ADn_Javier_Zamarr%C3%B3n.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:Agust%C3%ADn_Javier_Zamarr%C3%B3n.jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/wiki/Special:Redirect/page/84591463",
+      "extmetadata": {
+       "ObjectName": {
+        "value": "Agustín Javier Zamarrón",
+        "source": "mediawiki-metadata"
+       },
+       "Categories": {
+        "value": "Agustín Javier Zamarrón|Self-published work|December 2019 in Madrid|Files with coordinates missing SDC location of creation|Politicians of Spain in 2019",
+        "source": "commons-categories",
+        "hidden": ""
+       },
+       "ImageDescription": {
+        "value": "Agustín Javier Zamarrón during an interview in front of the Parliament building after the first session of the newly elected Congress.",
+        "source": "commons-desc-page"
+       },
+       "Artist": {
+        "value": "<a href=\"//commons.wikimedia.org/wiki/User:Tomukas\" title=\"User:Tomukas\">Thomas Holbach</a>",
+        "source": "commons-desc-page"
+       },
+       "LicenseShortName": {
+        "value": "CC BY-SA 4.0",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "AttributionRequired": {
+        "value": "true",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "LicenseUrl": {
+        "value": "https://creativecommons.org/licenses/by-sa/4.0",
+        "source": "commons-desc-page"
+       },
+       "Restrictions": {
+        "value": "",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "License": {
+        "value": "cc-by-sa-4.0",
+        "source": "commons-templates",
+        "hidden": ""
+       }
+      },
+      "mime": "image/jpeg"
+     }
+    ]
+   },
+   {
+    "pageid": 85124317,
+    "ns": 6,
+    "title": "File:Voorgevel van het Congres van Afgevaardigden te Madrid CHAMBRE DES DÉPUTÉS A MADRID (titel op object), RP-F-F07660.jpg",
+    "index": 5,
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 1302566,
+      "width": 4420,
+      "height": 2284,
+      "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1c/Voorgevel_van_het_Congres_van_Afgevaardigden_te_Madrid_CHAMBRE_DES_D%C3%89PUT%C3%89S_A_MADRID_%28titel_op_object%29%2C_RP-F-F07660.jpg/1280px-Voorgevel_van_het_Congres_van_Afgevaardigden_te_Madrid_CHAMBRE_DES_D%C3%89PUT%C3%89S_A_MADRID_%28titel_op_object%29%2C_RP-F-F07660.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "thumbwidth": 1280,
+      "thumbheight": 661,
+      "responsiveUrls": {
+       "2": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1c/Voorgevel_van_het_Congres_van_Afgevaardigden_te_Madrid_CHAMBRE_DES_D%C3%89PUT%C3%89S_A_MADRID_%28titel_op_object%29%2C_RP-F-F07660.jpg/3840px-Voorgevel_van_het_Congres_van_Afgevaardigden_te_Madrid_CHAMBRE_DES_D%C3%89PUT%C3%89S_A_MADRID_%28titel_op_object%29%2C_RP-F-F07660.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+      },
+      "thumbattribs": {
+       "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1c/Voorgevel_van_het_Congres_van_Afgevaardigden_te_Madrid_CHAMBRE_DES_D%C3%89PUT%C3%89S_A_MADRID_%28titel_op_object%29%2C_RP-F-F07660.jpg/1280px-Voorgevel_van_het_Congres_van_Afgevaardigden_te_Madrid_CHAMBRE_DES_D%C3%89PUT%C3%89S_A_MADRID_%28titel_op_object%29%2C_RP-F-F07660.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 1280,
+       "height": 661,
+       "srcset": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1c/Voorgevel_van_het_Congres_van_Afgevaardigden_te_Madrid_CHAMBRE_DES_D%C3%89PUT%C3%89S_A_MADRID_%28titel_op_object%29%2C_RP-F-F07660.jpg/3840px-Voorgevel_van_het_Congres_van_Afgevaardigden_te_Madrid_CHAMBRE_DES_D%C3%89PUT%C3%89S_A_MADRID_%28titel_op_object%29%2C_RP-F-F07660.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail 2x"
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/1/1c/Voorgevel_van_het_Congres_van_Afgevaardigden_te_Madrid_CHAMBRE_DES_D%C3%89PUT%C3%89S_A_MADRID_%28titel_op_object%29%2C_RP-F-F07660.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:Voorgevel_van_het_Congres_van_Afgevaardigden_te_Madrid_CHAMBRE_DES_D%C3%89PUT%C3%89S_A_MADRID_(titel_op_object),_RP-F-F07660.jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/wiki/Special:Redirect/page/85124317",
+      "extmetadata": {
+       "ObjectName": {
+        "value": "Voorgevel van het Congres van Afgevaardigden te Madrid CHAMBRE DES DÉPUTÉS A MADRID (titel op object), RP-F-F07660",
+        "source": "mediawiki-metadata"
+       },
+       "Categories": {
+        "value": "CC-Zero|Exterior of Palacio de las Cortes|Madrid in the 19th century|Stereo cards of Spain in the Rijksmuseum Amsterdam|Albumen prints in the Rijksmuseum Amsterdam|Palacio de las Cortes in the 20th century|Photographs by Jean Andrieu in the Rijksmuseum Amsterdam|Photographs of Madrid by Jean Andrieu",
+        "source": "commons-categories",
+        "hidden": ""
+       },
+       "ImageDescription": {
+        "value": "<br><br><big><b>Identificatie</b></big><br><b>Titel(s): </b>Voorgevel van het Congres van Afgevaardigden te Madrid. CHAMBRE DES DÉPUTÉS A MADRID (titel op object)<br><b>Objecttype:</b> stereofoto <br><b>Objectnummer:</b> RP-F-F07660<br><b>Opschriften / Merken:</b> nummer, recto, gedrukt: ‘2689.’<br><br><big><b>Vervaardiging</b></big><br><b>Vervaardiger:</b> fotograaf: Jean Andrieu (vermeld op object)<br><b>Plaats vervaardiging:</b> Madrid<br><b>Datering:</b> 1862 - 1876<br><b>Fysieke kenmerken:</b> albuminedruk<br><b>Materiaal:</b> karton fotopapier <br><b>Techniek:</b> albuminedruk<br><b>Afmetingen:</b> secundaire drager: h 85 mm × b 170 mm<br><br><big><b>Onderwerp</b></big><br><b>Wat: </b>façade (of house or building). Lower House, Parliament, Chamber<br><b>Waar:</b> Congres van Afgevaardigden<br><br><big><b>Verwerving en rechten</b></big><br><b>Verwerving:</b> overdracht van beheer 1994<br><b>Copyright:</b> Publiek domein",
+        "source": "commons-desc-page"
+       },
+       "Artist": {
+        "value": "Rijksmuseum",
+        "source": "commons-desc-page"
+       },
+       "LicenseShortName": {
+        "value": "CC0",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "AttributionRequired": {
+        "value": "false",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "LicenseUrl": {
+        "value": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+        "source": "commons-desc-page"
+       },
+       "Restrictions": {
+        "value": "",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "License": {
+        "value": "cc0",
+        "source": "commons-templates",
+        "hidden": ""
+       }
+      },
+      "mime": "image/jpeg"
+     }
+    ]
+   },
+   {
+    "pageid": 90136673,
+    "ns": 6,
+    "title": "File:The political raree-show- or a picture of parties and politics, during and at the close of the last session of Parliament, June 1779 (BM 1868,0808.4594).jpg",
+    "index": 20,
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 606713,
+      "width": 1600,
+      "height": 1097,
+      "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0c/The_political_raree-show-_or_a_picture_of_parties_and_politics%2C_during_and_at_the_close_of_the_last_session_of_Parliament%2C_June_1779_%28BM_1868%2C0808.4594%29.jpg/1280px-The_political_raree-show-_or_a_picture_of_parties_and_politics%2C_during_and_at_the_close_of_the_last_session_of_Parliament%2C_June_1779_%28BM_1868%2C0808.4594%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "thumbwidth": 1280,
+      "thumbheight": 878,
+      "responsiveUrls": {
+       "2": "https://upload.wikimedia.org/wikipedia/commons/0/0c/The_political_raree-show-_or_a_picture_of_parties_and_politics%2C_during_and_at_the_close_of_the_last_session_of_Parliament%2C_June_1779_%28BM_1868%2C0808.4594%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
+      },
+      "thumbattribs": {
+       "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0c/The_political_raree-show-_or_a_picture_of_parties_and_politics%2C_during_and_at_the_close_of_the_last_session_of_Parliament%2C_June_1779_%28BM_1868%2C0808.4594%29.jpg/1280px-The_political_raree-show-_or_a_picture_of_parties_and_politics%2C_during_and_at_the_close_of_the_last_session_of_Parliament%2C_June_1779_%28BM_1868%2C0808.4594%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 1280,
+       "height": 878,
+       "srcset": "https://upload.wikimedia.org/wikipedia/commons/0/0c/The_political_raree-show-_or_a_picture_of_parties_and_politics%2C_during_and_at_the_close_of_the_last_session_of_Parliament%2C_June_1779_%28BM_1868%2C0808.4594%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled 2x"
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/0/0c/The_political_raree-show-_or_a_picture_of_parties_and_politics%2C_during_and_at_the_close_of_the_last_session_of_Parliament%2C_June_1779_%28BM_1868%2C0808.4594%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:The_political_raree-show-_or_a_picture_of_parties_and_politics,_during_and_at_the_close_of_the_last_session_of_Parliament,_June_1779_(BM_1868,0808.4594).jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/wiki/Special:Redirect/page/90136673",
+      "extmetadata": {
+       "ObjectName": {
+        "value": "<div class=\"fn\">\nThe political raree-show: or a picture of parties and politics, during and at the close of the last session of Parliament, June 1779</div>",
+        "source": "commons-desc-page"
+       },
+       "Categories": {
+        "value": "Files with no machine-readable author|Artworks without Wikidata item|PD-old-100-expired|PD-scan (PD-old-100-expired)|Artworks with known accession number|CC-PD-Mark|Satirical prints in the British Museum|Uploads by copyfraud|PD-old missing SDC copyright status|The political raree-show: or a picture of parties and politics",
+        "source": "commons-categories",
+        "hidden": ""
+       },
+       "ImageDescription": {
+        "value": "Twelve views seen in a peep-show, the views being arranged in four rows; the outside of the box or booth is seen on the left, a boy looks through a round hole, the showman points, saying to him, \"There you shall see\". His words are given at length in the accompanying text (See Curatorial Comment).  1 July 1779 \n<br>Etching",
+        "source": "commons-desc-page"
+       },
+       "LicenseShortName": {
+        "value": "Public domain",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "AttributionRequired": {
+        "value": "false",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "Restrictions": {
+        "value": "",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "License": {
+        "value": "pd",
+        "source": "commons-templates",
+        "hidden": ""
+       }
+      },
+      "mime": "image/jpeg"
+     }
+    ]
+   },
+   {
+    "pageid": 119432009,
+    "ns": 6,
+    "title": "File:Palacio de las Cortes (Madrid).jpg",
+    "index": 17,
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 354556,
+      "width": 1600,
+      "height": 962,
+      "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9d/Palacio_de_las_Cortes_%28Madrid%29.jpg/1280px-Palacio_de_las_Cortes_%28Madrid%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "thumbwidth": 1280,
+      "thumbheight": 770,
+      "responsiveUrls": {
+       "2": "https://upload.wikimedia.org/wikipedia/commons/9/9d/Palacio_de_las_Cortes_%28Madrid%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
+      },
+      "thumbattribs": {
+       "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9d/Palacio_de_las_Cortes_%28Madrid%29.jpg/1280px-Palacio_de_las_Cortes_%28Madrid%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 1280,
+       "height": 770,
+       "srcset": "https://upload.wikimedia.org/wikipedia/commons/9/9d/Palacio_de_las_Cortes_%28Madrid%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled 2x"
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/9/9d/Palacio_de_las_Cortes_%28Madrid%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:Palacio_de_las_Cortes_(Madrid).jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/wiki/Special:Redirect/page/119432009",
+      "extmetadata": {
+       "ObjectName": {
+        "value": "Palacio de las Cortes (Madrid)",
+        "source": "mediawiki-metadata"
+       },
+       "Categories": {
+        "value": "Exterior of Palacio de las Cortes|Self-published work",
+        "source": "commons-categories",
+        "hidden": ""
+       },
+       "ImageDescription": {
+        "value": "The building of the Palacio de las Cortes in Madrid, the lower house of the Spanish Parliament",
+        "source": "commons-desc-page"
+       },
+       "Artist": {
+        "value": "<a href=\"//commons.wikimedia.org/wiki/User:Paasikivi\" title=\"User:Paasikivi\">Paasikivi</a>",
+        "source": "commons-desc-page"
+       },
+       "LicenseShortName": {
+        "value": "CC BY-SA 4.0",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "AttributionRequired": {
+        "value": "true",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "LicenseUrl": {
+        "value": "https://creativecommons.org/licenses/by-sa/4.0",
+        "source": "commons-desc-page"
+       },
+       "Restrictions": {
+        "value": "",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "License": {
+        "value": "cc-by-sa-4.0",
+        "source": "commons-templates",
+        "hidden": ""
+       }
+      },
+      "mime": "image/jpeg"
+     }
+    ]
+   }
+  ]
+ }
+}

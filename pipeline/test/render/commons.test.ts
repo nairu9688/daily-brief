@@ -192,8 +192,10 @@ describe('cleanAuthor', () => {
 
 describe('findCommonsPhoto', () => {
   it('interroge l’API de Commons (fichiers, bitmaps, vignette 1280 px) avec un agent générique', async () => {
-    const { fetch, calls } = fakeFetch({ [COMMONS_API]: { json: search } });
-    expect(await findCommonsPhoto('high-speed train', { fetch })).toEqual(TGV);
+    // Catégories ajoutées (la réponse du 19/11/2026 a été enregistrée sans elles) : le TGV devient pertinent.
+    const categorized = withPages((ps) => ps.map((p) => (Object.assign(meta(p), { Categories: { value: 'High-speed trains|TGV Duplex' } }), p)));
+    const { fetch, calls } = fakeFetch({ [COMMONS_API]: { json: categorized } });
+    expect(await findCommonsPhoto('high-speed train', { fetch, lang: 'fr' })).toEqual(TGV);
     const url = new URL(calls[0].url);
     expect(url.origin + url.pathname).toBe(COMMONS_API);
     expect(Object.fromEntries(url.searchParams)).toMatchObject({
@@ -206,22 +208,30 @@ describe('findCommonsPhoto', () => {
       prop: 'imageinfo',
       iiprop: 'url|extmetadata|mime|size',
       iiurlwidth: '1280',
+      gsrlimit: '20',
+      iiextmetadatafilter: 'Artist|LicenseShortName|LicenseUrl|License|Restrictions|NonFree|AttributionRequired|ObjectName|ImageDescription|Categories',
     });
     expect(calls[0].headers).toMatchObject({ 'User-Agent': WIKIMEDIA_USER_AGENT, 'Api-User-Agent': WIKIMEDIA_USER_AGENT });
     expect(WIKIMEDIA_USER_AGENT).toBe('DailyBrief/1.0 (personal news digest)');
   });
 
+  it('contrôle la pertinence : le TGV, sans les mots de la requête dans son titre, cède la place à un titre qui les a ; sinon aucune photo', async () => {
+    const { fetch } = fakeFetch({ [COMMONS_API]: { json: search } });
+    expect((await findCommonsPhoto('high-speed train', { fetch, lang: 'fr' }))?.pageUrl).toBe('https://commons.wikimedia.org/wiki/File:Jakarta-Bandung_High_Speed_Train_1.png');
+    expect(await findCommonsPhoto('car factory', { fetch, lang: 'fr' })).toBeNull();
+  });
+
   it('lève HttpError sur un statut en erreur et une erreur sur une réponse d’erreur de l’API', async () => {
     const denied = fakeFetch({ [COMMONS_API]: { status: 403, json: {} } });
-    await expect(findCommonsPhoto('x', { fetch: denied.fetch })).rejects.toBeInstanceOf(HttpError);
+    await expect(findCommonsPhoto('x', { fetch: denied.fetch, lang: 'fr' })).rejects.toBeInstanceOf(HttpError);
     const apiError = fakeFetch({ [COMMONS_API]: { json: { error: { code: 'maxlag', info: 'Waiting' } } } });
-    await expect(findCommonsPhoto('x', { fetch: apiError.fetch })).rejects.toThrow(/Commons : maxlag/);
+    await expect(findCommonsPhoto('x', { fetch: apiError.fetch, lang: 'fr' })).rejects.toThrow(/Commons : maxlag/);
   });
 
   it('refuse un corps trop lourd et abandonne après le délai', async () => {
     const big = fakeFetch({ [COMMONS_API]: { json: search, length: String(2_000_000) } });
-    await expect(findCommonsPhoto('x', { fetch: big.fetch })).rejects.toThrow(/trop lourd/);
+    await expect(findCommonsPhoto('x', { fetch: big.fetch, lang: 'fr' })).rejects.toThrow(/trop lourd/);
     const slow = fakeFetch({ [COMMONS_API]: { hang: true } });
-    await expect(findCommonsPhoto('x', { fetch: slow.fetch, timeoutMs: 20 })).rejects.toThrow();
+    await expect(findCommonsPhoto('x', { fetch: slow.fetch, timeoutMs: 20, lang: 'fr' })).rejects.toThrow();
   });
 });

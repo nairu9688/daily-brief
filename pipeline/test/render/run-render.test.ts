@@ -11,7 +11,12 @@ import { fixtureBrief, repoPath } from '../helpers';
 import { fakeFetch } from './fake-fetch';
 import { photo } from './photo';
 
+/**
+ * Réponse réelle du 19/11/2026, enregistrée sans les catégories : celles-ci sont ajoutées ici pour que le contrôle
+ * de pertinence (relevance.ts, testé à part) retienne le TGV pour les trois requêtes photo de la fixture.
+ */
 const search = JSON.parse(readFileSync(repoPath('fixtures/api/commons-search.json'), 'utf8'));
+for (const p of search.query.pages) p.imageinfo[0].extmetadata.Categories = { value: 'High-speed trains|Car factories|Airport runways' };
 const TGV_PAGE = 'https://commons.wikimedia.org/wiki/File:SNCF_TGV_Duplex_Viaduc_de_Cize_-_Bolozon.jpg';
 
 function day(langs = ['fr', 'en', 'es']) {
@@ -135,7 +140,7 @@ describe('runRender', () => {
     const fr = JSON.parse(readFileSync(join(dayDir, 'fr.final.json'), 'utf8'));
     expect(parseEdition(fr).success).toBe(true);
     expect(JSON.stringify(fr)).not.toContain('"photo":');
-    expect(r.issues).toContainEqual(expect.objectContaining({ level: 'warning', lang: 'fr', message: expect.stringMatching(/aucune photo libre sur Wikimedia Commons pour « car factory »/) }));
+    expect(r.issues).toContainEqual(expect.objectContaining({ level: 'warning', lang: 'fr', message: expect.stringMatching(/aucune photo libre et pertinente sur Wikimedia Commons pour « car factory »/) }));
     expect(n.calls.every((c) => c.url.startsWith(COMMONS_API))).toBe(true);
   });
 
