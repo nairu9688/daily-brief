@@ -2,12 +2,13 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { access } from '@/lib/access';
 import { buildCsp } from '@/lib/csp';
-import { EDITION_COOKIE, isLang } from '@/lib/edition-choice';
+import { EDITION_COOKIE, EDITION_COOKIE_MAX_AGE, isLang } from '@/lib/edition-choice';
 import { fixtureMode, fixtureVisitor, isAllowedEmail, supabaseConfig } from '@/lib/env';
 
 /**
  * Proxy (ex-middleware, Next 16, runtime Node) : pour chaque page,
- * 1. retient l'onglet d'édition (`?ed=en` → cookie `ed`, visible dès cette requête) ;
+ * 1. retient l'onglet d'édition (`?ed=en` → cookie `ed`, visible dès cette requête). Un préchargement
+ *    rend l'écran demandé mais ne change pas le choix retenu (voir plus bas) ;
  * 2. rafraîchit la session Supabase s'il y en a une. Le brief est public : seule /sante renvoie vers
  *    /login sans session, ou avec une autre adresse que ALLOWED_EMAIL (mode FIXTURE=1 : pas de
  *    connexion, l'utilisateur est connecté, sauf FIXTURE_VISITOR=1 qui simule un visiteur) ;
@@ -63,7 +64,13 @@ export async function proxy(request: NextRequest) {
   }
 
   for (const { name, value, options } of pending) response.cookies.set(name, value, options);
-  if (isLang(ed)) response.cookies.set(EDITION_COOKIE, ed, { path: '/', maxAge: 60 * 60 * 24 * 365, sameSite: 'lax', httpOnly: true, secure: https });
+  // Seul le chargement d'une page (Sec-Fetch-Dest: document, ou navigateur qui ne l'envoie pas) retient le
+  // choix : les requêtes RSC de Next (préchargement des onglets, navigation côté client) passent par fetch()
+  // et ne doivent pas le changer. Next retire ses propres en-têtes (Next-Router-Prefetch, RSC) avant le proxy.
+  // La navigation côté client pose le cookie au clic (EditionTabs) : il n'est donc pas httpOnly (une langue).
+  const dest = request.headers.get('sec-fetch-dest');
+  const pageLoad = dest === null || dest === 'document';
+  if (isLang(ed) && pageLoad) response.cookies.set(EDITION_COOKIE, ed, { path: '/', maxAge: EDITION_COOKIE_MAX_AGE, sameSite: 'lax', httpOnly: false, secure: https });
   response.headers.set('Content-Security-Policy', csp);
   return response;
 }

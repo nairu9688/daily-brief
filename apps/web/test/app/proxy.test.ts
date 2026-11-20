@@ -118,8 +118,14 @@ describe('proxy', () => {
   it('retient l’édition choisie dans un cookie, et ignore une valeur inconnue', async () => {
     m.email = 'nanigeek@gmail.com';
     const r = await proxy(req('/?ed=es', { https: true }));
-    expect(r.cookies.get('ed')).toMatchObject({ value: 'es', httpOnly: true, secure: true, sameSite: 'lax' });
+    expect(r.cookies.get('ed')).toMatchObject({ value: 'es', secure: true, sameSite: 'lax' });
+    expect(r.cookies.get('ed')?.httpOnly).toBeFalsy();
     expect((await proxy(req('/?ed=de'))).cookies.get('ed')).toBeUndefined();
+    // Un préchargement de l'onglet (requête fetch de Next) ne change pas le choix retenu ; un chargement de page, si.
+    const fetchReq = new NextRequest('https://brief.example/?ed=en', { headers: { 'sec-fetch-dest': 'empty' } });
+    expect((await proxy(fetchReq)).cookies.get('ed')).toBeUndefined();
+    const doc = new NextRequest('https://brief.example/?ed=en', { headers: { 'sec-fetch-dest': 'document' } });
+    expect((await proxy(doc)).cookies.get('ed')?.value).toBe('en');
   });
 
   it('en mode fixture, n’appelle pas Supabase et ne demande pas de connexion', async () => {

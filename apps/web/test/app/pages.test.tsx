@@ -15,6 +15,7 @@ vi.mock('next/navigation', () => ({
     throw new Error(`REDIRECT ${to}`);
   },
 }));
+vi.mock('@/components/Markets', () => ({ MarketsWidget: () => <section className="mkts">marchés</section> }));
 vi.mock('@/app/actions', () => ({ setVocabSelected: vi.fn(), queueAnki: vi.fn(), setThreadFollowed: vi.fn() }));
 
 import ArchivePage from '@/app/(app)/archive/page';
@@ -36,6 +37,16 @@ describe('pages', () => {
     const { container } = render(await BriefPage());
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('A blue wave sweeps Congress');
     expect(container.querySelector('.banner')).toBeNull();
+  });
+
+  it('l’écran porte l’accent de son édition ; les marchés sont dans la colonne de droite du Brief du jour seulement', async () => {
+    m.ed = 'es';
+    const { container, unmount } = render(await BriefPage());
+    expect(container.querySelector('.ed-screen')?.getAttribute('data-ed')).toBe('es');
+    expect(container.querySelector('.rail > .mb + .mkts')).not.toBeNull();
+    unmount();
+    const archived = render(await EditionPage({ params: Promise.resolve({ date: '2026-11-06' }) }));
+    expect(archived.container.querySelector('.mkts')).toBeNull();
   });
 
   it('sans édition du jour, montre la veille avec son bandeau', async () => {

@@ -5,7 +5,7 @@ const PORT = 3210;
 
 /**
  * Tests de bout en bout en mode FIXTURE=1 (aucun réseau, aucune clé), sur le build de production
- * (`npm run web:build` d'abord), à 390 px, en clair et en sombre. Deux serveurs sur le même build :
+ * (`npm run web:build` d'abord), à 390 px (grand écran : e2e/wide.spec.ts), en clair et en sombre. Deux serveurs sur le même build :
  * l'utilisateur autorisé connecté (port 3210), et un visiteur sans session (port 3211, e2e/visitor.spec.ts).
  */
 export default defineConfig({

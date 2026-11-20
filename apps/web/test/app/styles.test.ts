@@ -15,4 +15,16 @@ describe('styles de l’appli', () => {
     expect(block).not.toBe(css);
     for (const sel of ['.topbar', '.tabbar', '.media .cap', '.photo .cap']) expect(block, sel).toContain(sel);
   });
+
+  it('chaque édition a son accent, posé par tout élément qui porte data-ed (coquille, écran, onglet)', () => {
+    expect(css).toContain('[data-ed="fr"]{--accent:var(--fr)} [data-ed="en"]{--accent:var(--en)} [data-ed="es"]{--accent:var(--es)}');
+  });
+
+  it('le grand écran est sous une seule requête, qui masque la barre d’onglets et montre la barre latérale', () => {
+    const wide = css.slice(css.indexOf('@media (min-width: 1024px) and (orientation: landscape){'));
+    expect(wide).not.toBe(css);
+    expect(wide).toContain('.tabbar{display:none}');
+    expect(wide).toContain('.side{display:flex;');
+    expect(css.slice(0, css.indexOf('@media (min-width: 1024px)'))).toContain('.dayhead,.side{display:none}');
+  });
 });

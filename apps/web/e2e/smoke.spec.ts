@@ -37,8 +37,8 @@ test('la CSP porte un nonce et n’autorise que Wikimedia pour les images', asyn
 
 test('le Brief FR suit la maquette : onglets, cartes, puces, lecteur', async ({ page }) => {
   await open(page, '/?ed=fr');
-  await expect(page.locator('.editions a')).toHaveCount(3);
-  await expect(page.locator('.editions a[aria-current="page"]')).toHaveAttribute('data-ed', 'fr');
+  await expect(page.locator('.topbar .editions a')).toHaveCount(3);
+  await expect(page.locator('.topbar .editions a[aria-current="page"]')).toHaveAttribute('data-ed', 'fr');
   await expect(page.locator('.card')).toHaveCount(7);
   await expect(page.locator('.card svg.map')).toHaveCount(5);
   await expect(page.locator('.ptime')).toContainText('0:03');
@@ -58,7 +58,7 @@ test('le flou de l’en-tête, de la barre d’onglets et des légendes est bien
 test('l’onglet choisi est retenu', async ({ page }) => {
   await open(page, '/?ed=es');
   await open(page, '/');
-  await expect(page.locator('.editions a[aria-current="page"]')).toHaveAttribute('data-ed', 'es');
+  await expect(page.locator('.topbar .editions a[aria-current="page"]')).toHaveAttribute('data-ed', 'es');
   await expect(page.locator('.player')).toHaveCount(0);
   await open(page, '/?ed=fr');
 });

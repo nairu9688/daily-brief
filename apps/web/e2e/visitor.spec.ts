@@ -61,6 +61,22 @@ test('visiteur : /sante renvoie vers /login, et « Se connecter » de l’Archiv
   await expect(page.locator('.topbar')).toBeVisible();
 });
 
+test('visiteur : « Se connecter » est dans le menu du compte de l’en-tête (téléphone)', async ({ page }) => {
+  await open(page, '/?ed=fr');
+  await expect(page.getByRole('link', { name: 'Se connecter' })).toBeHidden();
+  await page.getByLabel('Compte : se connecter').click();
+  await page.getByRole('link', { name: 'Se connecter' }).click();
+  await expect(page).toHaveURL(/\/login$/);
+});
+
+test('visiteur : « Se connecter » est dans la barre latérale (grand écran)', async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 1024 });
+  await open(page, '/threads');
+  const side = page.locator('.side');
+  await expect(side.getByRole('link', { name: 'Se connecter' })).toBeVisible();
+  await expect(side.getByText('Santé →')).toHaveCount(0);
+});
+
 const SHOTS: { name: string; path: string; selector: string }[] = [
   { name: 'visiteur-vocab-en', path: '/?ed=en', selector: '.vocab' },
   { name: 'visiteur-archive-entete', path: '/archive?m=2026-11', selector: '.page-head' },

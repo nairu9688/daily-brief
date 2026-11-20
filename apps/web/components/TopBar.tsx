@@ -1,11 +1,15 @@
-import Link from 'next/link';
-import { LANGS, type Lang } from '@daily-brief/schema';
-import { headerDate, parisTime } from '@/lib/dates';
-import { REGION, T } from '@/lib/i18n';
+import type { Lang } from '@daily-brief/schema';
+import { headerDate, longDateFr, parisTime } from '@/lib/dates';
+import { T } from '@/lib/i18n';
+import { AccountMenu } from './Account';
+import { EditionTabs } from './EditionTabs';
+
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /**
- * En-tête collant : logo demi-disque à l'accent de l'édition, date, onglets FR/EN/ES. Les onglets sont
- * des liens `?ed=xx` : le proxy retient le choix dans le cookie `ed`, sans JavaScript.
+ * En-tête : logo demi-disque à l'accent de l'édition, date, compte, onglets FR/EN/ES (téléphone : collant).
+ * Grand écran : la barre latérale porte le logo, les onglets et le compte ; l'en-tête devient le titre
+ * de la colonne centrale (date longue, édition, heure de génération).
  */
 export function TopBar({ lang, date, generatedAt, basePath }: { lang: Lang; date: string; generatedAt?: string; basePath: string }) {
   return (
@@ -15,19 +19,22 @@ export function TopBar({ lang, date, generatedAt, basePath }: { lang: Lang; date
           <span className="logo" aria-hidden="true" />
           DAILY BRIEF
         </div>
-        <div className="date mono">
-          {headerDate(date)}
-          {generatedAt ? ` · ${parisTime(generatedAt)}` : ''}
+        <div className="brandend">
+          <div className="date mono">
+            {headerDate(date)}
+            {generatedAt ? ` · ${parisTime(generatedAt)}` : ''}
+          </div>
+          <AccountMenu />
         </div>
       </div>
-      <nav className="editions" aria-label="Éditions">
-        {LANGS.map((l) => (
-          <Link key={l} href={`${basePath}?ed=${l}`} data-ed={l} aria-current={l === lang ? 'page' : undefined} prefetch={false}>
-            <b>{T[l].label}</b>
-            <span className="mono">{REGION[l]}</span>
-          </Link>
-        ))}
-      </nav>
+      <div className="dayhead">
+        <p className="dd">{capitalize(longDateFr(date))}</p>
+        <p className="mono">
+          {T[lang].label}
+          {generatedAt ? ` · édition de ${parisTime(generatedAt)}` : ''}
+        </p>
+      </div>
+      <EditionTabs lang={lang} basePath={basePath} />
     </header>
   );
 }
