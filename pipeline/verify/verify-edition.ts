@@ -19,7 +19,7 @@ import { isKnownPrepaSubject } from './prepa';
 import { checkQuote } from './quotes';
 import type { SourceTexts } from './sources';
 import { resolveThread } from './threads';
-import { arcProblem, DEFAULT_PHOTO_QUERY, photoQueryProblem } from './visuals';
+import { arcProblem, DEFAULT_PHOTO_QUERY, photoQueryPlaceWarning, photoQueryProblem } from './visuals';
 import { vocabWarnings } from './vocab';
 import { AUDIO_WORDS, capStories, MAX_STORIES, wordCount } from './volume';
 
@@ -177,6 +177,9 @@ export function verifyEdition(input: unknown, ctx: VerifyContext): VerifyResult 
       if (problem) {
         fix('R11', `requête photo remplacée (${problem})`, id);
         story.visual = fallbackPhoto();
+      } else {
+        const noPlace = photoQueryPlaceWarning(story.visual.query);
+        if (noPlace) warn('R11', noPlace, id);
       }
     } else {
       const map = story.visual.map;

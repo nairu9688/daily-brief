@@ -107,10 +107,15 @@ describe('verifyEdition', () => {
     expect(JSON.stringify(e)).toBe(before);
   });
 
+  it('signale les requêtes photo des fixtures qui ne nomment aucun lieu (R11, avertissement)', () => {
+    const r = verifyEdition(fixtureEdition('fr'), ctx);
+    expect(r.issues).toContainEqual(expect.objectContaining({ rule: 'R11', level: 'warning', message: expect.stringContaining('« car factory » sans aucun lieu') }));
+  });
+
   it('ne signale aucune carte des fixtures (R11)', () => {
     for (const lang of ['fr', 'en', 'es'] as const) {
       const r = verifyEdition(fixtureEdition(lang), ctx);
-      expect(r.issues.filter((i) => i.rule === 'R11'), lang).toEqual([]);
+      expect(r.issues.filter((i) => i.rule === 'R11' && !/sans aucun lieu/.test(i.message)), lang).toEqual([]);
     }
   });
 
@@ -140,7 +145,7 @@ describe('verifyEdition', () => {
     if (out.visual.type !== 'map') throw new Error('fr-1 doit rester une carte');
     expect(out.visual.map.focus).toEqual(['FRA']);
     expect(out.visual.map.highlight).toEqual([]);
-    const r11 = r.issues.filter((i) => i.rule === 'R11');
+    const r11 = r.issues.filter((i) => i.rule === 'R11' && !/sans aucun lieu/.test(i.message));
     expect(r11.map((i) => i.message)).toEqual([expect.stringContaining('XXX'), expect.stringContaining('QQQ')]);
   });
 

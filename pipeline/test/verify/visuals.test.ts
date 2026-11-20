@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { arcProblem, photoQueryProblem } from '../../verify/visuals';
+import { arcProblem, photoQueryPlaceWarning, photoQueryProblem } from '../../verify/visuals';
 import { fixtureEdition } from '../helpers';
+
+describe('photoQueryPlaceWarning (R11, 20/11/2026)', () => {
+  it('signale une requête qui ne nomme aucun lieu : la photo risque d’être prise ailleurs', () => {
+    expect(photoQueryPlaceWarning('television studio cameras debate')).toMatch(/aucun lieu/);
+    expect(photoQueryPlaceWarning('car factory')).toMatch(/aucun lieu/);
+  });
+
+  it('accepte un pays, un adjectif de pays, une région ou une ville', () => {
+    for (const q of ['spain parliament building madrid', 'spanish parliament', 'congreso de los diputados madrid', 'catalonia flag', 'paris skyline', 'iowa farm']) expect(photoQueryPlaceWarning(q), q).toBeNull();
+  });
+});
 
 describe('photoQueryProblem (R11)', () => {
   it('accepte une requête d’objets ou de lieux', () => {

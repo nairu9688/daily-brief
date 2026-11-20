@@ -1,4 +1,5 @@
 import type { MapSpec, RubricKey } from '@daily-brief/schema';
+import { findPlaces } from '../lib/places';
 
 /** Requêtes photo (Wikimedia Commons) de repli quand celle de Claude viole R11 : objets ou lieux, jamais de personne. */
 export const DEFAULT_PHOTO_QUERY: Record<RubricKey, string> = {
@@ -32,6 +33,15 @@ export function photoQueryProblem(query: string, people: string[]): string | nul
   const names = new Set(people.flatMap(tokens));
   const hit = words.find((w) => w.length >= 2 && names.has(w));
   return hit ? `nom de personne dans la requête : ${hit}` : null;
+}
+
+/**
+ * R11 (20/11/2026) : une requête photo doit nommer le pays, la région ou la ville du sujet (en minuscules) ;
+ * sans lieu, Commons renvoie souvent une scène d'un autre pays (pancartes de l'Iowa pour un débat espagnol).
+ * Avertissement seulement : le rendu refuse de toute façon une photo située ailleurs.
+ */
+export function photoQueryPlaceWarning(query: string): string | null {
+  return findPlaces(query, { demonyms: true }).length ? null : `requête photo « ${query} » sans aucun lieu : nommer le pays ou la ville (en minuscules), ou préférer une carte`;
 }
 
 /** Les extrémités de l'arc doivent être deux lieux distincts de la carte. */
