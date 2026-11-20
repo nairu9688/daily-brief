@@ -15,7 +15,7 @@
     "typecheck": "tsc -p tsconfig.json && npm run typecheck -w @daily-brief/web",
     "schema:emit": "tsx packages/schema/scripts/emit-json-schema.ts",
     "brief:context": "tsx pipeline/context/cli.ts",
-    "brief:collect": "tsx pipeline/collect/cli.ts",
+    "brief:collect": "NODE_USE_ENV_PROXY=1 tsx pipeline/collect/cli.ts",
     "brief:newsletters": "tsx pipeline/newsletters/cli.ts",
     "brief:verify": "tsx pipeline/verify/cli.ts",
     "brief:audio": "tsx pipeline/audio/cli.ts",

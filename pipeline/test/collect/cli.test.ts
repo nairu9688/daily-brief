@@ -2,6 +2,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { repoPath } from '../helpers';
 import { runCli } from '../run-cli';
 
 describe('CLI brief:collect', () => {
@@ -53,4 +54,11 @@ describe('CLI brief:collect', () => {
     expect(r.stdout).not.toMatch(/^[A-Z]{2} : /m);
     expect(r.stderr).not.toContain('collect-report.json');
   }, 30_000);
+});
+
+describe('script npm brief:collect', () => {
+  it('passe par le proxy HTTPS du conteneur s’il existe (NODE_USE_ENV_PROXY) : sans lui, le filtre de sortie renvoie 403 à des médias lisibles', () => {
+    const scripts = JSON.parse(readFileSync(repoPath('package.json'), 'utf8')).scripts as Record<string, string>;
+    expect(scripts['brief:collect']).toBe('NODE_USE_ENV_PROXY=1 tsx pipeline/collect/cli.ts');
+  });
 });
