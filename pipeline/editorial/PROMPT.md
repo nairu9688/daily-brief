@@ -27,7 +27,11 @@ Un même `groupId` réunit le même événement vu par plusieurs médias. Au-del
 ## 3. Périmètre et diversité
 
 - **R2.** FR : France et monde, toute source. EN : États-Unis et Royaume-Uni, sources en anglais. ES : Espagne, sources en espagnol de **médias espagnols** (pays `ES` dans la liste blanche ; un média absent de la liste est retiré par le contrôle).
-- **R3.** Au moins deux médias distincts par sujet quand c'est possible ; aucun média au-delà d'environ 30 % des sources d'une édition ; mêle les lignes éditoriales.
+- **R3. Diversité des médias.**
+  - Préfère les sujets couverts par **au moins deux médias distincts** ; un sujet à un seul média n'est retenu que s'il est important, et `brief:verify` le signale.
+  - Répartis les sources : **aucun média au-delà de 30 %** des sources d'une édition (sujets et brèves). Quand un média domine `raw.json` (franceinfo en FR, par exemple), cherche le même événement chez les autres médias lus en entier (France 24, RFI, Public Sénat, TF1info, 20 Minutes, Euronews, Sud Radio… ; en ES : elDiario.es, 20minutos, Europa Press, El Confidencial, La Vanguardia, Cadena SER, Newtral, El Salto…) avant de le citer une fois de plus.
+  - Mêle les lignes éditoriales.
+  - Un média = **un nom** : recopie le champ `outlet` de `raw.json` (nom de `whitelist.json`, le même pour bbc.com et bbc.co.uk, franceinfo.fr et francetvinfo.fr). `brief:verify` le réécrit de toute façon, compte les médias par domaine canonique et affiche un bilan par édition (« R3 FR : N sources, M médias ; en tête : … ») : relis-le avant de corriger.
 
 ## 4. Forme d'une édition
 
@@ -47,7 +51,12 @@ Un même `groupId` réunit le même événement vu par plusieurs médias. Au-del
 - **R6. Chiffres.** `stats` : zéro ou **quatre** chiffres, chacun présent tel quel dans le texte de sa `sourceUrl` (seules les variantes de format sont tolérées : espaces fines, virgule ou point). Pas de calcul, pas d'arrondi. La `sourceUrl` d'un chiffre est l'une des sources `readFull: true` du sujet ; un seul chiffre faux retire les quatre (le contrôle supprime toute la grille).
 - **R7. Divergences.** Seulement pour la même mesure sur le même périmètre, chiffrée par deux médias différents (contre-exemple : 130 rames hors Eurostar contre 160 rames avec Eurostar).
 - **R9. Lien prépa.** Seulement s'il existe un vrai rapport avec le programme ECT, avec un `subject` pris parmi les titres et alias de `pipeline/editorial/programme-ect.md` (deux matières : « Anglais LV1 · CG »). Sinon `prepa: null`.
-- **R11. Visuel.** Une carte (`type: 'map'`, `MapSpec`, codes ISO alpha-3) quand le lieu compte ; sinon une photo `{ type: 'photo', query }` dont la requête (en anglais, cherchée sur Wikimedia Commons) ne contient que des objets ou des lieux, **jamais un nom de personne**. Jamais de photo de presse ni de personnalité publique. N'écris jamais le champ `photo` ni une URL d'image : `brief:render` choisit la photo et ajoute le crédit (auteur, licence).
+- **R11. Visuel.**
+  - Une **carte** (`type: 'map'`, `MapSpec`, codes ISO alpha-3) quand le lieu compte : **préfère-la pour les élections, les conflits, la diplomatie et tout sujet géographique**.
+  - Sinon une photo `{ type: 'photo', query }`. La requête est en anglais, **en minuscules**, cinq mots au plus, cherchée sur Wikimedia Commons. Elle **nomme le lieu** (pays, région ou ville) et un sujet concret et sans ambiguïté, de préférence un bâtiment, un drapeau ou une vue de la ville : « spain parliament building madrid », « madrid congress of deputies », « paris national assembly », « catalonia flag », « london skyline ». **Jamais une scène générique qui pourrait venir d'un autre pays** (« television studio cameras debate » a donné des pancartes électorales de l'Iowa pour un débat Sánchez–Feijóo).
+  - **Jamais un nom de personne** (spec R11 : jamais de personnalité publique, donc ni « pedro sanchez » ni « feijoo »). Jamais de photo de presse.
+  - `brief:verify` signale une requête sans lieu. `brief:render` refuse toute photo dont le titre et les catégories ne correspondent pas à la requête, qui ne montre pas le lieu demandé ou qui est située dans un autre pays : **le sujet reste alors sans photo** (aplat), ce qui vaut mieux qu'une photo trompeuse.
+  - N'écris jamais le champ `photo` ni une URL d'image : `brief:render` choisit la photo et ajoute le crédit (auteur, licence).
 - **R12. Threads.** Un sujet qui prolonge une histoire suivie reprend l'`id` du Thread ouvert de `context.json` (même langue). Une nouvelle histoire durable crée un Thread sans `id` (`{ title, subtitle }`). `subtitle` dit l'épisode du jour en une ligne. Sans contexte : `thread: null`.
 - `sources` : au moins une, `readFull: true` en tête ; `lang` en code ISO 639-1.
 
