@@ -1,5 +1,8 @@
 import { expect, type Page } from '@playwright/test';
 
+/** Port du second serveur de test, visiteur sans session (FIXTURE_VISITOR=1) : lecture publique. */
+export const VISITOR_PORT = 3211;
+
 /** Erreurs de la console et de la page (une violation de CSP apparaît ici). */
 export function collectErrors(page: Page): string[] {
   const errors: string[] = [];
