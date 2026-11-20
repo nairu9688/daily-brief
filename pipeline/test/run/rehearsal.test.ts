@@ -24,8 +24,8 @@ const DAY = '2026-11-06';
 const TTS_KEY = 'AIzaTEMOIN-repetition';
 /** Thread ouvert, présent dans la base et dans le contexte : le sujet FR 1 s'y rattache (R12). */
 const THREAD = { id: '6f1c2a4e-0d5b-4c1e-9a77-3b2f1e0c9d01', slug: 'mobilisation-sociale-de-l-automne', title: 'Mobilisation sociale de l’automne', lang: 'fr' as const, updatedAt: '2026-11-01T06:00:00.000Z' };
-/** Article cité par la newsletter : publicsenat.fr est « meta », seul inNewsletter le rend lisible (R1). */
-const NL_ARTICLE = 'https://www.publicsenat.fr/actualites/budget';
+/** Article cité par la newsletter Public Sénat : lemonde.fr est « meta », seul inNewsletter le rend lisible (R1). (publicsenat.fr est « full » depuis le 20/11/2026.) */
+const NL_ARTICLE = 'https://www.lemonde.fr/politique/article/2026/11/06/budget';
 let db: TestDb;
 let fake: FakeSupabase;
 let server: Awaited<ReturnType<typeof startAppsScript>>;
@@ -59,7 +59,7 @@ type Rehearsal = {
 /** Édition FR de la fixture, dont le premier sujet cite aussi l'article de la newsletter. */
 function frWithNewsletter(): string {
   const ed = fixtureEdition('fr');
-  ed.sections[0].stories[0].sources.push({ outlet: 'Public Sénat', title: 'Le Sénat examine le budget', url: NL_ARTICLE, lang: 'fr', readFull: true });
+  ed.sections[0].stories[0].sources.push({ outlet: 'Le Monde', title: 'Le Sénat examine le budget', url: NL_ARTICLE, lang: 'fr', readFull: true });
   return JSON.stringify(ed, null, 2);
 }
 const goodDraft = (lang: Lang) => (lang === 'fr' ? frWithNewsletter() : JSON.stringify(fixtureEdition(lang), null, 2));
@@ -114,7 +114,7 @@ describe('répétition de la routine sur la fixture', () => {
     expect(codes).toEqual([1, 1, 1]);
     expect(finish.report.steps.map((s) => [s.step, s.exitCode])).toEqual([['audio', 0], ['render', 0], ['publish', 0]]);
     expect(finish.exitCode).toBe(0);
-    expect(finish.report.notification.message).toBe('Brief du jour prêt : 10 sujets, 24 médias');
+    expect(finish.report.notification.message).toBe('Brief du jour prêt : 10 sujets, 23 médias');
     expect(html.match(/0:03 · voix Chirp HD/g)).toHaveLength(3);
     expect(await rows(db, 'select lang, audio_path from public.editions order by lang')).toEqual([
       { lang: 'en', audio_path: '2026-11-06/en.mp3' },
@@ -126,11 +126,11 @@ describe('répétition de la routine sur la fixture', () => {
     expect(run.steps.audio).toMatchObject({ status: 'ok', counters: { mp3: 3 } });
     expect(server.google.tree()).toHaveLength(4);
     expect(readFileSync(join(dayDir, 'routine-report.json'), 'utf8')).not.toContain(TTS_KEY);
-    // R1 par la newsletter : publicsenat.fr n'est pas « full », la source reste lue parce que la newsletter du jour la cite.
+    // R1 par la newsletter : lemonde.fr n'est pas « full », la source reste lue parce que la newsletter du jour la cite.
     expect(canReadFull(loadWhitelist(WHITELIST_PATH), NL_ARTICLE)).toBe(false);
     const fr = JSON.parse(readFileSync(join(dayDir, 'fr.verified.json'), 'utf8'));
     expect(fr.sections[0].stories[0].sources.find((x: { url: string }) => x.url === NL_ARTICLE)).toMatchObject({ readFull: true });
-    expect(readFileSync(join(dayDir, 'verify-report.json'), 'utf8')).not.toContain('Public Sénat');
+    expect(readFileSync(join(dayDir, 'verify-report.json'), 'utf8')).not.toContain('Le Monde : domaine hors liste blanche');
     // R12 : le sujet FR 1 est rattaché au Thread ouvert du contexte, sans en créer un autre.
     expect(fr.sections[0].stories[0].thread.id).toBe(THREAD.id);
     expect(await rows(db, 'select count(*)::int as n from public.thread_events where thread_id = $1', [THREAD.id])).toEqual([{ n: 1 }]);
@@ -141,7 +141,7 @@ describe('répétition de la routine sur la fixture', () => {
     const { codes, finish } = await rehearse(fakeTts(), { draft: (lang, attempt) => (lang === 'es' && attempt === 1 ? '{ "lang": "es", tronqué' : goodDraft(lang)) });
     expect(codes).toEqual([2, 1, 1]);
     expect(finish.exitCode).toBe(0);
-    expect(finish.report.notification.message).toBe('Brief du jour prêt : 10 sujets, 24 médias');
+    expect(finish.report.notification.message).toBe('Brief du jour prêt : 10 sujets, 23 médias');
   });
 
   it('code 2 jusqu’au bout : l’édition ES n’est pas publiée, « Brief incomplet », code 2', async () => {
@@ -162,7 +162,7 @@ describe('répétition de la routine sur la fixture', () => {
     const { finish } = await rehearse(fakeTts(() => ({ status: 403, json: {} })));
     expect(finish.report.steps.map((s) => s.exitCode)).toEqual([1, 0, 0]);
     expect(finish.exitCode).toBe(0);
-    expect(finish.report.notification.message).toBe('Brief du jour prêt : 10 sujets, 24 médias (audio en échec, éditions sans lecteur)');
+    expect(finish.report.notification.message).toBe('Brief du jour prêt : 10 sujets, 23 médias (audio en échec, éditions sans lecteur)');
     expect(await rows(db, 'select audio_path from public.editions')).toEqual([{ audio_path: null }, { audio_path: null }, { audio_path: null }]);
   });
 });
