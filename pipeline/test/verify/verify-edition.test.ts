@@ -271,6 +271,23 @@ describe('verifyEdition', () => {
   });
 });
 
+describe('R3 : identité normalisée des médias', () => {
+  it('réécrit le nom d’un média connu, compte bbc.com et bbc.co.uk pour un seul média et donne le bilan', () => {
+    const e = fixtureEdition('fr');
+    const story = e.sections.flatMap((s) => s.stories)[0];
+    story.sources = [
+      { outlet: 'bbc.com', title: 'A', url: 'https://www.bbc.com/news/a', lang: 'en', readFull: true },
+      { outlet: 'BBC', title: 'B', url: 'https://www.bbc.co.uk/news/b', lang: 'en', readFull: true },
+    ];
+    const r = verifyEdition(e, ctx);
+    const out = r.edition!.sections.flatMap((s) => s.stories).find((s) => s.id === story.id)!;
+    expect(out.sources.map((s) => s.outlet)).toEqual(['BBC News', 'BBC News']);
+    expect(r.issues).toContainEqual(expect.objectContaining({ rule: 'R3', storyId: story.id, level: 'warning' }));
+    expect(r.diversity?.singleOutletStories).toContain(story.id);
+    expect(r.diversity?.outlets).toBeGreaterThan(1);
+  });
+});
+
 describe('R13 : volume de l’édition', () => {
   /** Édition FR de la fixture portée à 18 sujets : copies du sujet fr-1, avec un id propre. */
   function bigEdition() {

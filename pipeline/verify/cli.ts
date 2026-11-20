@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { parisToday } from '../lib/date';
+import { formatDiversity } from './diversity';
 import { formatIssues } from './issues';
 import { runVerify } from './run-verify';
 
@@ -13,7 +14,7 @@ try {
   });
 
   const date = values.date ?? parisToday();
-  const { issues, exitCode } = runVerify({
+  const { issues, exitCode, editions } = runVerify({
     outDir: values.out!,
     date,
     whitelistPath: fileURLToPath(new URL('../config/whitelist.json', import.meta.url)),
@@ -22,6 +23,7 @@ try {
 
   console.log(`brief:verify ${date}`);
   console.log(formatIssues(issues));
+  for (const e of editions) if (e.diversity) console.log(formatDiversity(e.lang, e.diversity));
   console.log(
     exitCode === 0
       ? 'OK : aucune violation.'

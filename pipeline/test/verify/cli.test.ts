@@ -34,6 +34,8 @@ describe('CLI brief:verify (bout en bout)', () => {
     const r = runCli(['--date', DAY, '--out', out]);
     expect(r.status).toBe(1);
     expect(r.stdout).toContain('Infobae : média non espagnol (AR)');
+    expect(r.stdout).toMatch(/^R3 FR : \d+ sources, \d+ médias ; en tête : /m);
+    expect(r.stdout).toMatch(/^R3 ES : /m);
   }, 20_000);
 
   it('sort avec le code 2 sur une option inconnue', () => {

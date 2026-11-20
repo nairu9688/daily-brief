@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { join } from 'node:path';
 import { ContextSchema, IsoDateSchema, LANGS, parseEdition, RawCollectionSchema, type Lang, type OpenThread } from '@daily-brief/schema';
 import { loadWhitelist } from '../lib/whitelist';
+import type { DiversitySummary } from './diversity';
 import { exitCodeFor, type Issue } from './issues';
 import { parseProgrammeSubjects } from './prepa';
 import { buildSourceTexts, defaultScope, loadSourceTexts, type SourceTexts } from './sources';
@@ -18,7 +19,8 @@ export type RunVerifyResult = {
   issues: Issue[];
   exitCode: 0 | 1 | 2;
   written: string[];
-  editions: { lang: Lang; written: boolean }[];
+  /** Par édition : écrite ou non, et bilan R3 (médias) de l'édition corrigée. */
+  editions: { lang: Lang; written: boolean; diversity?: DiversitySummary }[];
 };
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -83,7 +85,7 @@ export function runVerify(opts: RunVerifyOptions): RunVerifyResult {
   };
 
   const written: string[] = [];
-  const editions: { lang: Lang; written: boolean }[] = [];
+  const editions: RunVerifyResult['editions'] = [];
   for (const lang of LANGS) {
     const out = join(dayDir, `${lang}.verified.json`);
     rmSync(out, { force: true });
@@ -114,7 +116,7 @@ export function runVerify(opts: RunVerifyOptions): RunVerifyResult {
       writeFileSync(out, JSON.stringify(r.edition, null, 2) + '\n');
       written.push(out);
     }
-    editions.push({ lang, written: r.edition !== null });
+    editions.push({ lang, written: r.edition !== null, ...(r.diversity ? { diversity: r.diversity } : {}) });
   }
   const exitCode = exitCodeFor(issues);
   const report = join(dayDir, 'verify-report.json');

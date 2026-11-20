@@ -124,7 +124,9 @@ describe('runVerify', () => {
   it('indique dans le rapport quelles éditions ont été écrites', () => {
     const { outDir, dayDir } = setupDay(false);
     const r = runVerify(opts(outDir));
-    expect(r.editions).toEqual([{ lang: 'fr', written: true }, { lang: 'en', written: true }, { lang: 'es', written: false }]);
+    expect(r.editions.map(({ lang, written }) => ({ lang, written }))).toEqual([{ lang: 'fr', written: true }, { lang: 'en', written: true }, { lang: 'es', written: false }]);
+    // Bilan R3 pour chaque édition contrôlée.
+    expect(r.editions[0].diversity).toMatchObject({ sources: expect.any(Number), outlets: expect.any(Number) });
     expect(JSON.parse(readFileSync(join(dayDir, 'verify-report.json'), 'utf8')).editions).toEqual(r.editions);
   });
 });

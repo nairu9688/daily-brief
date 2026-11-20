@@ -11,7 +11,7 @@ import {
 import { tryNormalizeUrl } from '../lib/url';
 import { canReadFull, type Whitelist } from '../lib/whitelist';
 import { checkDivergence } from './divergences';
-import { MAX_OUTLET_SHARE, outletShares, storyOutletCount } from './diversity';
+import { diversitySummary, displayOutlet, MAX_OUTLET_SHARE, outletShares, storyOutletCount, type DiversitySummary } from './diversity';
 import type { Issue, Rule } from './issues';
 import { checkStat } from './numbers';
 import { checkPerimeter } from './perimeter';
@@ -30,7 +30,8 @@ export type VerifyContext = {
   openThreads: OpenThread[];
 };
 
-export type VerifyResult = { edition: Edition | null; issues: Issue[] };
+/** `diversity` : bilan R3 de l'édition corrigée (absent si le schéma est invalide). */
+export type VerifyResult = { edition: Edition | null; issues: Issue[]; diversity?: DiversitySummary };
 
 const sameUrl = (a: string, b: string) => {
   const na = tryNormalizeUrl(a);
@@ -92,7 +93,9 @@ export function verifyEdition(input: unknown, ctx: VerifyContext): VerifyResult 
     return true;
   };
 
-  const enforceReadFull = (src: SourceRef, storyId?: string): SourceRef => {
+  const enforceReadFull = (input: SourceRef, storyId?: string): SourceRef => {
+    // Un seul nom par média (liste blanche) : « eldiario.es » et « elDiario.es » s'affichent pareil (R3).
+    const src = { ...input, outlet: displayOutlet(ctx.whitelist, input.outlet, input.url) };
     if (src.readFull && !canReadFull(ctx.whitelist, src.url) && !ctx.texts.inNewsletter(src.url)) {
       fix('R1', `${src.outlet} : domaine hors liste blanche, passé en « titre + lien »`, storyId);
       return { ...src, readFull: false };
@@ -225,7 +228,7 @@ export function verifyEdition(input: unknown, ctx: VerifyContext): VerifyResult 
       if (r.fix) fix('R12', r.fix, id);
     }
 
-    if (storyOutletCount(story) < 2) warn('R3', 'un seul média pour ce sujet (objectif : au moins deux)', id);
+    if (storyOutletCount(story, ctx.whitelist) < 2) warn('R3', 'un seul média pour ce sujet (objectif : au moins deux)', id);
     return story;
   };
 
@@ -270,11 +273,11 @@ export function verifyEdition(input: unknown, ctx: VerifyContext): VerifyResult 
     if (n > 2) warn('R8', `Morning Brief déséquilibré : ${n} infos « ${rubric} »`);
   }
 
-  for (const { outlet, share } of outletShares(ed)) {
+  for (const { outlet, share } of outletShares(ed, ctx.whitelist)) {
     if (share > MAX_OUTLET_SHARE) warn('R3', `${outlet} pèse ${Math.round(share * 100)} % des sources (plafond 30 %)`);
   }
 
   if (ed.vocab) for (const w of vocabWarnings(ed.vocab)) warn('R10', w);
 
-  return { edition: ed, issues };
+  return { edition: ed, issues, diversity: diversitySummary(ed, ctx.whitelist) };
 }
