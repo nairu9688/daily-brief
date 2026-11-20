@@ -1,8 +1,9 @@
 'use server';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 import { z } from 'zod';
 import { currentUser } from '@/lib/auth';
 import { getDataSource } from '@/lib/data';
+import { EDITIONS_TAG } from '@/lib/data/cache-tags';
 import { MAX_IDS } from '@/lib/data/limits';
 
 /**
@@ -31,8 +32,8 @@ const SELECT_PAGES = ['/', '/edition/[date]'];
 const ANKI_PAGES = ['/', '/edition/[date]', '/vocab'];
 const THREAD_PAGES = ['/threads', '/threads/[id]'];
 
-/** Utilisateur d'abord (une requête sans session ne voit même pas la validation), puis entrée, écriture et revalidation. */
-async function run<T>(schema: z.ZodType<T>, input: unknown, write: (value: T) => Promise<number>, pages: string[]): Promise<ActionResult> {
+/** Utilisateur d'abord (une requête sans session ne voit même pas la validation), puis entrée, écriture et revalidation (cache des éditions compris). */
+async function run<T>(schema: z.ZodType<T>, input: unknown, write: (value: T) => Promise<number>, pages: string[], tags: string[] = []): Promise<ActionResult> {
   if (!(await currentUser())) return SESSION;
   const parsed = schema.safeParse(input);
   if (!parsed.success) return INVALID;
@@ -43,16 +44,17 @@ async function run<T>(schema: z.ZodType<T>, input: unknown, write: (value: T) =>
     console.error('[daily-brief] écriture refusée', e instanceof Error ? e.message : e);
     return FAILED;
   }
+  for (const t of tags) updateTag(t);
   for (const p of pages) revalidatePath(p, p.includes('[') ? 'page' : undefined);
   return { ok: true, count };
 }
 
 export async function setVocabSelected(input: unknown): Promise<ActionResult> {
-  return run(SelectInput, input, async ({ ids, selected }) => (await getDataSource()).setSelected(ids, selected), SELECT_PAGES);
+  return run(SelectInput, input, async ({ ids, selected }) => (await getDataSource()).setSelected(ids, selected), SELECT_PAGES, [EDITIONS_TAG]);
 }
 
 export async function queueAnki(input: unknown): Promise<ActionResult> {
-  return run(AnkiInput, input, async ({ ids }) => (await getDataSource()).queueAnki(ids), ANKI_PAGES);
+  return run(AnkiInput, input, async ({ ids }) => (await getDataSource()).queueAnki(ids), ANKI_PAGES, [EDITIONS_TAG]);
 }
 
 export async function setThreadFollowed(input: unknown): Promise<ActionResult> {

@@ -6,7 +6,7 @@ const m = vi.hoisted(() => ({
 }));
 vi.mock('@/lib/auth', () => ({ currentUser: async () => m.user }));
 vi.mock('@/lib/data', () => ({ getDataSource: async () => m.ds }));
-const cache = vi.hoisted(() => ({ revalidatePath: vi.fn() }));
+const cache = vi.hoisted(() => ({ revalidatePath: vi.fn(), updateTag: vi.fn() }));
 vi.mock('next/cache', () => cache);
 
 import { queueAnki, setThreadFollowed, setVocabSelected } from '@/app/actions';
@@ -36,20 +36,27 @@ describe('actions serveur', () => {
 
   it('revalide les pages concernées après une écriture réussie, et seulement alors', async () => {
     // Cocher ne revalide pas /vocab : sur « Non cochés », le mot coché resterait sinon à disparaître de la liste.
+    // Les cases et Anki changent le Vocab de l'édition : le cache des éditions est purgé aussi.
     await setVocabSelected({ ids: [ID], selected: true });
     expect(cache.revalidatePath.mock.calls.map((c) => c[0])).toEqual(['/', '/edition/[date]']);
+    expect(cache.updateTag.mock.calls).toEqual([['editions']]);
     cache.revalidatePath.mockClear();
+    cache.updateTag.mockClear();
     await queueAnki({ ids: [ID] });
     expect(cache.revalidatePath.mock.calls.map((c) => c[0])).toEqual(['/', '/edition/[date]', '/vocab']);
+    expect(cache.updateTag.mock.calls).toEqual([['editions']]);
     cache.revalidatePath.mockClear();
+    cache.updateTag.mockClear();
     await setThreadFollowed({ id: ID, followed: true });
     expect(cache.revalidatePath.mock.calls.map((c) => c[0])).toEqual(['/threads', '/threads/[id]']);
+    expect(cache.updateTag).not.toHaveBeenCalled();
     cache.revalidatePath.mockClear();
     vi.spyOn(console, 'error').mockImplementation(() => {});
     m.ds.setFollowed.mockRejectedValueOnce(new Error('x'));
     await setThreadFollowed({ id: ID, followed: true });
     await setThreadFollowed({ id: 'pas-un-uuid', followed: true });
     expect(cache.revalidatePath).not.toHaveBeenCalled();
+    expect(cache.updateTag).not.toHaveBeenCalled();
   });
 
   it('refuse toute entrée mal formée ou d’autres colonnes, sans écrire', async () => {
