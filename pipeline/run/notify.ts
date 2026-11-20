@@ -1,8 +1,10 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 import { LANGS, parseEdition, type Edition, type Lang } from '@daily-brief/schema';
 import { redactText } from '../lib/redact';
+import { loadWhitelist, outletOf, type Whitelist } from '../lib/whitelist';
 import { MAX_JSON_BYTES } from '../publish/inputs';
 
 /** Lecture tolérante d'un rapport : absent, illisible ou d'une autre date donne null, jamais une exception. */
@@ -63,6 +65,17 @@ export type Notification = {
   notes: string[];
 };
 
+const WHITELIST_PATH = fileURLToPath(new URL('../config/whitelist.json', import.meta.url));
+
+/** Liste blanche pour l'identité des médias ; illisible, une liste vide (clé = domaine enregistrable). */
+function whitelistOrEmpty(): Whitelist {
+  try {
+    return loadWhitelist(WHITELIST_PATH);
+  } catch {
+    return { checkedAt: '', domains: [] };
+  }
+}
+
 /** Édition finale du jour (`{lang}.final.json`), ou null. */
 function finalEdition(dayDir: string, lang: Lang, date: string): Edition | null {
   const path = join(dayDir, `${lang}.final.json`);
@@ -81,7 +94,7 @@ function finalEdition(dayDir: string, lang: Lang, date: string): Edition | null 
  * parenthèses de ce qui manque (collecte dégradée, audio partiel, Drive en attente…).
  * `dryRun` : répétition sans publication, les éditions comptées sont celles du rendu.
  */
-export function buildNotification(dayDir: string, date: string, opts: { dryRun?: boolean; secrets?: (string | undefined)[] } = {}): Notification {
+export function buildNotification(dayDir: string, date: string, opts: { dryRun?: boolean; secrets?: (string | undefined)[]; whitelist?: Whitelist } = {}): Notification {
   const secrets = opts.secrets ?? [];
   const context = report(dayDir, 'context-report.json', date, Context);
   const collect = report(dayDir, 'collect-report.json', date, Collect);
@@ -125,7 +138,9 @@ export function buildNotification(dayDir: string, date: string, opts: { dryRun?:
   const finals = LANGS.filter((l) => done.includes(l)).map((l) => finalEdition(dayDir, l, date)).filter((e): e is Edition => e !== null);
   const editions = finals.map((e) => e.lang);
   const stories = finals.reduce((n, e) => n + e.sections.reduce((m, s) => m + s.stories.length, 0), 0);
-  const outlets = new Set(finals.flatMap((e) => e.sections.flatMap((s) => [...s.stories.flatMap((st) => st.sources), ...s.briefs])).map((src) => src.outlet.trim().toLowerCase())).size;
+  // Médias comptés par clé normalisée (R3) : « eldiario.es » et « elDiario.es », bbc.com et bbc.co.uk font un seul média.
+  const wl = opts.whitelist ?? whitelistOrEmpty();
+  const outlets = new Set(finals.flatMap((e) => e.sections.flatMap((s) => [...s.stories.flatMap((st) => st.sources), ...s.briefs])).map((src) => outletOf(wl, src.url).key)).size;
 
   const tail = notes.length ? ` (${notes.join(' ; ')})` : '';
   const counts = `${stories} sujet${stories > 1 ? 's' : ''}, ${outlets} média${outlets > 1 ? 's' : ''}`;

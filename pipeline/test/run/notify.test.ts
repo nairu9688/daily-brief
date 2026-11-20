@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Lang } from '@daily-brief/schema';
+import type { Edition, Lang } from '@daily-brief/schema';
 import { buildNotification } from '../../run/notify';
 import { audioReport, DAY, makeDay } from '../publish/day';
 import { stepReports } from '../publish/reports';
@@ -10,28 +10,28 @@ const publishReport = (langs: Lang[], drive = 'sent', exitCode = 0, over: Record
   JSON.stringify({ date: DAY, generatedAt: `${DAY}T04:45:00.000Z`, exitCode, status: 'ok', editions: (['fr', 'en', 'es'] as Lang[]).map((lang) => ({ lang, published: langs.includes(lang) })), drive: { status: drive }, ...over });
 const newslettersReport = (written: number) => JSON.stringify({ date: DAY, generatedAt: `${DAY}T04:20:00.000Z`, exitCode: 0, written: Array.from({ length: written }, (_, i) => ({ file: `0${i + 1}-x.md` })), skipped: [], issues: [] });
 /** Passage sans incident : collecte complète, newsletters lues, audio complet, Drive déposé. */
-function cleanDay(extra: Record<string, string> = {}) {
+function cleanDay(extra: Record<string, string> = {}, edit?: (e: Edition) => void) {
   const reports = stepReports();
   const collect = JSON.parse(reports['collect-report.json']);
   collect.degraded = false;
   collect.perLang.es.light = false;
-  return makeDay({ audio: ['fr', 'en', 'es'], extra: { ...reports, 'collect-report.json': JSON.stringify(collect), 'newsletters-report.json': newslettersReport(6), 'publish-report.json': publishReport(['fr', 'en', 'es']), ...extra } });
+  return makeDay({ audio: ['fr', 'en', 'es'], edit, extra: { ...reports, 'collect-report.json': JSON.stringify(collect), 'newsletters-report.json': newslettersReport(6), 'publish-report.json': publishReport(['fr', 'en', 'es']), ...extra } });
 }
 
 describe('buildNotification', () => {
   it('passage complet : « Brief du jour prêt : N sujets, M médias »', () => {
     const { dayDir } = cleanDay();
-    expect(buildNotification(dayDir, DAY)).toEqual({ ready: true, message: 'Brief du jour prêt : 10 sujets, 24 médias', editions: ['fr', 'en', 'es'], stories: 10, outlets: 24, notes: [] });
+    expect(buildNotification(dayDir, DAY)).toEqual({ ready: true, message: 'Brief du jour prêt : 10 sujets, 23 médias', editions: ['fr', 'en', 'es'], stories: 10, outlets: 23, notes: [] });
   });
 
   it('prêt avec des manques : collecte dégradée, édition allégée, audio partiel, Drive en attente', () => {
     const { dayDir } = makeDay({ audio: ['fr', 'en'], extra: { ...stepReports(), 'newsletters-report.json': newslettersReport(0), 'audio-report.json': audioReport(DAY, ['fr', 'en'], { status: 'degraded' }), 'publish-report.json': publishReport(['fr', 'en', 'es'], 'pending') } });
-    expect(buildNotification(dayDir, DAY).message).toBe('Brief du jour prêt : 10 sujets, 24 médias (collecte dégradée : webz : HTTP 429 (https://api.webz.io/newsApiLite?token=***) — source coupée ; édition allégée : ES ; aucune newsletter ; audio partiel ; Drive en attente)');
+    expect(buildNotification(dayDir, DAY).message).toBe('Brief du jour prêt : 10 sujets, 23 médias (collecte dégradée : webz : HTTP 429 (https://api.webz.io/newsApiLite?token=***) — source coupée ; édition allégée : ES ; aucune newsletter ; audio partiel ; Drive en attente)');
   });
 
   it('une édition non publiée : « Brief incomplet », avec ce qui est publié', () => {
     const { dayDir } = cleanDay({ 'publish-report.json': publishReport(['fr', 'en']) });
-    expect(buildNotification(dayDir, DAY)).toMatchObject({ ready: false, message: 'Brief incomplet : édition ES manquante — 8 sujets, 16 médias', editions: ['fr', 'en'] });
+    expect(buildNotification(dayDir, DAY)).toMatchObject({ ready: false, message: 'Brief incomplet : édition ES manquante — 8 sujets, 15 médias', editions: ['fr', 'en'] });
   });
 
   it.each([
@@ -51,7 +51,35 @@ describe('buildNotification', () => {
 
   it('répétition : compte les éditions rendues, sans publish-report.json', () => {
     const { dayDir } = cleanDay({ 'publish-report.json': '' });
-    expect(buildNotification(dayDir, DAY, { dryRun: true }).message).toBe('Répétition sans publication : 10 sujets, 24 médias');
+    expect(buildNotification(dayDir, DAY, { dryRun: true }).message).toBe('Répétition sans publication : 10 sujets, 23 médias');
+  });
+});
+
+describe('buildNotification : médias comptés par clé normalisée (20/11/2026)', () => {
+  /** Toutes les sources des trois éditions remplacées par ces URL et ces noms. */
+  const only = (sources: [string, string][]) => (e: Edition) => {
+    for (const section of e.sections) {
+      section.briefs = [];
+      for (const st of section.stories) st.sources = sources.map(([outlet, url]) => ({ outlet, title: 'T', url, lang: e.lang, readFull: true }));
+    }
+  };
+
+  it('deux noms ou deux domaines du même média comptent pour un', () => {
+    const { dayDir } = cleanDay({}, only([
+      ['elDiario.es', 'https://www.eldiario.es/a'],
+      ['eldiario.es', 'https://eldiario.es/b'],
+      ['franceinfo', 'https://www.franceinfo.fr/c'],
+      ['franceinfo.fr', 'https://www.francetvinfo.fr/d'],
+      ['BBC News', 'https://www.bbc.co.uk/e'],
+      ['bbc.com', 'https://www.bbc.com/f'],
+      ['PBS NewsHour', 'https://www.pbs.org/newshour/g'],
+      ['pbs.org', 'https://www.pbs.org/h'],
+      ['Euronews', 'https://fr.euronews.com/i'],
+      ['euronews.com', 'https://www.euronews.com/j'],
+      ['Sud Radio · AFP', 'https://www.sudradio.fr/k'],
+      ['Sud Radio', 'https://www.sudradio.fr/l'],
+    ]));
+    expect(buildNotification(dayDir, DAY)).toMatchObject({ ready: true, stories: 10, outlets: 6, message: 'Brief du jour prêt : 10 sujets, 6 médias' });
   });
 });
 
@@ -72,7 +100,7 @@ describe('buildNotification (revue du lot 7)', () => {
 
   it('publication dégradée hors Drive : PDF non enregistré, ou première erreur', () => {
     const pdfLost = cleanDay({ 'publish-report.json': publishReport(['fr', 'en', 'es'], 'sent', 0, { status: 'degraded', files: [{ name: `Daily Brief ${DAY}.pdf`, bucket: 'pdf', stored: false }], issues: [{ level: 'error', message: 'Storage : HTTP 500' }] }) });
-    expect(buildNotification(pdfLost.dayDir, DAY).message).toBe('Brief du jour prêt : 10 sujets, 24 médias (PDF non enregistré dans Storage)');
+    expect(buildNotification(pdfLost.dayDir, DAY).message).toBe('Brief du jour prêt : 10 sujets, 23 médias (PDF non enregistré dans Storage)');
     const other = cleanDay({ 'publish-report.json': publishReport(['fr', 'en', 'es'], 'sent', 0, { status: 'degraded', files: [], issues: [{ level: 'warning', message: 'w' }, { level: 'error', lang: 'es', message: 'Thread inconnu' }] }) });
     expect(buildNotification(other.dayDir, DAY).notes).toEqual(['publication dégradée : ES : Thread inconnu']);
     const mp3 = cleanDay({ 'publish-report.json': publishReport(['fr', 'en', 'es'], 'pending', 0, { status: 'degraded', files: [{ name: `Daily Brief ${DAY} FR.mp3`, bucket: 'audio', stored: false }] }) });
@@ -81,7 +109,7 @@ describe('buildNotification (revue du lot 7)', () => {
 
   it('publication dégradée par une édition manquante : pas de note « publication dégradée » en plus de « édition ES manquante »', () => {
     const { dayDir } = cleanDay({ 'publish-report.json': publishReport(['fr', 'en'], 'sent', 0, { status: 'degraded', files: [], issues: [] }) });
-    expect(buildNotification(dayDir, DAY).message).toBe('Brief incomplet : édition ES manquante — 8 sujets, 16 médias');
+    expect(buildNotification(dayDir, DAY).message).toBe('Brief incomplet : édition ES manquante — 8 sujets, 15 médias');
   });
 
   it('audio « invalid » parce qu’un ancien fichier n’a pas pu être supprimé : le message du lot 5', () => {
@@ -91,7 +119,7 @@ describe('buildNotification (revue du lot 7)', () => {
 
   it('répétition : l’audio désactivé est celui de la répétition', () => {
     const { dayDir } = cleanDay({ 'publish-report.json': '', 'audio-report.json': audioReport(DAY, [], { status: 'disabled' }) });
-    expect(buildNotification(dayDir, DAY, { dryRun: true }).message).toBe('Répétition sans publication : 10 sujets, 24 médias (audio désactivé (répétition))');
+    expect(buildNotification(dayDir, DAY, { dryRun: true }).message).toBe('Répétition sans publication : 10 sujets, 23 médias (audio désactivé (répétition))');
   });
 });
 
