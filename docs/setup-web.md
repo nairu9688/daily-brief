@@ -83,7 +83,25 @@ npm run web:check-bundle               # aucun secret ni nom de variable serveur
 
 **En-têtes de sécurité.** `next.config.ts` pose `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options` et `Permissions-Policy`, et `proxy.ts` la CSP. HSTS (`Strict-Transport-Security`) n'est pas ajouté par l'appli : Vercel l'envoie déjà sur tous ses domaines en https.
 
-## 6. À contrôler sur le vrai service
+## 6. Écrans, cache et marchés
+
+**Accent de l'édition.** FR bleu, EN vert, ES or (`design/app.css`). La mise en page `(app)/layout.tsx` n'est pas re-rendue lors d'une navigation côté client : l'accent de la coquille (`.app[data-ed]`) est donc un état client (`components/AppShell.tsx`), initialisé par le cookie `ed` et mis à jour par chaque écran d'édition (`<EditionAccent>`) ou au clic sur un onglet. Chaque écran porte aussi son propre `data-ed` (`.ed-screen`), juste dès le rendu serveur. Garde-fou : `e2e/accent.spec.ts` change d'onglet sans recharger et lit les styles calculés, en clair et en sombre.
+
+**Changer d'édition.** Les onglets (`components/EditionTabs.tsx`) préchargent l'écran complet au survol ou au toucher, marquent l'onglet et affichent une barre de progression dès le clic (`NavPending`), et posent le cookie `ed` au clic. Le proxy ne pose le cookie que pour un chargement de page (`Sec-Fetch-Dest: document`) : un préchargement ne change jamais l'édition retenue (Next retire ses en-têtes `RSC`/`Next-Router-Prefetch` avant le proxy). Pas de `loading.tsx` : avec un rendu dynamique, il afficherait un squelette à chaque premier chargement (React retarde la révélation du contenu d'environ 300 ms).
+
+**Cache des éditions.** `lib/data/cached.ts` : `edition(date, langue)` et la dernière date publiée passent par le cache de données de Next (2 minutes, étiquette `editions`), lus avec un client Supabase sans session (contenu public, 0005). Cocher un mot ou « Ajouter à Anki » purge l'étiquette (`updateTag`). L'audio et le PDF ne sont jamais mis en cache (URL signées de 10 minutes, créées à chaque requête).
+
+**Grand écran.** À partir de 1024 px en paysage (iPad couché, ordinateur) : barre latérale (logo, Brief/Threads/Vocab/Archive, édition, compte), colonne centrale (date longue, puces, sujets), colonne de droite (Morning Brief et lecteur, marchés). La barre d'onglets du bas est masquée. Tout est sous une seule requête média de `globals.css` : le téléphone (390 px) et la tablette en portrait gardent la colonne de la maquette. Captures : `e2e/wide.spec.ts-snapshots/`.
+
+**Compte.** Téléphone : icône dans l'en-tête du Brief (menu `<details>`, sans JavaScript) ; grand écran : bas de la barre latérale. Visiteur : « Se connecter » ; connecté : l'adresse, « Santé → » et « Se déconnecter » (POST `/auth/signout`).
+
+**Marchés.** Neuf instruments (CAC 40, Euro Stoxx 50, IBEX 35, FTSE 100, S&P 500, Nasdaq, Brent, EUR/USD, Bitcoin), dernier cours et variation du jour, « Différé · HH:MM » (heure de Paris du cours le plus récent ; chaque ligne porte l'heure de son cours en infobulle). Brief du jour seulement : bandeau horizontal sous le Morning Brief sur téléphone, tableau dans la colonne de droite sur grand écran.
+
+- *Source* : Yahoo Finance, `https://query1.finance.yahoo.com/v7/finance/spark?symbols=…&range=1d&interval=1d`, gratuit et sans clé, **une seule requête** pour les neuf instruments (≈ 10 Ko, 0,17 s). Évaluation du 2026-11-20, 7 requêtes en tout : Stooq `q/l/?s=^spx&f=sd2t2ohlcp&h&e=csv` répond 404 (point d'accès retiré), `stooq.pl` coupe la connexion, `stooq.com/q/d/l/` renvoie une page de vérification JavaScript (preuve de travail), inutilisable côté serveur ; Yahoo `v8/finance/chart` marche mais demande une requête par instrument ; `v7/finance/spark` rend tout d'un coup (`regularMarketPrice`, `regularMarketChangePercent`, `chartPreviousClose`, `regularMarketTime`). C'est une interface non officielle : elle peut limiter le débit (429) ou changer de forme ; le bloc est alors masqué.
+- *Lecture* (`lib/markets/`) : côté serveur seulement (rien à ajouter à la CSP), délai de 2,5 s, 256 Ko au plus, pas de redirection, JSON validé par zod, au moins 4 cours lisibles ; résultat gardé 10 minutes (`unstable_cache`), échec jamais mis en cache et suivi d'une minute sans nouvel essai. Le bloc arrive en flux (`Suspense`) : une source lente ne retarde jamais le brief. Source en panne : rien n'est affiché, l'erreur va dans les journaux du serveur.
+- *Tests* : réponse enregistrée `lib/markets/fixture-spark.json` (analyse, formatage, fausse lecture réseau ; aucun réseau dans les tests). En mode `FIXTURE=1`, l'appli affiche cette réponse ; `FIXTURE_MARKETS=off` simule une panne.
+
+## 7. À contrôler sur le vrai service
 
 Ces points ne peuvent pas être vérifiés hors ligne. Ils sont à cocher au premier essai.
 
@@ -98,4 +116,9 @@ Ces points ne peuvent pas être vérifiés hors ligne. Ils sont à cocher au pre
 - [ ] **Photos.** Une photo Wikimedia Commons s'affiche, avec « Photo : auteur — licence · Wikimedia Commons » (CSP `img-src https://upload.wikimedia.org https://thumb.wikimedia.org`).
 - [ ] **CSP.** Aucune violation dans la console, sur chaque écran, en production.
 - [ ] **Cookies.** Les cookies de session et `ed` portent `Secure` en https.
+- [ ] **Accent.** Sur iPhone et iPad, changer d'onglet FR → EN → ES sans recharger : logo, numéros du Morning Brief, kicker des cartes et onglet prennent chaque fois la couleur de l'édition ; recharger garde la dernière édition.
+- [ ] **Changement d'édition.** Le clic montre aussitôt la barre de progression et l'onglet marqué ; au survol (ordinateur) l'édition suivante s'ouvre presque instantanément.
+- [ ] **Grand écran.** iPad couché et ordinateur : barre latérale, trois colonnes, pas de barre d'onglets ; iPad debout : colonne du téléphone.
+- [ ] **Marchés.** Le bloc s'affiche avec des cours du jour depuis Vercel (Yahoo peut refuser les IP de centres de données : sinon, le bloc reste masqué et un avertissement « marchés indisponibles » apparaît dans les journaux).
+- [ ] **Cache.** Une édition publiée apparaît en deux minutes au plus ; cocher un mot du Vocab est visible aussitôt après rechargement.
 - [ ] **PWA.** L'installation fonctionne sur iPhone et Android ; l'icône et la couleur de fond sont correctes.

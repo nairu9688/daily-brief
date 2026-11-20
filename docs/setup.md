@@ -28,7 +28,7 @@ Ce guide ordonne toute la mise en place (spec §14) en une seule liste à cocher
 12. **Premier passage manuel de bout en bout** — *Claude, avec ton accord*, en suivant [ROUTINE.md](../ROUTINE.md) pour la date du jour ; *Naïm* contrôle. À contrôler :
     - [ ] le site : connexion, Brief du jour dans les trois langues, lecteur MP3, PDF du jour, une case cochée, un Thread suivi, la page Santé (étapes `context` à `drive`, dont `audio`) ;
     - [ ] Drive : `Daily Brief/AAAA/MM - Mois/` contient le PDF et les trois MP3 ;
-    - [ ] les sections « À contrôler » de [setup-supabase.md](setup-supabase.md) (§7), [setup-audio.md](setup-audio.md) (§7) et [setup-web.md](setup-web.md) (§6) ;
+    - [ ] les sections « À contrôler » de [setup-supabase.md](setup-supabase.md) (§7), [setup-audio.md](setup-audio.md) (§7) et [setup-web.md](setup-web.md) (§7) ;
     - [ ] les photos : dans `render-report.json`, pas d'avertissement « Wikimedia Commons indisponible » (un 403 signale un agent refusé ou un réseau de session qui n'autorise pas `commons.wikimedia.org`, `upload.wikimedia.org` et `thumb.wikimedia.org`) ; sur le site et dans le PDF, chaque photo porte « Photo : auteur — licence · Wikimedia Commons » et ne montre aucune personne identifiable ;
     - [ ] la collecte : dans `collect-report.json`, des textes lus pour chacun des 10 domaines `full` (redirection de l'adresse sans `www.` vers `www.` acceptée) ;
     - [ ] les newsletters : `newsletters-report.json` liste les messages du jour, aucun n'est ignoré pour « expéditeur hors liste », et dit si l'en-tête `Authentication-Results` a été enregistré ([setup-newsletters.md](setup-newsletters.md), §3 : `requireDmarc`) ;
