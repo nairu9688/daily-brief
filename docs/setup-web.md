@@ -5,7 +5,9 @@ Ce guide met en ligne l'appli du Daily Brief (spec §5, §8.3 et §14, étape 5)
 Deux règles valent pour tout le guide :
 
 - **L'appli n'utilise que la clé publique** de Supabase (`anon` ou `sb_publishable_…`). La clé de service (`service_role` ou `sb_secret_…`) ne doit jamais entrer dans Vercel : l'appli refuse de démarrer si on la lui donne par erreur.
-- **`FIXTURE=1` n'existe qu'en local.** Ce mode ouvre l'appli sans connexion ; il est refusé sur Vercel, et en production (`next start`) sauf `FIXTURE_ALLOW_START=1`, que seuls les tests de bout en bout posent. Ne jamais définir ces deux variables dans Vercel.
+- **`FIXTURE=1` n'existe qu'en local.** Ce mode ouvre l'appli comme si l'utilisateur autorisé était connecté (`FIXTURE_VISITOR=1` : comme un visiteur sans session) ; il est refusé sur Vercel, et en production (`next start`) sauf `FIXTURE_ALLOW_START=1`, que seuls les tests de bout en bout posent. Ne jamais définir ces variables dans Vercel.
+
+**Accès.** Le brief est public : sans connexion, on lit le Brief, les éditions archivées, les Threads, le Vocab, l'Archive, et on écoute le MP3 ou télécharge le PDF. La connexion (lien « Se connecter » de l'Archive) est réservée à `ALLOWED_EMAIL` ; elle affiche les actions personnelles (cases du Vocab, « Tout cocher », « Ajouter à Anki », « Suivre ce thread ») et ouvre la page Santé, seule page renvoyée vers `/login` sans session. Cela suppose la migration `0005_public_read.sql` appliquée (`docs/setup-supabase.md` §2) : sans elle, un visiteur voit « Aucune édition publiée ».
 
 ## 1. Créer le projet Vercel
 
@@ -26,7 +28,7 @@ Dans le panneau *Environment Variables* de l'écran d'import (§1, étape 4), ou
 | `ALLOWED_EMAIL` | la **même** adresse que `private.app_settings` (`docs/setup-supabase.md` §3) | non, mais jamais envoyée au navigateur |
 | `SITE_URL` | l'adresse publique du site, en https (`https://daily-brief-xxx.vercel.app` ou le domaine choisi) | non |
 
-C'est la RLS de la base qui protège les données. `ALLOWED_EMAIL` est une défense en profondeur : l'appli n'envoie aucun lien magique à une autre adresse (pas d'abus du quota d'envoi de Supabase) et renvoie vers la connexion toute session d'une autre adresse. Si les deux adresses diffèrent, personne ne lit rien : corriger l'une ou l'autre.
+C'est la RLS de la base qui protège les données (Santé et écritures ; le contenu est public). `ALLOWED_EMAIL` reste nécessaire : l'appli n'envoie aucun lien magique à une autre adresse (pas d'abus du quota d'envoi de Supabase), n'affiche les actions personnelles qu'à cette adresse, et renvoie vers `/login?erreur=refuse` une session d'une autre adresse qui ouvre Santé. Si les deux adresses diffèrent, personne ne voit Santé ni n'écrit : corriger l'une ou l'autre.
 
 `SITE_URL` fixe l'adresse du lien envoyé par courriel : sans elle, un lien n'est envoyé que depuis `localhost`.
 
@@ -53,15 +55,16 @@ Dans le tableau de bord Supabase, *Authentication* :
 ## 4. Déployer et se connecter
 
 1. *Deployments* → *Redeploy* (ou pousser sur la branche de production).
-2. Ouvrir le site : il renvoie vers `/login`. Saisir l'adresse autorisée, puis ouvrir le lien reçu (ou saisir le code).
-3. Le Brief du jour s'affiche. Avant le premier passage de la routine, la page indique « Aucune édition publiée ».
+2. Ouvrir le site : le Brief du jour s'affiche sans connexion, en lecture seule. Avant le premier passage de la routine, la page indique « Aucune édition publiée ».
+3. Pour les actions personnelles et Santé : Archive → « Se connecter », saisir l'adresse autorisée, puis ouvrir le lien reçu (ou saisir le code). Les cases du Vocab et « Suivre ce thread » apparaissent ; le lien « Santé → » remplace « Se connecter ».
 4. Installer sur l'écran d'accueil : Safari → *Partager* → *Sur l'écran d'accueil* ; Chrome Android → *Installer l'application*. Dans l'appli installée, se connecter avec le **code** du courriel.
 
 ## 5. Développement local
 
 ```bash
 npm install
-FIXTURE=1 npm run web:dev          # http://localhost:3000, données de fixtures/, sans connexion
+FIXTURE=1 npm run web:dev          # http://localhost:3000, données de fixtures/, comme l'utilisateur autorisé
+FIXTURE=1 FIXTURE_VISITOR=1 npm run web:dev   # idem, comme un visiteur sans session (lecture seule)
 FIXTURE=1 FIXTURE_TODAY=2026-11-07 npm run web:dev   # bandeau « brief de la veille »
 FIXTURE=1 FIXTURE_LIGHT=fr npm run web:dev           # bandeau « édition allégée » sur FR
 ```
@@ -87,7 +90,8 @@ Ces points ne peuvent pas être vérifiés hors ligne. Ils sont à cocher au pre
 - [ ] **Build Vercel.** Le build Turbopack réussit depuis `apps/web` avec les paquets du dépôt (`transpilePackages`) ; la carte du monde (world-atlas 50m) tient dans la fonction serveur.
 - [ ] **Jeton.** `getClaims()` renvoie bien `email` pour une session ouverte par lien magique (le proxy et la RLS en dépendent).
 - [ ] **Lien et code.** Le lien du courriel ouvre une session (`/auth/confirm?token_hash=…`) ; le code à 6 chiffres aussi, depuis l'appli installée.
-- [ ] **Autre adresse.** Une autre adresse ne reçoit aucun courriel ; une session d'une autre adresse est renvoyée vers `/login?erreur=refuse`.
+- [ ] **Visiteur.** Dans une fenêtre privée, sans session : Brief, édition archivée, Threads, Vocab et Archive s'affichent, sans cases ni « Suivre ce thread » ; le MP3 se lit et « PDF du jour » se télécharge (URL signée créée avec la clé publique) ; `/sante` renvoie vers `/login`.
+- [ ] **Autre adresse.** Une autre adresse ne reçoit aucun courriel ; une session d'une autre adresse lit le brief en lecture seule et `/sante` la renvoie vers `/login?erreur=refuse`.
 - [ ] **Écritures.** Cocher un mot, « Ajouter à Anki » et « Suivre ce thread » écrivent en base ; aucune autre écriture n'est possible (RLS).
 - [ ] **Audio.** Le lecteur joue le MP3 par l'URL signée (redirection de `/audio/<date>/<langue>`) et affiche sa durée ; la console ne montre aucune violation de CSP (`media-src` contient l'origine Supabase). Vérifier aussi un MP3 concaténé sans ffmpeg (consigne du lot 5).
 - [ ] **PDF.** « PDF du jour » télécharge `Daily Brief AAAA-MM-JJ.pdf`.

@@ -24,11 +24,14 @@ Les migrations sont dans `supabase/migrations/` et s'appliquent **dans l'ordre d
 | `0002_context_runs.sql` | Fonctions de `brief:context` (fermeture R12, Threads ouverts, sujets de la veille) et bilan `runs` |
 | `0003_publish.sql` | Fonction `publish_edition` (publication d'une édition en une transaction) |
 | `0004_files.sql` | Dépôts Drive en attente (prise en charge, abandon, expiration) et fonctions de la purge des MP3 |
+| `0005_public_read.sql` | Lecture publique (rôle `anon`) des six tables de contenu et des fichiers des buckets `audio` et `pdf` ; `runs`, `drive_pending` et les écritures restent à l'adresse autorisée |
 
 Deux façons de faire :
 
 - **Par le connecteur Supabase** : demander à Claude d'appliquer chaque fichier, un par un, avec l'outil de migration du connecteur.
-- **À la main** : dans le tableau de bord, ouvrir *SQL Editor*, coller le contenu de `0001_init.sql`, exécuter, puis recommencer avec les trois autres.
+- **À la main** : dans le tableau de bord, ouvrir *SQL Editor*, coller le contenu de `0001_init.sql`, exécuter, puis recommencer avec les quatre autres.
+
+**Projet déjà en place (0001 à 0004 appliquées).** Appliquer seulement `0005_public_read.sql`. Aucun redéploiement de l'appli n'est nécessaire pour la base ; l'appli publique, elle, demande le nouveau déploiement (`docs/setup-web.md`).
 
 **Droits d'exécution par défaut.** `0001_init.sql` retire à `PUBLIC` le droit d'exécuter les fonctions créées plus tard par le rôle qui l'applique (`alter default privileges revoke execute on functions from public`, sans limite de schéma). Une limite à `public` et `private` ne suffit pas : le droit d'exécution de `PUBLIC` est un droit par défaut global de Postgres, qu'une règle limitée à un schéma ne retire pas (vérifié par le test « une fonction ajoutée plus tard dans public n'est exécutable par personne par défaut »). Effet : une fonction créée plus tard par ce rôle, y compris par une extension activée après coup, n'est pas exécutable par `PUBLIC` et doit recevoir un `grant execute` explicite.
 
@@ -51,13 +54,22 @@ select id, public from storage.buckets where id in ('audio', 'pdf');
 
 select public.context_open_threads();
 -- attendu : []
+
+select tablename, policyname, roles from pg_policies
+where schemaname in ('public', 'storage') and policyname like '%public_read' order by 1;
+-- attendu : 7 lignes (les six tables de contenu et storage.objects), roles {anon,authenticated}
+
+select has_table_privilege('anon', 'public.runs', 'select') as runs,
+       has_table_privilege('anon', 'public.editions', 'select') as editions,
+       has_table_privilege('anon', 'public.vocab_items', 'update') as vocab_update;
+-- attendu : false, true, false
 ```
 
-Puis, dans *Advisors* (Security), vérifier qu'aucune table de `public` n'est signalée sans RLS.
+Puis, dans *Advisors* (Security), vérifier qu'aucune table de `public` n'est signalée sans RLS. Les politiques `*_public_read` (`using (true)` en lecture) sont voulues : le contenu du brief est public.
 
 ## 3. Régler l'email autorisé
 
-Une seule adresse peut lire le brief. Elle est rangée dans la table `private.app_settings`, que l'API n'expose pas. La valeur par défaut est `nanigeek@gmail.com`. Pour la changer, dans *SQL Editor* :
+Le contenu du brief se lit sans connexion (`0005_public_read.sql`). Une seule adresse peut, en plus, lire la page Santé (`runs`) et `drive_pending`, et écrire les mots cochés, l'état Anki et les Threads suivis. Elle est rangée dans la table `private.app_settings`, que l'API n'expose pas. La valeur par défaut est `nanigeek@gmail.com`. Pour la changer, dans *SQL Editor* :
 
 ```sql
 update private.app_settings set value = 'autre.adresse@exemple.fr' where key = 'allowed_email';
@@ -65,7 +77,7 @@ update private.app_settings set value = 'autre.adresse@exemple.fr' where key = '
 
 Le changement prend effet aussitôt, sans redéploiement. La comparaison ignore la casse et les espaces. Règles à connaître :
 
-- **Une valeur vide ou blanche n'autorise personne** : vider la ligne ferme la lecture à tout le monde, ce n'est pas un moyen de l'ouvrir.
+- **Une valeur vide ou blanche n'autorise personne** : vider la ligne ferme Santé et les écritures à tout le monde (le contenu reste public), ce n'est pas un moyen de les ouvrir.
 - **Un jeton de session anonyme est toujours refusé**, même si son email correspond (`is_anonymous` vrai).
 - **Un jeton sans email** ne correspond à rien. L'application (lot 6) aura aussi une variable `ALLOWED_EMAIL` pour son écran de connexion ; **les deux doivent porter la même adresse**, et c'est celle de la base qui protège les données.
 
@@ -143,7 +155,8 @@ Relancer `brief:publish` sur la même date ne crée aucun doublon : mêmes ligne
 Ces points ne peuvent pas être vérifiés hors ligne. Ils sont à cocher au premier essai.
 
 - [ ] **Clé de service.** `brief:context` répond avec le code 0. Si la clé est une clé secrète `sb_secret_…` et que l'appel reçoit un 401, utiliser la clé `service_role` historique (JWT) : le pipeline envoie la même clé dans les en-têtes `apikey` et `Authorization`.
-- [ ] **RLS avec un vrai jeton.** Connecté à l'application avec l'adresse autorisée, le brief s'affiche ; avec une autre adresse, tout est vide. Sans connexion, l'API REST répond par une erreur de droits.
+- [ ] **RLS avec un vrai jeton.** Sans connexion, l'API REST (clé publique seule) lit `editions` mais répond par une erreur de droits sur `runs` et sur toute écriture. Connecté avec l'adresse autorisée, `runs` se lit ; avec une autre adresse, `runs` est vide et aucune écriture ne touche de ligne.
+- [ ] **URL signée sans session.** Avec la clé publique seule, `createSignedUrl` réussit sur `audio` et `pdf` (politique `daily_brief_files_public_read`) ; l'URL publique directe (`/storage/v1/object/public/…`) reste refusée, les buckets étant privés.
 - [ ] **Cases à cocher.** Cocher un mot et suivre un Thread dans l'application fonctionne ; toute autre écriture est refusée.
 - [ ] **Buckets.** Le dépôt du PDF et d'un MP3 réussit ; les colonnes `file_size_limit` et `allowed_mime_types` des buckets sont bien celles de la migration.
 - [ ] **Fichier absent.** Storage répond 404, ou 400 avec `statusCode` 404, `not_found` ou « Object not found », pour un fichier absent : la relance des dépôts en attente le traite comme « absent ». Tout autre 400 (droits, requête mal formée) est une erreur, pas une absence ; vérifier que la réponse réelle de Storage pour un objet inexistant est bien reconnue.

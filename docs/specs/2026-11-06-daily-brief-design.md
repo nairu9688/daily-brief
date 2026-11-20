@@ -4,13 +4,13 @@ Date : 6 novembre 2026 · Auteur : Naïm (avec Claude) · Statut : validée en b
 
 ## 1. Objectif
 
-Chaque matin à 6 h (heure de Paris), Naïm dispose d'un briefing d'actualité en trois éditions pour suivre l'actu en prépa ECT. L'édition française couvre la France et le monde, l'édition anglaise les États-Unis et le Royaume-Uni, l'édition espagnole l'Espagne uniquement (l'Amérique latine n'est pas au programme de première année). Le briefing est consultable dans une application web privée au design minimaliste « tech » inspiré de Pollar News. Il est aussi archivé chaque jour en un PDF unique (FR puis EN puis ES) et en MP3 dans Google Drive, sous `Daily Brief/AAAA/MM - Mois/`.
+Chaque matin à 6 h (heure de Paris), Naïm dispose d'un briefing d'actualité en trois éditions pour suivre l'actu en prépa ECT. L'édition française couvre la France et le monde, l'édition anglaise les États-Unis et le Royaume-Uni, l'édition espagnole l'Espagne uniquement (l'Amérique latine n'est pas au programme de première année). Le briefing est consultable dans une application web publique, en lecture seule sans connexion, au design minimaliste « tech » inspiré de Pollar News. Il est aussi archivé chaque jour en un PDF unique (FR puis EN puis ES) et en MP3 dans Google Drive, sous `Daily Brief/AAAA/MM - Mois/`.
 
 Le principe éditorial reprend celui de Pollar : ne s'appuyer que sur de vrais articles, regrouper la même information vue par plusieurs médias, résumer par IA en le signalant, citer mot pour mot, et toujours offrir un bouton vers chaque article. La priorité absolue est la diversité des sources.
 
 ## 2. Périmètre
 
-**Phase 1 (lancement).** Pipeline quotidien complet (collecte, rédaction, vérification, rendu, audio, publication, dépôt Drive, notification). Application web : Brief du jour, rubriques, sources, Threads, vocabulaire à cocher, archive par date, page Santé, connexion privée, installable sur l'écran d'accueil. Lancement direct : un seul passage manuel de bout en bout après la mise en place, puis horaire quotidien actif dès le lendemain, sans période d'essai.
+**Phase 1 (lancement).** Pipeline quotidien complet (collecte, rédaction, vérification, rendu, audio, publication, dépôt Drive, notification). Application web : Brief du jour, rubriques, sources, Threads, vocabulaire à cocher, archive par date, page Santé, lecture publique et connexion facultative (réservée à l'adresse autorisée), installable sur l'écran d'accueil. Lancement direct : un seul passage manuel de bout en bout après la mise en place, puis horaire quotidien actif dès le lendemain, sans période d'essai.
 
 **Phase 2.** Synchro Anki des mots cochés, recherche plein texte dans l'archive, notifications quand un Thread suivi avance, lecture hors ligne.
 
@@ -80,7 +80,7 @@ Lors de la configuration, Claude prépare la liste vérifiée des newsletters ma
    ├─ 6. publication npm run brief:publish  → Supabase (tables + stockage) → Apps Script → Drive
    └─ 7. notification push « Brief prêt » / « Brief incomplet : <raison> »
 
-Application web (Next.js, Vercel) ← lecture Supabase (Auth + RLS), privée
+Application web (Next.js, Vercel) ← lecture Supabase (Auth + RLS), publique en lecture
 ```
 
 Structure du repo :
@@ -153,7 +153,7 @@ type MapSpec = { projection: 'conic-france' | 'conic-europe' | 'conic-spain' | '
 | runs | id, date, status, steps jsonb (durée, compteurs, erreurs par étape), notes |
 | drive_pending | id, date, files jsonb, attempts, last_error |
 
-Stockage : bucket privé `audio` (MP3, purge après 30 jours) et bucket privé `pdf`. RLS : lecture réservée à l'utilisateur authentifié dont l'email correspond à `ALLOWED_EMAIL` (par défaut nanigeek@gmail.com) ; écriture seulement avec la clé service (pipeline). L'application peut écrire `vocab_items.selected`, `vocab_items.anki_status` et `threads.followed`, et aucune autre colonne.
+Stockage : bucket privé `audio` (MP3, purge après 30 jours) et bucket privé `pdf`. RLS (décision du 20/11, migration `0005_public_read.sql`) : le contenu (`editions`, `stories`, `sources`, `threads`, `thread_events`, `vocab_items`) et les fichiers des buckets `audio` et `pdf` se lisent sans connexion (rôle `anon`), les buckets restant privés (URL signées). `runs` et `drive_pending` restent réservées à l'utilisateur authentifié dont l'email correspond à `ALLOWED_EMAIL` (par défaut nanigeek@gmail.com). Écriture seulement avec la clé service (pipeline), sauf `vocab_items.selected`, `vocab_items.anki_status` et `threads.followed`, que seul l'utilisateur autorisé peut écrire depuis l'application ; aucune autre colonne.
 
 ### 6.3 Secrets
 
@@ -221,7 +221,9 @@ Le **Brief** (écran par défaut) comporte :
 - les rubriques et « En bref » ;
 - le Vocab du jour, avec cases à cocher, « Tout cocher » et un bouton « Ajouter N mots à Anki » qui ne fait que mettre les mots en file en phase 1.
 
-Les autres écrans sont **Threads** (liste puis frise chronologique, avec « Suivre ce thread »), **Vocab** (tous les mots, filtres langue/date/coché), **Archive** (calendrier vers les éditions passées) et **Santé** (derniers passages de la routine). Une barre d'onglets en bas donne accès à Brief, Threads, Vocab et Archive. Le site a un manifeste PWA et des icônes. La référence visuelle est `design/maquette-v2.html`.
+Les autres écrans sont **Threads** (liste puis frise chronologique, avec « Suivre ce thread »), **Vocab** (tous les mots, filtres langue/date/coché), **Archive** (calendrier vers les éditions passées) et **Santé** (derniers passages de la routine).
+
+Tout se lit sans connexion. Les actions personnelles (cases du Vocab, « Tout cocher », « Ajouter à Anki », « Suivre ce thread », filtre « coché ») ne s'affichent qu'à l'utilisateur autorisé connecté ; un visiteur voit les mêmes écrans en lecture seule. La page **Santé** est réservée à l'utilisateur autorisé : un visiteur est renvoyé vers `/login`. Un lien discret « Se connecter » est dans l'Archive. Une barre d'onglets en bas donne accès à Brief, Threads, Vocab et Archive. Le site a un manifeste PWA et des icônes. La référence visuelle est `design/maquette-v2.html`.
 
 ### 8.4 Cartes
 
