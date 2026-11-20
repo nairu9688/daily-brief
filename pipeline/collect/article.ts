@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { RawArticleSchema, type RawArticle } from '@daily-brief/schema';
-import { outletKey, tryNormalizeUrl } from '../lib/url';
-import { canReadFull, type Whitelist } from '../lib/whitelist';
+import { tryNormalizeUrl } from '../lib/url';
+import { canReadFull, outletOf, type Whitelist } from '../lib/whitelist';
 
 export const MAX_DESCRIPTION = 600;
 
@@ -71,11 +71,13 @@ export function makeArticle(input: ArticleInput, wl: Whitelist): { article: RawA
   const rawText = input.text?.trim() ? input.text.replace(/\r\n?/g, '\n').replace(/\n{3,}/g, '\n\n').trim() : null;
   if (!url || !title || !lang) return { article: null, discardedText: false };
   const full = canReadFull(wl, url);
+  // Nom du média : celui de la liste blanche (un seul nom par média, R3), sinon celui de la source, sinon le domaine.
+  const identity = outletOf(wl, url);
   const description = wellFormed(Array.from(plainText(input.description)).slice(0, MAX_DESCRIPTION).join('')) || null;
   const candidate: RawArticle = {
     id: articleId(url),
     url,
-    outlet: plainText(input.outlet) || outletKey(url),
+    outlet: identity.known ? identity.name : plainText(input.outlet) || identity.key,
     title,
     description,
     lang,

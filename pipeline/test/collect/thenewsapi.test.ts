@@ -132,7 +132,7 @@ describe('collectTheNewsApi', () => {
     expect(sims[0].url).toContain('/similar/0b7d93a4-1f25-4c8e-8e6a-55d2b0c9e302?');
     const euronews = run.candidates.find((c) => c.article.url.includes('euronews'))!;
     const linked = run.candidates.filter((c) => c.seed === euronews.article.id).map((c) => c.article.outlet);
-    expect(linked).toEqual(['sudradio.fr', 'lefigaro.fr']);
+    expect(linked).toEqual(['Sud Radio', 'Le Figaro']);
     expect(run.candidates.every((c) => c.article.text === null && c.article.origin === 'thenewsapi')).toBe(true);
   });
 });

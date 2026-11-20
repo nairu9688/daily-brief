@@ -49,10 +49,10 @@ describe('collectExa', () => {
     const run = await collectExa(ctx, KEY, { broad: false });
     expect(run.requests).toBe(1);
     const byOutlet = Object.fromEntries(run.candidates.map((c) => [c.article.outlet, c.article]));
-    expect(Object.keys(byOutlet)).toEqual(['euronews.com', 'sudradio.fr', 'lemonde.fr']);
-    expect(byOutlet['euronews.com'].text).toContain('« Nous ne repartirons pas sans un chiffre »');
-    expect(byOutlet['euronews.com'].lang).toBe('fr');
-    expect(byOutlet['lemonde.fr'].text).toBeNull();
+    expect(Object.keys(byOutlet)).toEqual(['Euronews', 'Sud Radio', 'Le Monde']);
+    expect(byOutlet.Euronews.text).toContain('« Nous ne repartirons pas sans un chiffre »');
+    expect(byOutlet.Euronews.lang).toBe('fr');
+    expect(byOutlet['Le Monde'].text).toBeNull();
     expect(run.discardedTexts).toBe(1);
   });
 

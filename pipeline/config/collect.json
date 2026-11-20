@@ -14,9 +14,9 @@
     "numResults": 10,
     "maxRequests": 60,
     "fullDomains": {
-      "fr": ["fr.euronews.com", "sudradio.fr", "franceinfo.fr", "20minutes.fr", "huffingtonpost.fr"],
+      "fr": ["fr.euronews.com", "sudradio.fr", "franceinfo.fr", "20minutes.fr", "huffingtonpost.fr", "france24.com", "rfi.fr", "publicsenat.fr", "tf1info.fr"],
       "en": ["www.euronews.com", "aljazeera.com", "cbsnews.com", "pbs.org", "bbc.co.uk", "bbc.com", "theguardian.com", "npr.org"],
-      "es": ["eldiario.es", "elsaltodiario.com", "alicanteplaza.es", "democrata.es", "20minutos.es", "europapress.es", "elconfidencial.com"]
+      "es": ["eldiario.es", "elsaltodiario.com", "alicanteplaza.es", "democrata.es", "20minutos.es", "europapress.es", "elconfidencial.com", "lavanguardia.com", "newtral.es", "cadenaser.com"]
     }
   },
   "webz": {
@@ -30,5 +30,5 @@
     }
   },
   "rss": { "timeoutMs": 10000, "maxBytes": 4000000, "maxItemsPerFeed": 30 },
-  "fulltext": { "timeoutMs": 15000, "maxBytes": 1500000, "minChars": 400, "concurrency": 4, "maxFetches": 180, "deadlineMs": 240000 }
+  "fulltext": { "timeoutMs": 15000, "maxBytes": 1500000, "minChars": 400, "concurrency": 4, "maxFetches": 240, "deadlineMs": 240000 }
 }

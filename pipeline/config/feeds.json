@@ -1,5 +1,5 @@
 {
-  "note": "Flux RSS/Atom lus par brief:collect. Uniquement des domaines au statut full ou feed de whitelist.json (test pipeline/test/collect/rss.test.ts). Le flux ne donne que des métadonnées ; le texte intégral passe par fulltext.ts, pour les domaines full seulement (R1). URL vérifiées le 06/11/2026 (thehill.com a répondu 429 ce jour-là). Ajouts du 19/11/2026, chacun vérifié par une requête publique (flux RSS/Atom lu par feed-parse.ts, articles du jour) : franceinfo, 20 Minutes, Le HuffPost, The Conversation FR, BBC News, The Guardian, 20minutos, Europa Press, El Confidencial (voir docs/superpowers/plans/2026-11-19-retours-premier-brief.md). democrata.es a répondu 403 le 19/11/2026.",
+  "note": "Flux RSS/Atom lus par brief:collect. Uniquement des domaines au statut full ou feed de whitelist.json (test pipeline/test/collect/rss.test.ts). Le flux ne donne que des métadonnées ; le texte intégral passe par fulltext.ts, pour les domaines full seulement (R1). URL vérifiées le 06/11/2026 (thehill.com a répondu 429 ce jour-là). Ajouts du 19/11/2026, chacun vérifié par une requête publique (flux RSS/Atom lu par feed-parse.ts, articles du jour) : franceinfo, 20 Minutes, Le HuffPost, The Conversation FR, BBC News, The Guardian, 20minutos, Europa Press, El Confidencial (voir docs/superpowers/plans/2026-11-19-retours-premier-brief.md). democrata.es a répondu 403 le 19/11/2026. Ajouts du 20/11/2026 (flux lu puis un article lu par fetchFullText, même agent, voir docs/superpowers/plans/2026-11-20-diversite-photos.md) : France 24, RFI, Public Sénat (flux /feed), TF1info, Basta!, La Vanguardia, Newtral, Cadena SER. Le champ outlet n'est qu'un repli : le nom affiché vient de whitelist.json (outlet, sameAs).",
   "feeds": [
     { "url": "https://fr.euronews.com/rss", "outlet": "Euronews", "lang": "fr" },
     { "url": "https://www.sudradio.fr/feed", "outlet": "Sud Radio", "lang": "fr" },
@@ -7,6 +7,11 @@
     { "url": "https://www.20minutes.fr/feeds/rss-une.xml", "outlet": "20 Minutes", "lang": "fr" },
     { "url": "https://www.huffingtonpost.fr/rss/all_headline.xml", "outlet": "Le HuffPost", "lang": "fr" },
     { "url": "https://theconversation.com/fr/articles.atom", "outlet": "The Conversation", "lang": "fr" },
+    { "url": "https://www.france24.com/fr/rss", "outlet": "France 24", "lang": "fr" },
+    { "url": "https://www.rfi.fr/fr/rss", "outlet": "RFI", "lang": "fr" },
+    { "url": "https://www.publicsenat.fr/feed", "outlet": "Public Sénat", "lang": "fr" },
+    { "url": "https://www.tf1info.fr/feeds/rss-une.xml", "outlet": "TF1info", "lang": "fr" },
+    { "url": "https://basta.media/spip.php?page=backend", "outlet": "Basta!", "lang": "fr" },
     { "url": "https://www.euronews.com/rss", "outlet": "Euronews", "lang": "en" },
     { "url": "https://www.aljazeera.com/xml/rss/all.xml", "outlet": "Al Jazeera", "lang": "en" },
     { "url": "https://www.cbsnews.com/latest/rss/main", "outlet": "CBS News", "lang": "en" },
@@ -21,6 +26,9 @@
     { "url": "https://www.democrata.es/feed/", "outlet": "Demócrata", "lang": "es" },
     { "url": "https://www.20minutos.es/rss", "outlet": "20minutos", "lang": "es" },
     { "url": "https://www.europapress.es/rss/rss.aspx", "outlet": "Europa Press", "lang": "es" },
-    { "url": "https://rss.elconfidencial.com/espana/", "outlet": "El Confidencial", "lang": "es" }
+    { "url": "https://rss.elconfidencial.com/espana/", "outlet": "El Confidencial", "lang": "es" },
+    { "url": "https://www.lavanguardia.com/rss/home.xml", "outlet": "La Vanguardia", "lang": "es" },
+    { "url": "https://www.newtral.es/feed/", "outlet": "Newtral", "lang": "es" },
+    { "url": "https://cadenaser.com/arc/outboundfeeds/rss/?outputType=xml", "outlet": "Cadena SER", "lang": "es" }
   ]
 }

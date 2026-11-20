@@ -7,7 +7,7 @@ import { RequestBudget } from '../../collect/budget';
 import { CollectConfigSchema, loadCollectConfig } from '../../collect/config';
 import { loadRubriques, RubriquesSchema, searchOf } from '../../collect/rubriques';
 import { readDailyUsage, utcDay, writeDailyUsage } from '../../collect/usage-ledger';
-import { lookupDomain, loadWhitelist } from '../../lib/whitelist';
+import { lookupDomain, loadWhitelist, outletOf } from '../../lib/whitelist';
 import { repoPath, WHITELIST_PATH } from '../helpers';
 
 const CONFIG_PATH = repoPath('pipeline/config/collect.json');
@@ -56,12 +56,29 @@ describe('diversité des médias lisibles en entier (R3)', () => {
     }
   });
 
-  it('les médias vérifiés le 19/11/2026 sont lisibles en entier ; ceux qui refusent l’agent (403) ne le sont pas', () => {
+  it('les médias vérifiés les 19 et 20/11/2026 sont lisibles en entier ; payants ou fermés à l’agent ne le sont pas', () => {
     const wl = loadWhitelist(WHITELIST_PATH);
     for (const d of ['franceinfo.fr', '20minutes.fr', 'huffingtonpost.fr', 'theconversation.com', 'bbc.co.uk', 'theguardian.com', 'npr.org', '20minutos.es', 'europapress.es', 'elconfidencial.com']) {
       expect(lookupDomain(wl, `https://www.${d}/x`)?.status, d).toBe('full');
     }
-    for (const d of ['france24.com', 'rfi.fr', 'ouest-france.fr', 'lemonde.fr', 'elpais.com']) expect(lookupDomain(wl, `https://www.${d}/x`)?.status, d).toBe('meta');
+    for (const d of ['france24.com', 'rfi.fr', 'publicsenat.fr', 'tf1info.fr', 'basta.media', 'lavanguardia.com', 'newtral.es', 'cadenaser.com']) {
+      expect(lookupDomain(wl, `https://www.${d}/x`)?.status, d).toBe('full');
+    }
+    for (const d of ['ouest-france.fr', 'lemonde.fr', 'liberation.fr', 'leparisien.fr', 'humanite.fr', 'elpais.com', 'elmundo.es', 'abc.es', 'infolibre.es']) {
+      expect(lookupDomain(wl, `https://www.${d}/x`)?.status, d).toBe('meta');
+    }
+  });
+
+  it('au moins 9 médias full distincts en FR et en ES (identité normalisée : franceinfo.fr et francetvinfo.fr comptent pour un)', () => {
+    const wl = loadWhitelist(WHITELIST_PATH);
+    const c = loadCollectConfig(CONFIG_PATH);
+    const feeds = JSON.parse(readFileSync(repoPath('pipeline/config/feeds.json'), 'utf8')).feeds as { url: string; lang: 'fr' | 'en' | 'es' }[];
+    for (const lang of ['fr', 'es'] as const) {
+      const keys = new Set<string>();
+      for (const d of c.exa.fullDomains[lang]) keys.add(outletOf(wl, `https://${d}/`).key);
+      for (const f of feeds.filter((x) => x.lang === lang)) if (lookupDomain(wl, f.url)?.status === 'full') keys.add(outletOf(wl, f.url).key);
+      expect(keys.size, `${lang} : ${[...keys].join(', ')}`).toBeGreaterThanOrEqual(9);
+    }
   });
 });
 

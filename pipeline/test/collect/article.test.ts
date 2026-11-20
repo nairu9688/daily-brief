@@ -21,7 +21,7 @@ describe('makeArticle', () => {
     expect(article).toEqual({
       id: articleId('https://lemonde.fr/politique/article/x.html'),
       url: 'https://lemonde.fr/politique/article/x.html',
-      outlet: 'lemonde.fr',
+      outlet: 'Le Monde',
       title: 'Budget : le Sénat vote',
       description: 'Chapô & suite',
       lang: 'fr',
@@ -52,10 +52,22 @@ describe('makeArticle', () => {
     expect(makeArticle({ url: 'https://a.fr/x', title: 'T', lang: 'french', origin: 'rss' }, wl).article).toBeNull();
   });
 
-  it('nomme le média par son domaine si la source ne le donne pas, borne la description', () => {
+  it('nomme le média par la liste blanche, sinon par la source, sinon par son domaine ; borne la description', () => {
     const { article } = makeArticle({ url: 'https://news.sky.com/story/x', title: 'T', lang: 'en', origin: 'exa', description: 'x'.repeat(2000) }, wl);
-    expect(article?.outlet).toBe('sky.com');
+    expect(article?.outlet).toBe('Sky News');
     expect(article?.description).toHaveLength(600);
+    const unknown = (outlet?: string) => makeArticle({ url: 'https://www.lalibre.be/x', title: 'T', lang: 'fr', origin: 'thenewsapi', outlet }, wl).article?.outlet;
+    expect(unknown('La Libre Belgique')).toBe('La Libre Belgique');
+    expect(unknown()).toBe('lalibre.be');
+  });
+
+  it('un même média garde un seul nom, quel que soit le nom donné par la source (20/11/2026)', () => {
+    const name = (url: string, outlet: string) => makeArticle({ url, title: 'T', lang: 'fr', origin: 'thenewsapi', outlet }, wl).article?.outlet;
+    expect(name('https://www.eldiario.es/x', 'eldiario.es')).toBe('elDiario.es');
+    expect(name('https://www.francetvinfo.fr/x', 'franceinfo.fr')).toBe('franceinfo');
+    expect(name('https://www.bbc.com/news/x', 'bbc.com')).toBe('BBC News');
+    expect(name('https://www.pbs.org/newshour/x', 'pbs.org')).toBe('PBS NewsHour');
+    expect(name('https://www.euronews.com/x', 'euronews.com')).toBe('Euronews');
   });
 });
 

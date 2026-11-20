@@ -17,7 +17,7 @@ describe('collectWebz', () => {
   it('R1 : garde le texte d’eldiario.es (full), écarte celui d’elpais.com (meta), ignore les posts hors fenêtre ou mal formés', async () => {
     const { fetch } = fakeHttp({ [WEBZ_LITE]: { json: apiFixture('webz-news-lite.json') } });
     const run = await collectWebz(testContext(fetch), TOKEN, ['es']);
-    expect(run.candidates.map((c) => c.article.outlet)).toEqual(['eldiario.es', 'elpais.com']);
+    expect(run.candidates.map((c) => c.article.outlet)).toEqual(['elDiario.es', 'El País']);
     const [eldiario, elpais] = run.candidates.map((c) => c.article);
     expect(eldiario).toMatchObject({ lang: 'es', origin: 'webz', publishedAt: '2026-11-06T04:10:00.000Z', description: null });
     expect(eldiario.text).toBe('El pleno del Congreso aprobó este jueves los Presupuestos Generales del Estado.\nLa votación salió adelante por un estrecho margen.');
