@@ -50,15 +50,22 @@ describe('migrations Supabase', () => {
     }
   });
 
-  it('aucun droit par défaut : anon ne lit aucune table, et aucune fonction de public n’est exécutable par anon ou authenticated', async () => {
-    const tables = await rows<{ relname: string; anon: boolean; authenticated_write: boolean }>(
+  it('aucun droit par défaut : anon ne lit que les six tables de contenu, n’écrit nulle part, et aucune fonction de public n’est exécutable par anon ou authenticated', async () => {
+    const tables = await rows<{ relname: string; anon_read: boolean; anon_write: boolean; authenticated_write: boolean }>(
       db,
-      `select c.relname, has_table_privilege('anon', c.oid, 'select, insert, update, delete') as anon,
+      `select c.relname, has_table_privilege('anon', c.oid, 'select') as anon_read,
+              has_table_privilege('anon', c.oid, 'insert, update, delete, truncate, references, trigger') as anon_write,
               has_table_privilege('authenticated', c.oid, 'insert, delete, truncate') as authenticated_write
        from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relkind in ('r', 'v', 'm', 'S') order by 1`,
     );
     expect(tables.length).toBeGreaterThanOrEqual(8);
-    expect(tables.filter((t) => t.anon || t.authenticated_write)).toEqual([]);
+    // Lecture publique (0005_public_read.sql) : le contenu du brief, jamais runs ni drive_pending.
+    expect(tables.filter((t) => t.anon_read).map((t) => t.relname)).toEqual(['editions', 'sources', 'stories', 'thread_events', 'threads', 'vocab_items']);
+    expect(tables.filter((t) => t.anon_write || t.authenticated_write)).toEqual([]);
+    // Aucun droit de colonne en écriture pour anon (les droits de 0001 sont pour authenticated seulement).
+    expect(
+      await rows(db, `select table_name, column_name from information_schema.column_privileges where table_schema = 'public' and grantee = 'anon' and privilege_type <> 'SELECT'`),
+    ).toEqual([]);
     // Fonctions de public volontairement exécutables par anon ou authenticated : aucune (clé service seulement).
     const INTENDED: string[] = [];
     const fns = await rows<{ proname: string }>(

@@ -1,7 +1,9 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ALLOWED_EMAIL, asRole, createTestDb, rows, type Role, type TestDb } from './pg';
 
-const TABLES = ['editions', 'stories', 'sources', 'threads', 'thread_events', 'vocab_items', 'runs', 'drive_pending'];
+const CONTENT_TABLES = ['editions', 'stories', 'sources', 'threads', 'thread_events', 'vocab_items'];
+const PRIVATE = ['runs', 'drive_pending'];
+const TABLES = [...CONTENT_TABLES, ...PRIVATE];
 const USER: Role = { email: ALLOWED_EMAIL };
 const STRANGER: Role = { email: 'intrus@exemple.fr' };
 
@@ -34,11 +36,16 @@ afterAll(async () => {
 const counts = (role: Role) =>
   asRole(db, role, async (tx) => {
     const out: Record<string, number> = {};
-    for (const t of TABLES) out[t] = (await tx.query<{ n: number }>(`select count(*)::int as n from public.${t}`)).rows[0].n;
+    for (const t of TABLES) {
+      if (role === 'anon' && PRIVATE.includes(t)) continue;
+      out[t] = (await tx.query<{ n: number }>(`select count(*)::int as n from public.${t}`)).rows[0].n;
+    }
     return out;
   });
 const ALL = { editions: 1, stories: 1, sources: 1, threads: 1, thread_events: 1, vocab_items: 1, runs: 1, drive_pending: 1 };
-const NONE = Object.fromEntries(TABLES.map((t) => [t, 0]));
+/** Ce que voit tout le monde (0005_public_read.sql) : le contenu, sans runs ni drive_pending. */
+const CONTENT = { ...ALL, runs: 0, drive_pending: 0 };
+const ANON = Object.fromEntries(CONTENT_TABLES.map((t) => [t, 1]));
 const run = (role: Role, sql: string, params: unknown[] = []) => asRole(db, role, (tx) => tx.query(sql, params));
 
 describe('RLS : lecture', () => {
@@ -50,32 +57,38 @@ describe('RLS : lecture', () => {
     expect(await counts({ email: '  NaniGeek@Gmail.com ' })).toEqual(ALL);
   });
 
-  it('un autre utilisateur connecté ne lit rien', async () => {
-    expect(await counts(STRANGER)).toEqual(NONE);
+  it('un autre utilisateur connecté lit le contenu public, pas runs ni drive_pending', async () => {
+    expect(await counts(STRANGER)).toEqual(CONTENT);
   });
 
-  it('un jeton sans email ne lit rien', async () => {
-    expect(await counts({ email: null })).toEqual(NONE);
+  it('un jeton sans email lit le contenu public seulement', async () => {
+    expect(await counts({ email: null })).toEqual(CONTENT);
   });
 
-  it('le rôle anon n’a aucun droit sur les tables', async () => {
-    for (const t of TABLES) await expect(run('anon', `select count(*) from public.${t}`)).rejects.toThrow(/permission denied/);
+  it('le rôle anon (visiteur sans session) lit le contenu, mais jamais runs ni drive_pending', async () => {
+    expect(await counts('anon')).toEqual(ANON);
+    for (const t of PRIVATE) await expect(run('anon', `select count(*) from public.${t}`)).rejects.toThrow(/permission denied/);
+  });
+
+  it('le visiteur lit aussi les colonnes personnelles (cochés, état Anki, suivi) : sans risque, décision de 0005', async () => {
+    const r = await run('anon', `select v.selected, v.anki_status, t.followed from public.vocab_items v, public.threads t`);
+    expect(r.rows).toEqual([{ selected: false, anki_status: 'none', followed: false }]);
   });
 
   it('changer l’email autorisé prend effet aussitôt', async () => {
     await db.exec(`update private.app_settings set value = 'intrus@exemple.fr' where key = 'allowed_email'`);
     try {
-      expect(await counts(USER)).toEqual(NONE);
+      expect(await counts(USER)).toEqual(CONTENT);
       expect(await counts(STRANGER)).toEqual(ALL);
     } finally {
       await db.exec(`update private.app_settings set value = '${ALLOWED_EMAIL}' where key = 'allowed_email'`);
     }
   });
 
-  it('sans réglage allowed_email, personne ne lit', async () => {
+  it('sans réglage allowed_email, personne ne lit runs ni drive_pending', async () => {
     await db.exec(`delete from private.app_settings where key = 'allowed_email'`);
     try {
-      expect(await counts(USER)).toEqual(NONE);
+      expect(await counts(USER)).toEqual(CONTENT);
     } finally {
       await db.exec(`insert into private.app_settings (key, value) values ('allowed_email', '${ALLOWED_EMAIL}')`);
     }
@@ -84,37 +97,37 @@ describe('RLS : lecture', () => {
   it('un email vide ne correspond jamais, même si le réglage est vide', async () => {
     await db.exec(`update private.app_settings set value = '' where key = 'allowed_email'`);
     try {
-      expect(await counts({ email: '' })).toEqual(NONE);
-      expect(await counts({ email: '   ' })).toEqual(NONE);
-      expect(await counts({ email: null })).toEqual(NONE);
+      expect(await counts({ email: '' })).toEqual(CONTENT);
+      expect(await counts({ email: '   ' })).toEqual(CONTENT);
+      expect(await counts({ email: null })).toEqual(CONTENT);
     } finally {
       await db.exec(`update private.app_settings set value = '${ALLOWED_EMAIL}' where key = 'allowed_email'`);
     }
   });
 
-  it('un jeton anonyme portant l’email autorisé ne lit rien', async () => {
-    expect(await counts({ email: ALLOWED_EMAIL, anonymous: true })).toEqual(NONE);
+  it('un jeton anonyme portant l’email autorisé ne lit que le contenu public', async () => {
+    expect(await counts({ email: ALLOWED_EMAIL, anonymous: true })).toEqual(CONTENT);
   });
 
-  it('le rôle anon portant l’email autorisé dans son jeton ne lit rien', async () => {
+  it('le rôle anon portant l’email autorisé dans son jeton ne lit ni runs ni drive_pending', async () => {
     const asAnon = (sql: string) =>
       db.transaction(async (tx) => {
         await tx.query(`select set_config('request.jwt.claims', $1, true)`, [JSON.stringify({ role: 'anon', email: ALLOWED_EMAIL })]);
         await tx.exec('set local role anon');
         return tx.query(sql);
       });
-    for (const t of TABLES) await expect(asAnon(`select count(*) from public.${t}`)).rejects.toThrow(/permission denied/);
-    await expect(asAnon('select count(*) from storage.objects')).resolves.toMatchObject({ rows: [{ count: 0 }] });
+    for (const t of PRIVATE) await expect(asAnon(`select count(*) from public.${t}`)).rejects.toThrow(/permission denied/);
+    for (const t of CONTENT_TABLES) await expect(asAnon(`select count(*)::int as n from public.${t}`)).resolves.toMatchObject({ rows: [{ n: 1 }] });
   });
 
-  it('une session sans aucune revendication de jeton ne lit rien', async () => {
+  it('une session sans aucune revendication de jeton ne lit que le contenu public', async () => {
     const out = await db.transaction(async (tx) => {
       await tx.exec('set local role authenticated');
       const n: Record<string, number> = {};
       for (const t of TABLES) n[t] = Number((await tx.query<{ n: number }>(`select count(*)::int as n from public.${t}`)).rows[0].n);
       return n;
     });
-    expect(out).toEqual(NONE);
+    expect(out).toEqual(CONTENT);
   });
 
   it('les réglages privés sont illisibles pour l’utilisateur, même autorisé', async () => {
@@ -159,6 +172,26 @@ describe('RLS : écriture', () => {
     expect(await rows(db, 'select followed from public.threads')).toEqual([{ followed: true }]);
   });
 
+  it('un autre utilisateur ne modifie pas non plus les autres colonnes, ni n’insère ni ne supprime', async () => {
+    await expect(run(STRANGER, `update public.vocab_items set term = 'x' where id = $1`, [vocab])).rejects.toThrow(/permission denied/);
+    await expect(run(STRANGER, `update public.editions set headline = 'x' where id = $1`, [edition])).rejects.toThrow(/permission denied/);
+    await expect(run(STRANGER, `insert into public.threads (slug, title, lang) values ('x', 'x', 'fr')`)).rejects.toThrow(/permission denied/);
+    for (const t of TABLES) await expect(run(STRANGER, `delete from public.${t}`)).rejects.toThrow(/permission denied/);
+  });
+
+  it('le visiteur sans session (anon) ne modifie, n’insère ni ne supprime rien', async () => {
+    await expect(run('anon', `update public.vocab_items set selected = false where id = $1`, [vocab])).rejects.toThrow(/permission denied/);
+    await expect(run('anon', `update public.vocab_items set anki_status = 'none' where id = $1`, [vocab])).rejects.toThrow(/permission denied/);
+    await expect(run('anon', `update public.threads set followed = false where id = $1`, [thread])).rejects.toThrow(/permission denied/);
+    await expect(run('anon', `update public.editions set headline = 'x' where id = $1`, [edition])).rejects.toThrow(/permission denied/);
+    await expect(run('anon', `update public.runs set status = 'ok'`)).rejects.toThrow(/permission denied/);
+    await expect(run('anon', `insert into public.threads (slug, title, lang) values ('x', 'x', 'fr')`)).rejects.toThrow(/permission denied/);
+    await expect(run('anon', `insert into public.runs (date, status) values ('2026-11-07', 'ok')`)).rejects.toThrow(/permission denied/);
+    for (const t of TABLES) await expect(run('anon', `delete from public.${t}`)).rejects.toThrow(/permission denied/);
+    expect(await rows(db, 'select selected, anki_status from public.vocab_items')).toEqual([{ selected: true, anki_status: 'queued' }]);
+    expect(await rows(db, 'select followed from public.threads')).toEqual([{ followed: true }]);
+  });
+
   it('une valeur d’état Anki inconnue est refusée', async () => {
     await expect(run(USER, `update public.vocab_items set anki_status = 'done' where id = $1`, [vocab])).rejects.toThrow(/vocab_items_anki_status_check/);
   });
@@ -172,9 +205,23 @@ describe('RLS : écriture', () => {
 describe('RLS : stockage', () => {
   const files = (role: Role) => asRole(db, role, async (tx) => (await tx.query<{ n: number }>('select count(*)::int as n from storage.objects')).rows[0].n);
 
-  it('seul l’utilisateur autorisé voit les fichiers des buckets audio et pdf', async () => {
-    expect(await files(USER)).toBe(2);
-    expect(await files(STRANGER)).toBe(0);
-    expect(await files('anon')).toBe(0);
+  it('tout le monde voit les fichiers des buckets audio et pdf (URL signées avec la clé publique), et eux seuls', async () => {
+    await db.exec(`insert into storage.buckets (id, name, public) values ('autre', 'autre', false) on conflict do nothing`);
+    await db.exec(`insert into storage.objects (bucket_id, name) values ('autre', 'secret.txt') on conflict do nothing`);
+    try {
+      expect(await files(USER)).toBe(2);
+      expect(await files(STRANGER)).toBe(2);
+      expect(await files('anon')).toBe(2);
+      expect(await files('service_role')).toBe(3);
+    } finally {
+      await db.exec(`delete from storage.objects where bucket_id = 'autre'; delete from storage.buckets where id = 'autre'`);
+    }
+  });
+
+  it('les buckets restent privés (public = false) : les fichiers ne s’ouvrent que par URL signée', async () => {
+    expect(await rows(db, `select id, public from storage.buckets where id in ('audio', 'pdf') order by id`)).toEqual([
+      { id: 'audio', public: false },
+      { id: 'pdf', public: false },
+    ]);
   });
 });
